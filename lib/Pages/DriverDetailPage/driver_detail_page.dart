@@ -1,0 +1,3439 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../common/main_layout.dart';
+import '../../models/conductor_model.dart';
+import '../../models/operador_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/driver_provider.dart';
+import '../../providers/operador_provider.dart';
+import '../../src/color.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+class DriverDetailPage extends StatefulWidget {
+  Driver driver;
+  DriverDetailPage({Key? key, required this.driver}) : super(key: key);
+
+
+  @override
+  State<DriverDetailPage> createState() => _DriverDetailPageState();
+}
+
+
+class _DriverDetailPageState extends State<DriverDetailPage> {
+  final DriverProvider _driverProvider = DriverProvider();
+  bool isDocumentodeidentidadVisible = false;
+  bool isDocumentosVehiculoVisible = false;
+  bool isSoatTecnoVisible = false;
+  bool isComunicacionNotificacionesVisible = false;
+  bool isRecargaVisible = false;
+  bool isLicenciaisible = false;
+  String? selectedTipoDocumento;
+  String? selectedGenero;
+  String? selectedMarca;
+  String? selectedModelo;
+  String? selectedColor;
+  String? selectedTipoServicio;
+  String? selectedTipoVehiculo;
+  String? selectedcategoriaLicencia;
+  int nuevaRecarga = 0;
+  String? rol;
+  String? phoneNumber;
+  double _progress = 0;
+  late InAppWebViewController inAppWebViewController;
+  bool isRecargasvisible = false;
+
+
+  Operador? operador;
+  OperadorProvider _operadorProvider = OperadorProvider();
+  MyAuthProvider _authProvider = MyAuthProvider();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    seleccionarDropMarcaVehiculo();
+    //seleccionarDropTipoVehiculo();
+    selectedTipoDocumento = widget.driver.the04TipoDocumento;
+    selectedGenero = widget.driver.the09Genero;
+    selectedMarca = widget.driver.the15Marca;
+    selectedModelo = widget.driver.the17Modelo;
+    selectedColor = widget.driver.the16Color;
+    selectedTipoServicio = widget.driver.the19TipoServicio;
+    selectedTipoVehiculo = widget.driver.the14TipoVehiculo;
+    selectedcategoriaLicencia = widget.driver.licenciaCategoria;
+    getOperadorInfo();
+  }
+
+  Color getStatusColor() {
+    if (widget.driver.verificacionStatus == "registrado"
+    ) {
+      return Colors.blueGrey;
+    }
+    else if (widget.driver.verificacionStatus == "foto_tomada") {
+      return Colors.amber;
+    }
+    else if (widget.driver.verificacionStatus == 'Procesando') {
+      return Colors.blueAccent;
+    }
+    else if (widget.driver.verificacionStatus == 'corregida') {
+      return Colors.purple;
+    }
+
+    else if (widget.driver.verificacionStatus == 'activado') {
+      return Colors.green;
+    }
+    else if (widget.driver.verificacionStatus == 'bloqueado') {
+      return Colors.red.shade900;
+    }
+    else if (widget.driver.verificacionStatus == '') {
+      return Colors.brown.shade900;
+    }
+    else {
+      return Colors.grey;
+    }
+  }
+
+  Color getStatusColorFotos(String fotoStatus) {
+    switch (fotoStatus) {
+      case "rechazada":
+        return Colors.red;
+      case "corregida":
+        return Colors.purple;
+      case "aceptada":
+        return Colors.green;
+      default:
+        return Colors.grey;  // Por si acaso el estado es diferente o nulo
+    }
+  }
+
+  // Método para convertir booleanos en "SI" o "NO"
+  String boolToYesNo(bool value) {
+    return value ? 'SI' : 'NO';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MainLayout(
+      pageTitle:  obtenerRolParaTitulo(),
+      content: SingleChildScrollView(
+        padding: const EdgeInsets.all(7),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 100),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.5),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _encabezadoSeccion(),
+                    const Divider(),
+                    _seccionDatosGenerales(),
+                    const Divider(),
+                    _seccionDocumentosdeIdentidad(),
+                    const Divider(),
+                    _seccionDocumentosVehiculo(),
+                    const Divider(),
+                    _seccionSOAT(),
+                    const Divider(),
+                    _seccionLicencia(),
+                    const Divider(),
+                    _seccionComunicacionNotificaciones(),
+                    const Divider(),
+                    _seccionRecargas(),
+                    const SizedBox(height: 50,)
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  /////// widgets interfaz/////////////////////////////////////////
+
+  Widget _encabezadoSeccion() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.driver.id,
+              style: TextStyle(fontSize: fontSize),
+            ),
+            isMobile
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
+                    Text('Conductor desde: ${widget.driver.the10FechaRegistro}',
+                      style: TextStyle(fontSize: fontSize),
+                    ),
+                  ],
+                ),
+
+                Divider(),
+                _buildInfoEstadoConductor('Conectado:', widget.driver.the39EstaConectado ?? false, fontSize),
+                _buildInfoEstadoConductor('Trabajando:', widget.driver.the00_is_working ?? false, fontSize),
+                _buildInfoRowHorizontal('Saldo Recarga', _formatearNumero(widget.driver.the32SaldoRecarga)),
+                SizedBox(height: 20),
+                Container(
+                  alignment: Alignment.center,
+                    width: 200,
+                    child: _buildVerificationStatus(fontSize)),
+
+              ],
+            )
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: const TextStyle( fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('Conductor desde: ${widget.driver.the10FechaRegistro}',
+                      style: TextStyle(fontSize: fontSize),
+                    ),
+                  ],
+                ),
+
+                Column(
+                  children: [
+                    _buildInfoEstadoConductor('Conectado:', widget.driver.the39EstaConectado ?? false, fontSize),
+                    _buildInfoEstadoConductor('Trabajando:', widget.driver.the00_is_working ?? false, fontSize),
+                  ],
+                ),
+                _buildInfoRow('Saldo Recarga', _formatearNumero(widget.driver.the32SaldoRecarga)),
+                _buildVerificationStatus(fontSize),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _seccionDatosGenerales() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionTitle('Datos Generales'),
+                botonesComunicacion(context)
+
+              ],
+            ),
+
+            isMobile
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoColumns(),
+                const SizedBox(height: 25),
+                _buildActionButtonRow(context),
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    _buildPhotoStack(),
+                    const SizedBox(width: 25),
+                    _buildButtonRowAceptarRechazarFotoPerfil(context),
+                  ],
+                ),
+              ],
+            )
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    _buildPhotoStack(),
+                    const SizedBox(height: 30),
+                    _buildButtonRowAceptarRechazarFotoPerfil(context),
+                  ],
+                ),
+                const SizedBox(width: 50),
+                _buildInfoColumns(),
+                const SizedBox(width: 150),
+                _buildActionButtonColumn(context),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _seccionDocumentosdeIdentidad(){
+    return LayoutBuilder(
+      builder: (context, constraints){
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+        return Column(
+          children: [
+            isMobile ?
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                          });
+                        },
+                        child: _buildSectionTitle('Documento de identidad')),
+
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isDocumentodeidentidadVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isDocumentodeidentidadVisible,
+                  child: Column(
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                         Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                  children: [
+                                    _buildDocumentPhoto("Cédula parte delantera", widget.driver.fotoCedulaDelantera),
+                                    Positioned(
+                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(widget.driver.the25CedulaDelanteraFoto),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                _buildTextField(widget.driver.the01Nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(widget.driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _dropTipoDocumento (),
+                                _buildTextField(widget.driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaDelantera(context, "¿Aceptar la foto del documento de identidad en su parte delantera?", "aceptada");
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
+                                          _saveField("Verificacion_Status", "rechazada");
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 25),
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      height: 40,
+                                      width: 40,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.pushNamed(context, "antecedentes_page");
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: primary,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.add_chart_sharp, color: Colors.white, size: 30), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 40,
+                                      width: 40,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.person_off, color: Colors.white, size: 30), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 20),
+                          Divider(),// Espacio entre columnas
+                          const SizedBox(height: 20),
+                          Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                  children: [
+                                    _buildDocumentPhoto("Cédula parte trasera", widget.driver.fotoCedulaTrasera),
+                                    Positioned(
+                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(widget.driver.the26CedulaTraseraFoto),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                _buildTextField(widget.driver.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_Expedicion_Documento"),
+                                _buildTextField(widget.driver.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_Nacimiento"),
+                                _dropGenero(),
+                                const SizedBox(height: 30),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaTrasera(context, "¿Aceptar la foto del documento de identidad en su parte trasera?", "aceptada");
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
+                                          _saveField("Verificacion_Status", "rechazada");
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 30),
+                              ],
+                            ),
+                        ],
+                      ),
+
+                    ],
+                  ),
+                ),
+              ],
+            ) : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                          });
+                        },
+                        child: _buildSectionTitle('Documento de identidad')),
+
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isDocumentodeidentidadVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isDocumentodeidentidadVisible,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                  children: [
+                                    _buildDocumentPhoto("Cédula parte delantera", widget.driver.fotoCedulaDelantera),
+                                    Positioned(
+                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(widget.driver.the25CedulaDelanteraFoto),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                _buildTextField(widget.driver.the01Nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(widget.driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _dropTipoDocumento (),
+                                _buildTextField(widget.driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaDelantera(context, "¿Aceptar la foto del documento de identidad en su parte delantera?", "aceptada");
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
+                                          _saveField("Verificacion_Status", "rechazada");
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20), // Espacio entre columnas
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                  children: [
+                                    _buildDocumentPhoto("Cédula parte trasera", widget.driver.fotoCedulaTrasera),
+                                    Positioned(
+                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(widget.driver.the26CedulaTraseraFoto),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                _buildTextField(widget.driver.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_Expedicion_Documento"),
+                                _buildTextField(widget.driver.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_Nacimiento"),
+                                _dropGenero(),
+                                const SizedBox(height: 30),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaTrasera(context, "¿Aceptar la foto del documento de identidad en su parte trasera?", "aceptada");
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
+                                          _saveField("Verificacion_Status", "rechazada");
+
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 50),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Container(
+                            margin: EdgeInsets.symmetric(vertical: 20),
+                            height: 50, // Altura del botón
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                const url = 'https://antecedentes.policia.gov.co:7005/WebJudicial/';
+                                if (await canLaunch(url)) {
+                                  await launch(url);
+                                } else {
+                                  throw 'Could not launch $url';
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: TextStyle(fontSize: 16),
+                              ),
+                              icon: Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                              label: Text('Antecedentes', style: TextStyle( color: blanco)),
+                            ),
+                          ),
+                          Container(
+                            margin: EdgeInsets.symmetric(vertical: 20),
+                            height: 50, // Altura del botón
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                // Lógica para informar activación por Mail
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.redAccent, // Color de fondo del botón
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: TextStyle(fontSize: 16),
+                              ),
+                              icon: Icon(Icons.cancel, color: Colors.white), // Icono de Correo
+                              label: Text('Bloqueo AJ', style: TextStyle( color: blanco)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+    );
+  }
+  Widget _seccionDocumentosVehiculo() {
+    return LayoutBuilder(
+        builder: (context, constraints){
+          double screenWidth = constraints.maxWidth;
+          // Define el tamaño de la letra según el ancho de la pantalla
+          double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+          // Define si es móvil o no
+          bool isMobile = screenWidth < 600;
+          return Column(
+            children: [
+              isMobile ?
+              Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isDocumentosVehiculoVisible = !isDocumentosVehiculoVisible;
+                            });
+                          },
+                          child: _buildSectionTitle('Documentos del Vehículo')),
+
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            isDocumentosVehiculoVisible = !isDocumentosVehiculoVisible;
+                          });
+                        },
+                        icon: Icon(
+                          isDocumentosVehiculoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 30,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Visibility(
+                    visible: isDocumentosVehiculoVisible,
+                    child: Column(
+                      children: [
+                           Column(
+                                children: [
+                                  Stack(
+                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                    children: [
+                                      _buildDocumentPhoto("Tarjeta Propiedad parte delantera", widget.driver.fotoTarjetaPropiedadDelantera),
+                                      Positioned(
+                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: BoxDecoration(
+                                            color: getStatusColorFotos(widget.driver.the27TarjetaPropiedadDelanteraFoto),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  _buildTextField(widget.driver.the18Placa, 'Placa', "18_Placa"),
+                                  seleccionarDropMarcaVehiculo(),
+                                  _dropModelo(),
+                                  _dropColor(),
+
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaDelantera(context, "¿Aceptar la foto de la tarjeta de propiedad en su parte delantera?", "aceptada");
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 25),
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaDelantera(context, "¿Está seguro de rechazar la foto de la tarjeta de propiedad en su parte delantera?", "rechazada");
+                                            _saveField("Verificacion_Status", "rechazada");
+
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+
+                            const SizedBox(height: 20),
+                            Divider(),
+                            const SizedBox(height: 20),// Espacio entre columnas
+                            Column(
+                                children: [
+                                  Stack(
+                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                    children: [
+                                      _buildDocumentPhoto("Tarjeta de propiedad parte trasera", widget.driver.fotoTarjetaPropiedadTrasera),
+                                      Positioned(
+                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: BoxDecoration(
+                                            color: getStatusColorFotos(widget.driver.the28TarjetaPropiedadTraseraFoto),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  _dropTipoServicio(),
+                                  seleccionarDropTipoVehiculo(),
+                                  _buildTextField(widget.driver.the24NumeroTarjetaPropiedad, 'Licencia de tránsito', "24_Numero_Tarjeta_Propiedad"),
+
+                                  const SizedBox(height: 30),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaTrasera(context, "¿Aceptar la foto de la tarjeta de propiedad en su parte trasera?", "aceptada");
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 25),
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaTrasera(context, "¿Está seguro de rechazar la foto de la tarjeta de propiedad en su parte trasera?", "rechazada");
+                                            _saveField("Verificacion_Status", "rechazada");
+
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                          const SizedBox(height: 30),
+                      ],
+                    ),
+                  ),
+                ],
+              ) :
+
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isDocumentosVehiculoVisible = !isDocumentosVehiculoVisible;
+                            });
+                          },
+                          child: _buildSectionTitle('Documentos del Vehículo')),
+
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            isDocumentosVehiculoVisible = !isDocumentosVehiculoVisible;
+                          });
+                        },
+                        icon: Icon(
+                          isDocumentosVehiculoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 30,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Visibility(
+                    visible: isDocumentosVehiculoVisible,
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                    children: [
+                                      _buildDocumentPhoto("Tarjeta Propiedad parte delantera", widget.driver.fotoTarjetaPropiedadDelantera),
+                                      Positioned(
+                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: BoxDecoration(
+                                            color: getStatusColorFotos(widget.driver.the27TarjetaPropiedadDelanteraFoto),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  _buildTextField(widget.driver.the18Placa, 'Placa', "18_Placa"),
+                                  seleccionarDropMarcaVehiculo(),
+                                  _dropModelo(),
+                                  _dropColor(),
+
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaDelantera(context, "¿Aceptar la foto de la tarjeta de propiedad en su parte delantera?", "aceptada");
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 25),
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaDelantera(context, "¿Está seguro de rechazar la foto de la tarjeta de propiedad en su parte delantera?", "rechazada");
+                                            _saveField("Verificacion_Status", "rechazada");
+
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20), // Espacio entre columnas
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+                                    children: [
+                                      _buildDocumentPhoto("Tarjeta de propiedad parte trasera", widget.driver.fotoTarjetaPropiedadTrasera),
+                                      Positioned(
+                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: BoxDecoration(
+                                            color: getStatusColorFotos(widget.driver.the28TarjetaPropiedadTraseraFoto),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  _dropTipoServicio(),
+                                  seleccionarDropTipoVehiculo(),
+                                  _buildTextField(widget.driver.the24NumeroTarjetaPropiedad, 'Licencia de tránsito', "24_Numero_Tarjeta_Propiedad"),
+
+                                  const SizedBox(height: 30),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaTrasera(context, "¿Aceptar la foto de la tarjeta de propiedad en su parte trasera?", "aceptada");
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 25),
+                                      SizedBox(
+                                        height: 30,
+                                        width: 30,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            _showConfirmationFotoTarjetaTrasera(context, "¿Está seguro de rechazar la foto de la tarjeta de propiedad en su parte trasera?", "rechazada");
+                                            _saveField("Verificacion_Status", "rechazada");
+
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+                                          ),
+                                          child: const Center(
+                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 50),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        }
+    );
+  }
+  Widget _seccionSOAT() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          children: [
+
+            isMobile ?
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: (){
+                          setState(() {
+                            isSoatTecnoVisible = !isSoatTecnoVisible;
+                          });
+                        },
+                        child: _buildSectionTitle('SOAT y Tecnomecánica')),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isSoatTecnoVisible = !isSoatTecnoVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isSoatTecnoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isSoatTecnoVisible,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
+                            _buildTextField(widget.driver.the21VigenciaSoat, 'Vigencia del SOAT', "21_Vigencia_Soat"),
+                            _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
+                            _buildTextField(widget.driver.the23VigenciaTecno, 'Vigencia Revisión tecnomecánica', "23_Vigencia_Tecno"),
+                            const SizedBox(height: 50),
+                          ],
+                        ),
+
+                      const SizedBox(width: 60),
+
+                       Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          height: 50, // Altura del botón
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
+                              if (await canLaunch(url)) {
+                                await launch(url);
+                              } else {
+                                throw 'Could not launch $url';
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              textStyle: const TextStyle(fontSize: 16),
+                            ),
+                            icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                            label: const Text('Abrir pagina RUNT', style: TextStyle( color: blanco)),
+                          ),
+                        ),
+                      const SizedBox(height: 30)
+                    ],
+                  ),
+                ),
+              ],
+            ) :
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: (){
+                          setState(() {
+                            isSoatTecnoVisible = !isSoatTecnoVisible;
+                          });
+                        },
+                        child: _buildSectionTitle('SOAT y Tecnomecánica')),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isSoatTecnoVisible = !isSoatTecnoVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isSoatTecnoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isSoatTecnoVisible,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
+                            _buildTextField(widget.driver.the21VigenciaSoat, 'Vigencia del SOAT', "21_Vigencia_Soat"),
+                            _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
+                            _buildTextField(widget.driver.the23VigenciaTecno, 'Vigencia Revisión tecnomecánica', "23_Vigencia_Tecno"),
+                            const SizedBox(height: 50),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 60),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          margin: EdgeInsets.only(top: 10),
+                          height: 50, // Altura del botón
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
+                              if (await canLaunch(url)) {
+                                await launch(url);
+                              } else {
+                                throw 'Could not launch $url';
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              textStyle: TextStyle(fontSize: 16),
+                            ),
+                            icon: Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                            label: Text('Abrir pagina RUNT', style: TextStyle( color: blanco)),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+
+          ],
+        );
+      },
+    );
+  }
+  Widget _seccionLicencia () {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          children: [
+
+            isMobile ?
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: (){
+                          setState(() {
+                            isLicenciaisible = !isLicenciaisible;
+                          });
+                        },
+                        child: _buildSectionTitle('Licencia de conducción')),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isLicenciaisible = !isLicenciaisible;
+                        });
+                      },
+                      icon: Icon(
+                        isLicenciaisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isLicenciaisible,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _dropCategoriaLicencia(),
+                          _buildTextField(widget.driver.licenciaVigencia, 'Videncia de la licencia', "licencia_vigencia"),
+
+                          const SizedBox(height: 50),
+                        ],
+                      ),
+
+                      const SizedBox(width: 60),
+
+                      Container(
+                        margin: const EdgeInsets.only(top: 10),
+                        height: 50, // Altura del botón
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                            if (await canLaunch(url)) {
+                              await launch(url);
+                            } else {
+                              throw 'Could not launch $url';
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            textStyle: const TextStyle(fontSize: 16),
+                          ),
+                          icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                          label: const Text('Abrir página RUNT Conductores', style: TextStyle( color: blanco)),
+                        ),
+                      ),
+                      const SizedBox(height: 30)
+                    ],
+                  ),
+                ),
+              ],
+            ) :
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                        onTap: (){
+                          setState(() {
+                            isLicenciaisible = !isLicenciaisible;
+                          });
+                        },
+                        child: _buildSectionTitle('Licencia de conducción')),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isLicenciaisible = !isLicenciaisible;
+                        });
+                      },
+                      icon: Icon(
+                        isLicenciaisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isLicenciaisible,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        width: 200,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _dropCategoriaLicencia(),
+                            _buildTextField(widget.driver.licenciaVigencia, 'Videncia de la licencia', "licencia_vigencia"),
+
+                            const SizedBox(height: 50),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 60),
+
+                      Container(
+                        margin: const EdgeInsets.only(top: 10),
+                        height: 50, // Altura del botón
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                            if (await canLaunch(url)) {
+                              await launch(url);
+                            } else {
+                              throw 'Could not launch $url';
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            textStyle: const TextStyle(fontSize: 16),
+                          ),
+                          icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                          label: const Text('Abrir página RUNT Conductores', style: TextStyle( color: blanco)),
+                        ),
+                      ),
+                      const SizedBox(height: 30)
+                    ],
+                  ),
+                ),
+              ],
+            )
+
+          ],
+        );
+      },
+    );
+  }
+  Widget _seccionComunicacionNotificaciones(){
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                      onTap: (){
+                        setState(() {
+                          isComunicacionNotificacionesVisible = !isComunicacionNotificacionesVisible;
+                        });
+                      },
+                      child: _buildSectionTitle('Activación y notificaciones')),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        isComunicacionNotificacionesVisible = !isComunicacionNotificacionesVisible;
+                      });
+                    },
+                    icon: Icon(
+                      isComunicacionNotificacionesVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      size: 30,
+                    ),
+                  ),
+                ],
+              ),
+              Visibility(
+                visible: isComunicacionNotificacionesVisible,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 30),
+                          Row(
+                            children: [
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // Lógica para informar activación por WhatsApp
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    backgroundColor: Colors.green,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  icon: const Icon(Icons.message, color: Colors.white, size: 14,),
+                                  label: const Text('WhatsApp', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                              const SizedBox(width: 30),
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // Lógica para informar activación por Mail
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    backgroundColor: Colors.red,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  icon: const Icon(Icons.email, color: Colors.white, size: 14,),
+                                  label: const Text('EMail', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 30),
+                          const TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Mensaje de Notificación',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                // Lógica para enviar notificación directa
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                              icon: const Icon(Icons.send, color: Colors.white, size: 14,),
+                              label: const Text('Notificación', style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 30),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+      },
+    );
+  }
+
+  Widget _seccionRecargas () {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        // Define el tamaño de la letra según el ancho de la pantalla
+        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+
+        // Define si es móvil o no
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          children: [
+            isMobile ?
+            Visibility(
+              visible: isRecargasvisible,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                          onTap: (){
+                            setState(() {
+                              isRecargaVisible = !isRecargaVisible;
+                            });
+                          },
+                          child: _buildSectionTitle('Recargas')),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            isRecargaVisible = !isRecargaVisible;
+                          });
+                        },
+                        icon: Icon(
+                          isRecargaVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 30,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Visibility(
+                    visible: isRecargaVisible,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInfoRowHorizontal('Saldo anterior a ésta recarga', _formatearNumero(widget.driver.the321SaldoAnteriorInfo)),
+                            _buildInfoRowHorizontal('+ Esta recarga', widget.driver.the35NuevaRecargaInfo),
+                            _buildInfoRowHorizontal('Saldo Final', _formatearNumero(widget.driver.the32SaldoRecarga)),
+                            _buildInfoRowHorizontal('Fecha recarga actual', widget.driver.the33FechaUltimaRecarga.toString()),
+                            _buildInfoRowHorizontal('Saldo por redimir', _formatearNumero(widget.driver.the37RecargaRedimir)),
+                            const SizedBox(height: 20),
+                            _buildTextFieldEnteros(widget.driver.the34NuevaRecarga, 'Valor a recargar', "34_Nueva_Recarga"),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          height: 40, // Altura del botón
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _recargarAhora();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.green, // Color de fondo del botón
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              textStyle: TextStyle(fontSize: 16),
+                            ),
+                            icon: Icon(Icons.double_arrow_outlined, color: Colors.white), // Icono de Correo
+                            label: Text('ACTUALIZAR RECARGA', style: TextStyle( color: blanco, fontSize: 12)),
+                          ),
+                        ),
+
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ) :
+            Visibility(
+              visible: isRecargasvisible,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                          onTap: (){
+                            setState(() {
+                              isRecargaVisible = !isRecargaVisible;
+                            });
+                          },
+                          child: _buildSectionTitle('Recargas')),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            isRecargaVisible = !isRecargaVisible;
+                          });
+                        },
+                        icon: Icon(
+                          isRecargaVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 30,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Visibility(
+                    visible: isRecargaVisible,
+                    child: Container(
+                      width: 300,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildInfoRowHorizontal('Saldo anterior a ésta recarga', _formatearNumero(widget.driver.the321SaldoAnteriorInfo)),
+                          _buildInfoRowHorizontal('+ Esta recarga', widget.driver.the35NuevaRecargaInfo),
+                          _buildInfoRowHorizontal('Saldo Final', _formatearNumero(widget.driver.the32SaldoRecarga)),
+                          _buildInfoRowHorizontal('Fecha recarga actual', widget.driver.the33FechaUltimaRecarga.toString()),
+                          _buildInfoRowHorizontal('Saldo por redimir', _formatearNumero(widget.driver.the37RecargaRedimir)),
+                          const SizedBox(height: 20),
+                          _buildTextFieldEnteros(widget.driver.the34NuevaRecarga, 'Valor a recargar', "34_Nueva_Recarga"),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            height: 40, // Altura del botón
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _recargarAhora();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.green, // Color de fondo del botón
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: TextStyle(fontSize: 16),
+                              ),
+                              icon: Icon(Icons.double_arrow_outlined, color: Colors.white), // Icono de Correo
+                              label: Text('ACTUALIZAR RECARGA', style: TextStyle( color: blanco, fontSize: 12)),
+                            ),
+                          ),
+
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+
+          ],
+        );
+      },
+    );
+  }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  void getOperadorInfo() async {
+    var user = _authProvider.getUser();
+    if (user != null) {
+      operador = await _operadorProvider.getById(user.uid);
+      if (operador != null) {
+        rol = operador?.the20Rol;
+        if(rol == "Master" || rol == "Recarga Carros"){
+          setState(() {
+            isRecargasvisible = true;
+          });
+        }
+      }
+    }
+    print('Datos del operador ***************************************** $rol');
+  }
+
+  Widget botonesComunicacion (context){
+    bool isMobile = !kIsWeb;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        GestureDetector(
+          onTap: () {
+            if(isMobile){
+              _openWhatsApp(context);
+            }
+            _openWhatsAppWeb(context);
+          },
+          child: Image.asset(
+            'assets/icono_whatsapp.png', // Ruta de la imagen de WhatsApp
+            width: 30,
+            height: 30,
+          ),
+        ),
+        const SizedBox(width: 20), // Espacio entre la imagen y el icono
+        GestureDetector(
+          onTap: () {
+            makePhoneCall(widget.driver.the07Celular);
+          },
+          child: const Icon(
+            Icons.phone,
+            color: Colors.black, // Color del icono de llamada
+            size: 30,
+          ),
+        ),
+        Divider()
+      ],
+    );
+  }
+
+  Widget _buildButtonRowAceptarRechazarFotoPerfil(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          height: 30,
+          width: 30,
+          child: ElevatedButton(
+            onPressed: () {
+              _showConfirmationFotoPerfil(context, "¿Aceptar la foto de perfil?", "aceptada");
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+            ),
+            child: const Center(
+              child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+            ),
+          ),
+        ),
+        const SizedBox(width: 35),
+        SizedBox(
+          height: 30,
+          width: 30,
+          child: ElevatedButton(
+            onPressed: () {
+              _showConfirmationFotoPerfil(context, "¿Está seguro de rechazar la foto de perfil?", "rechazada");
+              _saveField("Verificacion_Status", "rechazada");
+
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
+            ),
+            child: const Center(
+              child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoStack() {
+    return Stack(
+      clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+      children: [
+        _buildPerfilPhoto(widget.driver.image),
+        Positioned(
+          top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
+          right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: getStatusColorFotos(widget.driver.the29FotoPerfil),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoColumns() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRowHorizontal('Fecha activación:   ', widget.driver.the12FechaActivacion),
+        _buildInfoRowHorizontal('Activador:   ', widget.driver.the13NombreActivador),
+        _buildInfoRowHorizontal('Email:   ', widget.driver.the06Email),
+        _buildInfoRowHorizontal('Celular:   ', widget.driver.the07Celular),
+        _buildInfoRowHorizontal('Vehículo:   ', widget.driver.the14TipoVehiculo),
+        _buildInfoRowHorizontal('Placa:   ', widget.driver.the18Placa),
+        _buildInfoRowHorizontal('Viajes:   ', widget.driver.the30NumeroViajes.toString()),
+        _buildInfoRowHorizontal('Calificación:   ', widget.driver.the31Calificacion.toString()),
+        _buildInfoRowHorizontal('Cancelaciones:   ', widget.driver.the40NumeroCancelaciones.toString()),
+      ],
+    );
+  }
+
+  Widget _buildActionButtonColumn(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 40, // Altura del botón
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.red, // Color de fondo del botón
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: TextStyle(fontSize: 16),
+            ),
+            icon: Icon(Icons.block, color: Colors.white), // Icono de Correo
+            label: Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ),
+        const SizedBox(height: 30),
+        SizedBox(
+          height: 40, // Altura del botón
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.green, // Color de fondo del botón
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: TextStyle(fontSize: 16),
+            ),
+            icon: Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtonRow(BuildContext context) {
+    return Row(
+      mainAxisAlignment:MainAxisAlignment.spaceEvenly ,
+      children: [
+        SizedBox(
+          height: 40, // Altura del botón
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.red, // Color de fondo del botón
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: TextStyle(fontSize: 16),
+            ),
+            icon: Icon(Icons.block, color: Colors.white), // Icono de Correo
+            label: Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ),
+        const SizedBox(height: 30),
+        SizedBox(
+          height: 40, // Altura del botón
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.green, // Color de fondo del botón
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: TextStyle(fontSize: 16),
+            ),
+            icon: Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _dropTipoDocumento() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tipo de Documento', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedTipoDocumento,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "Cédula de Ciudadanía", child: Text("Cédula de Ciudadanía")),
+                  DropdownMenuItem(value: "Cédula de extranjería", child: Text("Cédula de extranjería")),
+                  DropdownMenuItem(value: "Pasaporte", child: Text("Pasaporte")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedTipoDocumento = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("04_Tipo_Documento", selectedTipoDocumento!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropGenero() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Género', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedGenero,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "Masculino", child: Text("Masculino")),
+                  DropdownMenuItem(value: "Femenino", child: Text("Femenino")),
+                  DropdownMenuItem(value: "Otro", child: Text("Otro")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedGenero = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("09_Genero", selectedGenero!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropMarca() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Marca', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedMarca,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "Chevrolet", child: Text("Chevrolet")),
+                  DropdownMenuItem(value: "Chery", child: Text("Chery")),
+                  DropdownMenuItem(value: "Citroen", child: Text("Citroen")),
+                  DropdownMenuItem(value: "Daihatsu", child: Text("Daihatsu")),
+                  DropdownMenuItem(value: "Fiat", child: Text("Fiat")),
+                  DropdownMenuItem(value: "Ford", child: Text("Ford")),
+                  DropdownMenuItem(value: "Honda", child: Text("Honda")),
+                  DropdownMenuItem(value: "Hyundai", child: Text("Hyundai")),
+                  DropdownMenuItem(value: "Kia", child: Text("Kia")),
+                  DropdownMenuItem(value: "Mazda", child: Text("Mazda")),
+                  DropdownMenuItem(value: "Mitsubishi", child: Text("Mitsubishi")),
+                  DropdownMenuItem(value: "Nissan", child: Text("Nissan")),
+                  DropdownMenuItem(value: "Peugeot", child: Text("Peugeot")),
+                  DropdownMenuItem(value: "Renault", child: Text("Renault")),
+                  DropdownMenuItem(value: "Seat", child: Text("Seat")),
+                  DropdownMenuItem(value: "Skoda", child: Text("Skoda")),
+                  DropdownMenuItem(value: "Subaru", child: Text("Subaru")),
+                  DropdownMenuItem(value: "Suzuki", child: Text("Suzuki")),
+                  DropdownMenuItem(value: "Toyota", child: Text("Toyota")),
+                  DropdownMenuItem(value: "Volkswagen", child: Text("Volkswagen")),
+                  DropdownMenuItem(value: "Otro", child: Text("Otro")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedMarca = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("15_Marca", selectedMarca!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropMarcaMoto() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Marca', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedMarca,
+                items: const [
+                  DropdownMenuItem(value: "AKT", child: Text("AKT")),
+                  DropdownMenuItem(value: "Apollo", child: Text("Apollo")),
+                  DropdownMenuItem(value: "Aprilia", child: Text("Aprilia")),
+                  DropdownMenuItem(value: "Ayco", child: Text("Ayco")),
+                  DropdownMenuItem(value: "Bajaj", child: Text("Bajaj")),
+                  DropdownMenuItem(value: "Benelli", child: Text("Benelli")),
+                  DropdownMenuItem(value: "CF", child: Text("CF")),
+                  DropdownMenuItem(value: "Hero", child: Text("Hero")),
+                  DropdownMenuItem(value: "Honda", child: Text("Honda")),
+                  DropdownMenuItem(value: "Jialing", child: Text("Jialing")),
+                  DropdownMenuItem(value: "Kawasaki", child: Text("Kawasaki")),
+                  DropdownMenuItem(value: "Keeway", child: Text("Keeway")),
+                  DropdownMenuItem(value: "Kymco", child: Text("Kymco")),
+                  DropdownMenuItem(value: "KTM", child: Text("KTM")),
+                  DropdownMenuItem(value: "Lifan", child: Text("Lifan")),
+                  DropdownMenuItem(value: "Piaggio", child: Text("Piaggio")),
+                  DropdownMenuItem(value: "Pulsar", child: Text("Pulsar")),
+                  DropdownMenuItem(value: "Royal", child: Text("Royal")),
+                  DropdownMenuItem(value: "Sherco", child: Text("Sherco")),
+                  DropdownMenuItem(value: "Starker", child: Text("Starker")),
+                  DropdownMenuItem(value: "Suzuki", child: Text("Suzuki")),
+                  DropdownMenuItem(value: "SYM", child: Text("SYM")),
+                  DropdownMenuItem(value: "Triumph", child: Text("Triumph")),
+                  DropdownMenuItem(value: "TVS", child: Text("TVS")),
+                  DropdownMenuItem(value: "Vespa", child: Text("Vespa")),
+                  DropdownMenuItem(value: "Yamaha", child: Text("Yamaha")),
+                  DropdownMenuItem(value: "YCF", child: Text("YCF")),
+                  DropdownMenuItem(value: "Otro", child: Text("Otro")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedMarca = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("15_Marca", selectedMarca!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropColor() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Color', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedColor,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "Amarillo", child: Text("Amarillo")),
+                  DropdownMenuItem(value: "Azul", child: Text("Azul")),
+                  DropdownMenuItem(value: "Cafe", child: Text("Cafe")),
+                  DropdownMenuItem(value: "Beige", child: Text("Beige")),
+                  DropdownMenuItem(value: "Blanco", child: Text("Blanco")),
+                  DropdownMenuItem(value: "Dorado", child: Text("Dorado")),
+                  DropdownMenuItem(value: "Gris", child: Text("Gris")),
+                  DropdownMenuItem(value: "Morado", child: Text("Morado")),
+                  DropdownMenuItem(value: "Naranja", child: Text("Naranja")),
+                  DropdownMenuItem(value: "Negro", child: Text("Negro")),
+                  DropdownMenuItem(value: "Plateado", child: Text("Plateado")),
+                  DropdownMenuItem(value: "Rojo", child: Text("Rojo")),
+                  DropdownMenuItem(value: "Verde", child: Text("Verde")),
+                  DropdownMenuItem(value: "Vinotinto", child: Text("Vinotinto")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedColor = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("16_Color", selectedColor!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropModelo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Modelo', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedModelo,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "2024", child: Text("2024")),
+                  DropdownMenuItem(value: "2023", child: Text("2023")),
+                  DropdownMenuItem(value: "2022", child: Text("2022")),
+                  DropdownMenuItem(value: "2021", child: Text("2021")),
+                  DropdownMenuItem(value: "2020", child: Text("2020")),
+                  DropdownMenuItem(value: "2019", child: Text("2019")),
+                  DropdownMenuItem(value: "2018", child: Text("2018")),
+                  DropdownMenuItem(value: "2017", child: Text("2017")),
+                  DropdownMenuItem(value: "2016", child: Text("2016")),
+                  DropdownMenuItem(value: "2015", child: Text("2015")),
+                  DropdownMenuItem(value: "2014", child: Text("2014")),
+                  DropdownMenuItem(value: "2013", child: Text("2013")),
+                  DropdownMenuItem(value: "2012", child: Text("2012")),
+                  DropdownMenuItem(value: "2011", child: Text("2011")),
+                  DropdownMenuItem(value: "2010", child: Text("2010")),
+                  DropdownMenuItem(value: "2009", child: Text("2009")),
+                  DropdownMenuItem(value: "2008", child: Text("2008")),
+                  DropdownMenuItem(value: "2007", child: Text("2007")),
+                  DropdownMenuItem(value: "2006", child: Text("2006")),
+                  DropdownMenuItem(value: "2005", child: Text("2005")),
+                  DropdownMenuItem(value: "2004", child: Text("2004")),
+                  DropdownMenuItem(value: "2003", child: Text("2003")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedModelo = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("17_Modelo", selectedModelo!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropTipoServicio() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tipo de servicio', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedTipoServicio,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "Particular", child: Text("Particular")),
+                  DropdownMenuItem(value: "Público", child: Text("Público")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedTipoServicio = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("19_Tipo_Servicio", selectedTipoServicio!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropTipoVehiculo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tipo de Vehículo', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedTipoVehiculo,
+                items: const [
+                  DropdownMenuItem(value: "Automovil", child: Text("Automovil")),
+                  DropdownMenuItem(value: "Minivan", child: Text("Minivan")),
+                  DropdownMenuItem(value: "Camioneta", child: Text("Camioneta")),
+                  DropdownMenuItem(value: "Taxi", child: Text("Taxi")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedTipoVehiculo = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("14_Tipo_Vehiculo", selectedTipoVehiculo!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+  Widget _dropTipoVehiculoMotos() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tipo de Vehículo', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedTipoVehiculo,
+                items: const [
+                  DropdownMenuItem(value: "Moto", child: Text("Moto")),
+
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedTipoVehiculo = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("14_Tipo_Vehiculo", selectedTipoVehiculo!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropCategoriaLicencia() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Categoria', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedcategoriaLicencia,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "A1", child: Text("A1")),
+                  DropdownMenuItem(value: "A2", child: Text("A2")),
+                  DropdownMenuItem(value: "B1", child: Text("B1")),
+                  DropdownMenuItem(value: "B2", child: Text("B2")),
+                  DropdownMenuItem(value: "B3", child: Text("B3")),
+                  DropdownMenuItem(value: "C1", child: Text("C1")),
+                  DropdownMenuItem(value: "C2", child: Text("C2")),
+                  DropdownMenuItem(value: "C3", child: Text("C3")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedcategoriaLicencia = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                _saveField("licencia_categoria", selectedcategoriaLicencia!);
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  //// widget para textedit strings////////
+  Widget _buildTextField(String initialValue, String label, String key) {
+    TextEditingController controller = TextEditingController(text: initialValue);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.save),
+            onPressed: () {
+              _saveField(key, controller.text);
+            },
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFieldEnteros(int initialValue, String label, String key) {
+    TextEditingController controller = TextEditingController(text: initialValue.toString());
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.save),
+            onPressed: () {
+              _saveFieldEnteros(key, controller.text);
+            },
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _recargarAhora() async {
+    try {
+      // Obtener el valor actualizado de nueva recarga desde la base de datos
+      int nuevaRecarga = await _obtenerNuevaRecargaDesdeBaseDeDatos() ?? 0;
+      print("Valor de nueva recarga obtenido de la base de datos: $nuevaRecarga");
+
+      // Obtener el saldo anterior del widget
+      int saldoAnterior = widget.driver.the32SaldoRecarga ?? 0;
+
+      // Calcular el nuevo saldo
+      final nuevoSaldo = saldoAnterior + nuevaRecarga;
+
+      // Guardar el nuevo saldo en la base de datos
+      await _saveFieldEnteros("32_Saldo_Recarga", nuevoSaldo.toString());
+      await _saveFieldEnteros("321_Saldo_Anterior_Info", saldoAnterior.toString());
+      //_saveField("35_Nueva_Recarga_Info", nuevaRecarga.toString());
+
+      String saldoFormateado = _formatearNumero(nuevoSaldo);
+
+      // Actualizar el saldo en el objeto driver
+      setState(() {
+
+        widget.driver.the32SaldoRecarga = nuevoSaldo;
+        widget.driver.the35NuevaRecargaInfo = _formatearNumero(nuevaRecarga);
+        widget.driver.the321SaldoAnteriorInfo = saldoAnterior;
+      });
+
+      // Guardar el valor de la recarga en la base de datos como 0
+      await _saveFieldEnteros("34_Nueva_Recarga", "0");
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recarga exitosa. Nuevo saldo: ${_formatearNumero(nuevoSaldo)}')),
+      );
+
+      // Limpiar el campo de texto
+      setState(() {
+        widget.driver.the34NuevaRecarga = 0;
+      });
+
+      print('Valor de nueva recarga después de resetear: ${widget.driver.the34NuevaRecarga}');
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al realizar la recarga: $error')),
+      );
+      print('Error al realizar la recarga: $error');
+    }
+  }
+
+  void activarUsuario(BuildContext context) {
+    String message;
+    bool canActivate = false; // Variable para determinar si se puede activar el usuario
+
+    // Verificar si el conductor ya está activado
+    if (widget.driver.the11EstaActivado == true) {
+      message = 'El conductor ya se encuentra activado';
+    } else {
+      // Condiciones para determinar si se puede activar el usuario
+      if (widget.driver.the29FotoPerfil == "aceptada" &&
+          widget.driver.the25CedulaDelanteraFoto == "aceptada" &&
+          widget.driver.the27TarjetaPropiedadDelanteraFoto == "aceptada" &&
+          widget.driver.the28TarjetaPropiedadTraseraFoto == "aceptada" &&
+          widget.driver.the05FechaExpedicionDocumento.isNotEmpty &&
+          widget.driver.the08FechaNacimiento.isNotEmpty &&
+          widget.driver.the09Genero.isNotEmpty &&
+          widget.driver.the24NumeroTarjetaPropiedad.isNotEmpty &&
+          widget.driver.the20NumeroSoat.isNotEmpty &&
+          widget.driver.the21VigenciaSoat.isNotEmpty &&
+          widget.driver.the22NumeroTecno.isNotEmpty &&
+          widget.driver.the23VigenciaTecno.isNotEmpty &&
+          widget.driver.licenciaCategoria.isNotEmpty &&
+          widget.driver.licenciaVigencia.isNotEmpty) {
+        message = 'El conductor ya puede ser activado';
+        canActivate = true;
+      } else {
+        message = 'Hay alguna verificación que no se ha hecho y evita activar al conductor';
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Activar Conductor'),
+          content: Text(message),
+          actions: <Widget>[
+            if (canActivate)
+              TextButton(
+                child: const Text('Activar'),
+                onPressed: () {
+                  _saveFieldBool("11_Esta_activado", true);
+                  _saveFieldBool("38_Esta_bloqueado", false);
+                  _saveField("Verificacion_Status", "activado"); // Llama al método para guardar el campo
+
+                  setState(() {
+                    widget.driver.the11EstaActivado = true;
+                    widget.driver.the38EstaBloqueado = false;
+                    widget.driver.verificacionStatus = "activado";
+                  });
+
+                  Navigator.of(context).pop(); // Cerrar el diálogo
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  void bloquearUsuario(BuildContext context) {
+    String message;
+
+    // Verificar si el usuario ya está bloqueado
+    if (widget.driver.the38EstaBloqueado == true) {
+      // Si ya está bloqueado, mostramos el mensaje y salimos
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Bloquear Conductor'),
+            content: const Text('El conductor ya se encuentra bloqueado'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Cerrar el diálogo
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return; // Salir del método si el conductor ya está bloqueado
+    }
+
+    // Si el usuario no está bloqueado, procedemos a bloquearlo
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Bloquear Conductor'),
+          content: const Text('¿Está seguro de bloquear al conductor?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Bloquear'),
+              onPressed: () {
+                _saveFieldBool("38_Esta_bloqueado", true); // Marcar como bloqueado
+                _saveFieldBool("11_Esta_activado", false); // Marcar como bloqueado
+                _saveField("Verificacion_Status", "bloqueado"); // Actualizar el estado
+
+                setState(() {
+                  widget.driver.the11EstaActivado = false;
+                  widget.driver.the38EstaBloqueado = true;
+                  widget.driver.verificacionStatus = "bloqueado";
+                });
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+            ),
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  String _formatearNumero(int valor) {
+    final format = NumberFormat("#,###", "es_CO");
+    return '\$ ${format.format(valor)}';
+  }
+
+  Future<int> _obtenerNuevaRecargaDesdeBaseDeDatos() async {
+    try {
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(widget.driver.id)
+          .get();
+
+      if (snapshot.exists && snapshot.data() != null) {
+        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+        return data['34_Nueva_Recarga'] ?? 0; // Si el valor es nulo, devolver 0 por defecto
+      } else {
+        throw Exception("No se pudo obtener el valor de la recarga.");
+      }
+    } catch (error) {
+      print('Error al obtener nueva recarga desde la base de datos: $error');
+      throw error;
+    }
+  }
+
+  void _showConfirmationDialogActivarusuario(BuildContext context, String message, bool isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text("No"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+            ),
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                activarUsuario(context); // Llama al método para activar el usuario
+
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationDialogBloquearusuario(BuildContext context, String message, bool isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text("No"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+            ),
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                bloquearUsuario(context); // Llama al método para activar el usuario
+
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  void _showConfirmationFotoPerfil(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("29_Foto_perfil", isBloquear);
+                setState(() {
+                  widget.driver.the29FotoPerfil = isBloquear;
+                });// Llama al método para guardar el campo
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationFotoCedulaDelantera(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("25_Cedula_Delantera_foto", isBloquear); // Llama al método para guardar el campo
+                setState(() {
+                  widget.driver.the25CedulaDelanteraFoto = isBloquear;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationFotoCedulaTrasera(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("26_Cedula_Trasera_foto", isBloquear); // Llama al método para guardar el campo
+                setState(() {
+                  widget.driver.the26CedulaTraseraFoto = isBloquear;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationFotoTarjetaDelantera(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("27_Tarjeta_Propiedad_Delantera_foto", isBloquear); // Llama al método para guardar el campo
+                setState(() {
+                  widget.driver.the27TarjetaPropiedadDelanteraFoto = isBloquear;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationFotoTarjetaTrasera(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("28_Tarjeta_Propiedad_Trasera_foto", isBloquear); // Llama al método para guardar el campo
+                setState(() {
+                  widget.driver.the28TarjetaPropiedadTraseraFoto= isBloquear;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  //// metodo para guardar los editfield enteros/////
+  Future<void> _saveFieldEnteros(String key, String value) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(widget.driver.id)
+          .update({key: int.parse(value)});
+      print('Campo guardado exitosamente con key: $key y valor: $value');
+    } catch (error) {
+      print('Error al guardar campo con key: $key y valor: $value. Error: $error');
+      throw error;
+    }
+  }
+
+  //// metodo para guardar los editfield enteros/////
+  void _saveFieldBool(String key, dynamic value) async {
+    print("Guardando campo con key '$key' y valor '$value'");
+
+    bool boolValue = false;
+    if (value is String) {
+      boolValue = bool.fromEnvironment(value.toLowerCase());
+    } else if (value is bool) {
+      boolValue = value;
+    } else {
+      print("Error: El valor '$value' no puede ser convertido a bool.");
+      return;
+    }
+
+    Map<String, dynamic> data = {
+      key: boolValue,
+    };
+
+    try {
+      await _driverProvider.update(data, widget.driver.id);
+      _showSnackBar(context, 'Actualizacion exitosa');
+    } catch (error) {
+      _showSnackBar(context, 'Error al actualizar el conductor: $error');
+    }
+  }
+
+
+  //// metodo para guardar los editfield strings/////
+  void _saveField(String key, dynamic value) async {
+    print("Guardando campo con key '$key' y valor '$value'");
+
+    Map<String, String> data = {
+      key: value,
+    };
+
+    try {
+      await _driverProvider.update(data, widget.driver.id);
+      _showSnackBar(context, 'Actualización exitosa');
+    } catch (error) {
+      _showSnackBar(context, 'Error al actualizar el conductor: $error');
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    final snackBar = SnackBar(
+      content: Text(message),
+      duration: Duration(seconds: 2),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  String obtenerRolParaTitulo() {
+    String rol = widget.driver.rol;
+    if (rol == "moto") {
+      return 'Motociclista: ${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}';
+    } else {
+      return 'Conductor: ${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}';
+    }
+  }
+
+
+  Widget seleccionarDropTipoVehiculo() {
+    rol = widget.driver.rol;
+    if (rol == "moto") {
+      return _dropTipoVehiculoMotos();
+    } else {
+      return _dropTipoVehiculo();
+    }
+  }
+
+
+  Widget seleccionarDropMarcaVehiculo(){
+    rol = widget.driver.rol;
+    if(rol == "moto"){
+      return _dropMarcaMoto();
+    }else{
+      return _dropMarca();
+    }
+  }
+
+  Widget _buildTextFieldRecarga(int initialValue, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: TextEditingController(text: initialValue.toString()),
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.save),
+            onPressed: () {
+              // Implementar lógica de guardado aquí
+            },
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationStatus(double fontSize) {
+    Color statusColor = getStatusColor();
+    String statusText = '';
+
+    if (widget.driver.verificacionStatus == "registrado") {
+      statusText = 'Registrado';
+    } else if (widget.driver.verificacionStatus == "foto_tomada") {
+      statusText = 'Fotos faltantes';
+    } else if (widget.driver.verificacionStatus == 'Procesando') {
+      statusText = 'Procesando';
+    }
+    else if (widget.driver.verificacionStatus == 'corregida') {
+      statusText = 'Corregida';
+    }
+    else if (widget.driver.verificacionStatus == 'activado') {
+      statusText = 'Activado';
+    }
+    else if (widget.driver.verificacionStatus == 'bloqueado') {
+      statusText = 'Bloqueado';
+    }
+
+    else {
+      statusText = 'En Espera';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: blanco,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusColor, width: 2)
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 10,
+            backgroundColor: statusColor,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            statusText,
+            style: const TextStyle(
+              color: negro,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Text(
+        title,
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 3),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowHorizontal(String label, String value) {
+    return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+          ),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(fontSize: 12)),
+        ],
+      );
+
+  }
+
+  Widget _buildInfoEstadoConductor(String label, bool value, double fontSize) {
+    return  Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: fontSize),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            boolToYesNo(value), // Utilizamos la función de conversión
+            style:TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
+          ),
+        ],
+      );
+  }
+
+  Widget _buildDocumentPhotoStatus(String label, bool hasPhoto) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Icon(
+            hasPhoto ? Icons.check_circle : Icons.cancel,
+            color: hasPhoto ? Colors.green : Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentPhoto(String title, String? imageUrl) {
+    bool isZoomed = false;
+    return Column(
+      children: [
+        if (imageUrl != null && imageUrl.isNotEmpty)
+          StatefulBuilder(
+            builder: (context, setState) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    isZoomed = !isZoomed;
+                  });
+                },
+                child: Container(
+                  width: isZoomed ? 400 : 150,
+                  height: isZoomed ? 320 : 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    image: DecorationImage(
+                      fit: BoxFit.cover,
+                      image: NetworkImage(imageUrl),
+                    ),
+                  ),
+                ),
+              );
+            },
+          )
+        else
+          const Icon(
+            Icons.image,
+            size: 100,
+          ),
+        const SizedBox(height: 10),
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),),  // Mover el título aquí
+      ],
+    );
+  }
+
+
+
+  Widget _buildPerfilPhoto(String? photoUrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 180,
+            height: 180, // Ajusta el tamaño cuadrado aquí
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: photoUrl != null
+                  ? Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (BuildContext context, Object exception, StackTrace? stackTrace) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image,
+                          color: Colors.grey,
+                          size: 50, // Ajusta el tamaño del ícono aquí
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'Foto no disponible',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              )
+                  : const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image,
+                      color: Colors.grey,
+                      size: 50, // Ajusta el tamaño del ícono aquí
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Foto no disponible',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openWhatsApp(BuildContext context) async {
+    String phoneNumber = widget.driver.the07Celular;
+    String? name = widget.driver.the01Nombres;
+    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Tay-rona.';
+    final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
+    try {
+      await launchUrl(whatsappLink);
+    } catch (e) {
+      showNoWhatsAppInstalledDialog(context);
+    }
+  }
+
+  void _openWhatsAppWeb(BuildContext context) async {
+    String phoneNumber = widget.driver.the07Celular;
+    String? name = widget.driver.the01Nombres;
+    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Tay-rona.';
+    sendWhatsAppWeb(phone: phoneNumber, text: message);
+  }
+
+
+
+
+////metodo para abrir whatsapp web
+  Future<void> sendWhatsAppWeb({required String phone,required String text}) async{
+      if(!await launchUrl(Uri.parse("https://wa.me/$phone? text= $text"))) {
+        throw Exception('No se puede enviar un mensaje a $phone');
+      }
+  }
+
+  void showNoWhatsAppInstalledDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('WhatsApp no instalado', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          content: const Text('No tienes WhatsApp en tu dispositivo. Instálalo e intenta de nuevo'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Aceptar', style: TextStyle(color: negro, fontWeight: FontWeight.w900, fontSize: 14)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void makePhoneCall(String phoneNumber) async {
+    final phoneCallUrl = 'tel:$phoneNumber';
+
+    try {
+      await launch(phoneCallUrl);
+    } catch (e) {
+      print('No se pudo realizar la llamada: $e');
+    }
+  }
+
+  Widget verPaginaantecedentes() {
+    return Stack(
+      children: [
+        InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: Uri.parse('https://antecedentes.policia.gov.co:7005/WebJudicial/'),
+          ),
+          onWebViewCreated: (InAppWebViewController controller) {
+            inAppWebViewController = controller;
+          },
+          onProgressChanged: (InAppWebViewController controller, int progress) {
+            setState(() {
+              _progress = progress / 100;
+            });
+          },
+        ),
+        _progress < 1 ? Container(
+          child: LinearProgressIndicator(
+            backgroundColor: grisMedio,
+            minHeight: 8,
+            value: _progress,
+          ),
+        ) : const SizedBox()
+      ],
+    );
+  }
+
+  Widget verPaginaRuntVehiculo() {
+    return Stack(
+      children: [
+        InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: Uri.parse('https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo'),
+          ),
+          onWebViewCreated: (InAppWebViewController controller) {
+            inAppWebViewController = controller;
+          },
+          onProgressChanged: (InAppWebViewController controller, int progress) {
+            setState(() {
+              _progress = progress / 100;
+            });
+          },
+        ),
+        _progress < 1 ? Container(
+          child: LinearProgressIndicator(
+            backgroundColor: grisMedio,
+            minHeight: 8,
+            value: _progress,
+          ),
+        ) : const SizedBox()
+      ],
+    );
+  }
+
+  Widget verPaginaRuntConductor() {
+    return Stack(
+      children: [
+        InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: Uri.parse('https://www.runt.com.co/consultaCiudadana/#/consultaPersona'),
+          ),
+          onWebViewCreated: (InAppWebViewController controller) {
+            inAppWebViewController = controller;
+          },
+          onProgressChanged: (InAppWebViewController controller, int progress) {
+            setState(() {
+              _progress = progress / 100;
+            });
+          },
+        ),
+        _progress < 1 ? Container(
+          child: LinearProgressIndicator(
+            backgroundColor: grisMedio,
+            minHeight: 8,
+            value: _progress,
+          ),
+        ) : const SizedBox()
+      ],
+    );
+  }
+
+}
+

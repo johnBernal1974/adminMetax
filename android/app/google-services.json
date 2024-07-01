@@ -1,0 +1,143 @@
+{
+  "project_info": {
+    "project_number": "427872411983",
+    "firebase_url": "https://tay-rona-flutter-default-rtdb.firebaseio.com",
+    "project_id": "tay-rona-flutter",
+    "storage_bucket": "tay-rona-flutter.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427872411983:android:6e1f7a19fd918d8af3a53a",
+        "android_client_info": {
+          "package_name": "com.admin_tay.tay_rona_administrador"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "427872411983-duc1m2b28qniroj3p2hhm1k0dn0tngnd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.admin_tay.tay_rona_administrador",
+            "certificate_hash": "12110ca13abf410a53b2e7bc94ef31661b7dc325"
+          }
+        },
+        {
+          "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3GsIJaOaJOaWeWdS4ElcRWxor3Gx-IoA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "427872411983-dllr773jeg3af79j5d2bu6n6n4gasqrt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tayronaconductor.tayronaConductorFlutter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427872411983:android:34e1386d81bdaaa4f3a53a",
+        "android_client_info": {
+          "package_name": "com.tayronaconductor.tayrona_conductor_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "427872411983-c9ba6cvultj6slg92l5fn9o7pc752p8o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tayronaconductor.tayrona_conductor_flutter",
+            "certificate_hash": "12110ca13abf410a53b2e7bc94ef31661b7dc325"
+          }
+        },
+        {
+          "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3GsIJaOaJOaWeWdS4ElcRWxor3Gx-IoA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "427872411983-dllr773jeg3af79j5d2bu6n6n4gasqrt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tayronaconductor.tayronaConductorFlutter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427872411983:android:eb64849a94ebe827f3a53a",
+        "android_client_info": {
+          "package_name": "com.tayronausuario.tayrona_usuario"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "427872411983-ergaranm0r98rjorhbs91njmqp9fo51a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tayronausuario.tayrona_usuario",
+            "certificate_hash": "12110ca13abf410a53b2e7bc94ef31661b7dc325"
+          }
+        },
+        {
+          "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3GsIJaOaJOaWeWdS4ElcRWxor3Gx-IoA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "427872411983-h8gmv7i8klm56j4dsr8ed4lsp73uomh2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "427872411983-dllr773jeg3af79j5d2bu6n6n4gasqrt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tayronaconductor.tayronaConductorFlutter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
