@@ -90,6 +90,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     else if (widget.driver.verificacionStatus == 'bloqueado') {
       return Colors.red.shade900;
     }
+    else if (widget.driver.verificacionStatus == 'bloqueo_AJ') {
+      return Colors.deepOrange;
+    }
     else if (widget.driver.verificacionStatus == '') {
       return Colors.brown.shade900;
     }
@@ -774,7 +777,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                             height: 50, // Altura del botón
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                // Lógica para informar activación por Mail
+                                _showConfirmationBloqueoAJ(context, "¿Está seguro de bloquear el conductor por AJ?", "bloqueo_AJ");
+
                               },
                               style: ElevatedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.redAccent, // Color de fondo del botón
@@ -2535,25 +2539,49 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   //// widget para textedit strings////////
   Widget _buildTextField(String initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue);
+    FocusNode focusNode = FocusNode();
+    ValueNotifier<Color> borderColorNotifier = ValueNotifier<Color>(Colors.grey);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: IconButton(
-            icon: Icon(Icons.save),
-            onPressed: () {
-              _saveField(key, controller.text);
+      child: ValueListenableBuilder<Color>(
+        valueListenable: borderColorNotifier,
+        builder: (context, borderColor, child) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            decoration: InputDecoration(
+              labelText: label,
+              suffixIcon: IconButton(
+                icon: Icon(Icons.save),
+                onPressed: () {
+                  _saveField(key, controller.text);
+                  borderColorNotifier.value = Colors.grey; // Retornar al color inicial
+                  focusNode.unfocus(); // Quitar el foco del TextField
+                },
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+            ),
+            onChanged: (text) {
+              borderColorNotifier.value = Colors.red; // Cambiar a color rojo al modificar
             },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
+
 
   Widget _buildTextFieldEnteros(int initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue.toString());
@@ -2630,6 +2658,29 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     String message;
     bool canActivate = false; // Variable para determinar si se puede activar el usuario
 
+    // Verificar si el conductor tiene el status "bloqueo_AJ"
+    if (widget.driver.verificacionStatus == "bloqueo_AJ") {
+      message = 'Este conductor no se puede activar debido a un bloqueo administrativo';
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Activar Conductor'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Cerrar el diálogo
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return; // Salir de la función si el conductor está bloqueado
+    }
+
     // Verificar si el conductor ya está activado
     if (widget.driver.the11EstaActivado == true) {
       message = 'El conductor ya se encuentra activado';
@@ -2687,6 +2738,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
+
   void bloquearUsuario(BuildContext context) {
     String message;
 
@@ -2713,7 +2765,29 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       return; // Salir del método si el conductor ya está bloqueado
     }
 
-    // Si el usuario no está bloqueado, procedemos a bloquearlo
+    // Verificar si el usuario tiene el status "bloqueo_AJ"
+    if (widget.driver.verificacionStatus == "bloqueo_AJ") {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Bloquear Conductor'),
+            content: const Text('Este conductor ya tiene un bloqueo administrativo'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Cerrar el diálogo
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return; // Salir del método si el conductor tiene un bloqueo administrativo
+    }
+
+    // Si el usuario no está bloqueado y no tiene bloqueo administrativo, procedemos a bloquearlo
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2725,7 +2799,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               child: const Text('Bloquear'),
               onPressed: () {
                 _saveFieldBool("38_Esta_bloqueado", true); // Marcar como bloqueado
-                _saveFieldBool("11_Esta_activado", false); // Marcar como bloqueado
+                _saveFieldBool("11_Esta_activado", false); // Marcar como no activado
                 _saveField("Verificacion_Status", "bloqueado"); // Actualizar el estado
 
                 setState(() {
@@ -2747,6 +2821,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       },
     );
   }
+
 
 
   String _formatearNumero(int valor) {
@@ -2947,6 +3022,30 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
+  void _showConfirmationBloqueoAJ(BuildContext context, String message, String isBloquear) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+
+            TextButton(
+              child: Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _saveField("Verificacion_Status", isBloquear); // Llama al método para guardar el campo
+                setState(() {
+                  widget.driver.verificacionStatus= isBloquear;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   //// metodo para guardar los editfield enteros/////
   Future<void> _saveFieldEnteros(String key, String value) async {
     try {
@@ -3081,6 +3180,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
     else if (widget.driver.verificacionStatus == 'bloqueado') {
       statusText = 'Bloqueado';
+    }else if (widget.driver.verificacionStatus == 'bloqueo_AJ') {
+      statusText = 'BloqueoAJ';
     }
 
     else {

@@ -8,7 +8,6 @@ import 'package:tay_rona_administrador/Pages/PricesPage/prices_page.dart';
 import 'package:tay_rona_administrador/Pages/UsuariosPage/usuarios_page.dart';
 import 'package:tay_rona_administrador/providers/client_provider.dart';
 import 'package:tay_rona_administrador/providers/operador_provider.dart';
-import 'package:tay_rona_administrador/providers/prices_provider.dart';
 import 'package:tay_rona_administrador/src/color.dart';
 import 'Pages/Login_page/login_page.dart';
 import 'Pages/ConductoresPage/conductores_page.dart';

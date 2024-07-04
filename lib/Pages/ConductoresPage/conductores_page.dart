@@ -51,7 +51,9 @@ class _ConductoresPageState extends State<ConductoresPage> {
         return Colors.green;
       } else if (driver.verificacionStatus == 'bloqueado') {
         return Colors.red.shade900;
-      } else if (driver.verificacionStatus == 'rechazada') {
+      } else if (driver.verificacionStatus == 'bloqueo_AJ') {
+        return Colors.deepOrange;
+      }else if (driver.verificacionStatus == 'rechazada') {
         return Colors.brown.shade900;
       } else if (driver.verificacionStatus == 'suspendido') {
         return Colors.black;
@@ -86,6 +88,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
           case 'bloqueado':
             matchesFilter = driver.verificacionStatus == "bloqueado";
             break;
+          case 'bloqueo_AJ':
+            matchesFilter = driver.verificacionStatus == "bloqueo_AJ";
+            break;
+
           case 'suspendido':
             matchesFilter = driver.the41SuspendidoPorCancelaciones == true;
             break;
@@ -136,6 +142,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
           case 'bloqueado':
             matchesStatus = driver.verificacionStatus == 'bloqueado';
             break;
+          case 'bloqueo_AJ':
+            matchesStatus = driver.verificacionStatus == 'bloqueo_AJ';
+            break;
+
           case 'Suspendido':
             matchesStatus = driver.the41SuspendidoPorCancelaciones == true;
             break;
@@ -368,6 +378,15 @@ class _ConductoresPageState extends State<ConductoresPage> {
         tooltip: 'Bloqueado (${countByStatus('bloqueado')})',
       ),
       IconButton(
+        icon: Icon(Icons.back_hand_rounded, color: Colors.deepOrange),
+        onPressed: () {
+          setState(() {
+            filterStatus = 'bloqueo_AJ';
+          });
+        },
+        tooltip: 'BloqueoAJ (${countByStatus('bloqueo_AJ')})',
+      ),
+      IconButton(
         icon: Icon(Icons.pause_circle_filled, color: Colors.black),
         onPressed: () {
           setState(() {
@@ -469,6 +488,18 @@ class _ConductoresPageState extends State<ConductoresPage> {
           });
         },
         child: Text('Bloqueado (${countByStatus('bloqueado')})'),
+      ),
+
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white, backgroundColor: Colors.deepOrange,
+        ),
+        onPressed: () {
+          setState(() {
+            filterStatus = 'bloqueo_AJ';
+          });
+        },
+        child: Text('Bloqueo_AJ (${countByStatus('bloqueo_AJ')})'),
       ),
       ElevatedButton(
         style: ElevatedButton.styleFrom(
