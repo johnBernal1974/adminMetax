@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tay_rona_administrador/providers/auth_provider.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
 
 import '../../models/operador_model.dart';
-import '../../src/color.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/operador_provider.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -40,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.topCenter,
                   margin: EdgeInsets.only(top: 16.0),
                   child: Image.asset(
-                    'assets/logo_tay_admin.png', // Ajusta la ruta según la ubicación de tu imagen
+                    'assets/imagen_zafiro_azul.png', // Ajusta la ruta según la ubicación de tu imagen
                     height: 100.0,
                     fit: BoxFit.contain,
                   ),

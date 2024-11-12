@@ -1,10 +1,10 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
 
 import '../models/operador_model.dart';
 import '../src/color.dart';
+import 'operador_provider.dart';
 
 class MyAuthProvider {
   late FirebaseAuth _firebaseAuth;
@@ -75,12 +75,12 @@ class MyAuthProvider {
             String? verificationStatus = await _operadorProvider.getVerificationStatus();
             if (verificationStatus == 'Procesando') {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
+                const SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
               );
               return;
             } else if (verificationStatus == 'bloqueado') {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Acceso denegado')),
+                const SnackBar(content: Text('Acceso denegado')),
               );
               return;
             } else if (verificationStatus == 'activado') {

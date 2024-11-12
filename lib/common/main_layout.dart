@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:tay_rona_administrador/providers/auth_provider.dart';
-import 'package:tay_rona_administrador/src/color.dart';
 import '../Pages/widgets/side_bar_menu.dart';
+import '../src/color.dart';
 
 class MainLayout extends StatelessWidget {
   final Widget content;

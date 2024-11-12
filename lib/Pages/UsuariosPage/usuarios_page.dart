@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:zafiro_administrador/models/usuario_model.dart';
 import '../../common/main_layout.dart';
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
@@ -22,6 +23,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
   String filterStatus = "";
   int totalClients = 0;
   Operador? operador;
+  Client? client;
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
 
@@ -33,29 +35,30 @@ class _UsuariosPageState extends State<UsuariosPage> {
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
 
     Color getStatusColor(client) {
-      if (client.verificacionStatus == "registrado"
+      if (client?.verificacionStatus == "registrado"
       ) {
         return Colors.blueGrey;
       }
-      else if (client.verificacionStatus == "foto_tomada") {
+      else if (client?.verificacionStatus == "foto_tomada") {
         return Colors.amber;
       }
-      else if (client.verificacionStatus == 'Procesando') {
-        return Colors.blueAccent;
-      }
-      else if (client.verificacionStatus == 'corregida') {
+      else if (client?.the15FotoPerfilUsuario == 'corregida' || client?.the14FotoCedulaTrasera == 'corregida'
+          || client?.the13FotoCedulaDelantera == 'corregida' && client?.verificacionStatus == 'Procesando') {
         return Colors.purple;
       }
+      else if (client?.verificacionStatus == 'Procesando') {
+        return Colors.blueAccent;
+      }
 
-      else if (client.verificacionStatus == 'activado') {
+      else if (client?.verificacionStatus == 'activado') {
         return Colors.green;
       }
-      else if (client.verificacionStatus == 'bloqueado') {
+      else if (client?.verificacionStatus == 'bloqueado') {
         return Colors.red.shade900;
       }
-      else if (client.verificacionStatus == 'rechazada') {
+      else if (client?.verificacionStatus == 'rechazada') {
         return Colors.brown.shade900;
-      }else if (client.verificacionStatus == 'suspendido') {
+      }else if (client?.verificacionStatus == 'suspendido') {
         return Colors.black;
       }
       else {
@@ -508,7 +511,6 @@ class _UsuariosPageState extends State<UsuariosPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-
             DataColumn(
               label: Text(
                 'Celular',
@@ -524,6 +526,14 @@ class _UsuariosPageState extends State<UsuariosPage> {
           ],
           rows: filteredClientes.map((client) {
             return DataRow(
+              onSelectChanged: (_) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ClientDetailPage(client: client),
+                  ),
+                );
+              },
               cells: [
                 DataCell(
                   Container(
@@ -547,20 +557,14 @@ class _UsuariosPageState extends State<UsuariosPage> {
                     ),
                   ),
                 ),
-                DataCell(Text(
-                  client.the01Nombres ?? "Nombre no disponible",
-                  style: TextStyle(color: Colors.black),
-                )),
-                DataCell(Text(
-                  client.the02Apellidos ?? "Apellidos no disponibles",
-                  style: TextStyle(color: Colors.black),
-                )),
+                DataCell(Text(client.the01Nombres ?? "Nombre no disponible", style: TextStyle(color: Colors.black))),
+                DataCell(Text(client.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
                 DataCell(Text(client.the04NumeroDocumento ?? "Documento no disponible")),
                 DataCell(Text(client.the06Email ?? "Email no disponible")),
                 DataCell(Text(client.the07Celular ?? "Celular no disponible")),
                 DataCell(
                   IconButton(
-                    icon: const Icon(Icons.double_arrow_outlined, color: negro),
+                    icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -578,5 +582,6 @@ class _UsuariosPageState extends State<UsuariosPage> {
       ),
     );
   }
+
 
 }

@@ -41,57 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDgVNuJAV4Ocn2qq6FoZFVLOCOOm2kIPRE',
-    appId: '1:427872411983:web:8d3d12a267f0fb46f3a53a',
-    messagingSenderId: '427872411983',
-    projectId: 'tay-rona-flutter',
-    authDomain: 'tay-rona-flutter.firebaseapp.com',
-    databaseURL: 'https://tay-rona-flutter-default-rtdb.firebaseio.com',
-    storageBucket: 'tay-rona-flutter.appspot.com',
-    measurementId: 'G-NNLR169V9J',
+    apiKey: 'AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0',
+    appId: '1:776719847961:web:2f69301d843863172a5088',
+    messagingSenderId: '776719847961',
+    projectId: 'transport-f7c79',
+    authDomain: 'transport-f7c79.firebaseapp.com',
+    storageBucket: 'transport-f7c79.appspot.com',
+    measurementId: 'G-0P5JXEVERY',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB3GsIJaOaJOaWeWdS4ElcRWxor3Gx-IoA',
-    appId: '1:427872411983:android:6e1f7a19fd918d8af3a53a',
-    messagingSenderId: '427872411983',
-    projectId: 'tay-rona-flutter',
-    databaseURL: 'https://tay-rona-flutter-default-rtdb.firebaseio.com',
-    storageBucket: 'tay-rona-flutter.appspot.com',
+    apiKey: 'AIzaSyASx4Osx-gpV0qPm2mmDOtnkdHULXNmWYU',
+    appId: '1:776719847961:android:ed96638a5d1e356e2a5088',
+    messagingSenderId: '776719847961',
+    projectId: 'transport-f7c79',
+    storageBucket: 'transport-f7c79.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA9XehgtpAceKRJzqx8RTgGNwA70o76-XA',
-    appId: '1:427872411983:ios:6edee1caad988aa8f3a53a',
-    messagingSenderId: '427872411983',
-    projectId: 'tay-rona-flutter',
-    databaseURL: 'https://tay-rona-flutter-default-rtdb.firebaseio.com',
-    storageBucket: 'tay-rona-flutter.appspot.com',
-    androidClientId: '427872411983-0v9n96qjbjqqoc9i1aqa6fqst5u29v00.apps.googleusercontent.com',
-    iosClientId: '427872411983-vm5ddvnqb199mudl4cusnhf6gp0541md.apps.googleusercontent.com',
+    apiKey: 'AIzaSyAQeJ7rFkX-UfHFzDOT_5zM1EfTf5es6W4',
+    appId: '1:776719847961:ios:7731864044f01d9b2a5088',
+    messagingSenderId: '776719847961',
+    projectId: 'transport-f7c79',
+    storageBucket: 'transport-f7c79.appspot.com',
     iosBundleId: 'com.admintay.tayRonaAdministrador',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA9XehgtpAceKRJzqx8RTgGNwA70o76-XA',
-    appId: '1:427872411983:ios:6edee1caad988aa8f3a53a',
-    messagingSenderId: '427872411983',
-    projectId: 'tay-rona-flutter',
-    databaseURL: 'https://tay-rona-flutter-default-rtdb.firebaseio.com',
-    storageBucket: 'tay-rona-flutter.appspot.com',
-    androidClientId: '427872411983-0v9n96qjbjqqoc9i1aqa6fqst5u29v00.apps.googleusercontent.com',
-    iosClientId: '427872411983-vm5ddvnqb199mudl4cusnhf6gp0541md.apps.googleusercontent.com',
+    apiKey: 'AIzaSyAQeJ7rFkX-UfHFzDOT_5zM1EfTf5es6W4',
+    appId: '1:776719847961:ios:7731864044f01d9b2a5088',
+    messagingSenderId: '776719847961',
+    projectId: 'transport-f7c79',
+    storageBucket: 'transport-f7c79.appspot.com',
     iosBundleId: 'com.admintay.tayRonaAdministrador',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDgVNuJAV4Ocn2qq6FoZFVLOCOOm2kIPRE',
-    appId: '1:427872411983:web:9f347c276ec5aa2bf3a53a',
-    messagingSenderId: '427872411983',
-    projectId: 'tay-rona-flutter',
-    authDomain: 'tay-rona-flutter.firebaseapp.com',
-    databaseURL: 'https://tay-rona-flutter-default-rtdb.firebaseio.com',
-    storageBucket: 'tay-rona-flutter.appspot.com',
-    measurementId: 'G-ZGHGP6DSM8',
+    apiKey: 'AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0',
+    appId: '1:776719847961:web:9de19fb904f314e82a5088',
+    messagingSenderId: '776719847961',
+    projectId: 'transport-f7c79',
+    authDomain: 'transport-f7c79.firebaseapp.com',
+    storageBucket: 'transport-f7c79.appspot.com',
+    measurementId: 'G-1WVEGNWHD4',
   );
 }

@@ -1,4 +1,4 @@
-package com.admin_tay.tay_rona_administrador;
+package com.zafiro_administrador;
 
 import io.flutter.embedding.android.FlutterActivity;
 

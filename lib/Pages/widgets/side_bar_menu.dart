@@ -29,18 +29,13 @@ class _SideBarState extends State<SideBar> {
                 Container(
                     margin: const EdgeInsets.only(top: 35),
                     alignment: Alignment.center,
-                    child: Image.asset("assets/logo_tayrona_solo.png", width: 30, height: 30,)
+                    child: Image.asset("assets/imagen_zafiro_azul.png", width: 60, height: 60,)
                 ),
                 Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  alignment: Alignment.center,
-                  child: const Text('¡Tay-rona eres tú, soy yo,\nsomos todos!', style:  TextStyle(
-                      fontSize: 10,
-                      color: negroLetras,
-                      fontWeight: FontWeight.w500
-                  ),
-                    textAlign: TextAlign.center,),
+                    alignment: Alignment.center,
+                    child: Image.asset("assets/logo_zafiro-pequeño.png", width: 60, height: 60,)
                 ),
+                const SizedBox(height: 20),
                 const Divider(height: 1, color: gris),
                 
                 Container(
@@ -128,12 +123,12 @@ class _SideBarState extends State<SideBar> {
                 ),
 
                 DrawerListTitle(
-                  title: "Datos operación",
+                  title: "Info Recargas",
                   icon: Icons.date_range_outlined, // Icono de historial
                   press: () {
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      'viajes_realizados_page',
+                      'recarga_info_page',
                           (Route<dynamic> route) => false,
                     );
                   },
@@ -158,8 +153,8 @@ class _SideBarState extends State<SideBar> {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: Text("Confirmación"),
-                          content: Text("¿Estás seguro de que deseas cerrar sesión?"),
+                          title: const Text("Confirmación"),
+                          content: const Text("¿Estás seguro de que deseas cerrar sesión?"),
                           actions: <Widget>[
                             TextButton(
                               child: Text("NO"),
@@ -168,7 +163,7 @@ class _SideBarState extends State<SideBar> {
                               },
                             ),
                             TextButton(
-                              child: Text("SI"),
+                              child: const Text("SI"),
                               onPressed: () async {
                                 _authProvider.signOut();
                                 Navigator.of(context).pop(); // Cierra el cuadro de diálogo

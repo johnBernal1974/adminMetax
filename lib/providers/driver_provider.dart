@@ -8,6 +8,8 @@ class DriverProvider with ChangeNotifier {
   bool _loading = false;
   late List<Driver> _drivers = [];
   late int _travelHistoryCount;
+  int travelHistoryMotoCount = 0; // Variable para contar "moto"
+  int travelHistoryCarroCount = 0; // Variable para contar "carro"
 
   DriverProvider() {
     _ref = FirebaseFirestore.instance.collection('Drivers');
@@ -31,7 +33,7 @@ class DriverProvider with ChangeNotifier {
     try {
       QuerySnapshot querySnapshot = await _ref.get();
       for (var doc in querySnapshot.docs) {
-        print('Datos crudos del documento: ${doc.data()}'); // Imprime los datos crudos
+        //print('Datos crudos del documento: ${doc.data()}'); // Imprime los datos crudos
       }
       _drivers = querySnapshot.docs.map((doc) {
         return Driver.fromJson(doc.data() as Map<String, dynamic>);
@@ -103,7 +105,6 @@ class DriverProvider with ChangeNotifier {
     try {
       QuerySnapshot querySnapshot = await _travelHistoryRef.get();
       int count = querySnapshot.size;
-      print('Número de documentos en TravelHistory: $count');
       return count;
     } catch (error) {
       print('Error al obtener el número de documentos en TravelHistory: $error');
@@ -116,11 +117,22 @@ class DriverProvider with ChangeNotifier {
     try {
       QuerySnapshot querySnapshot = await _travelHistoryRef.get();
       _travelHistoryCount = querySnapshot.size;
-      print('Número de documentos en TravelHistory: $_travelHistoryCount');
+
+      // Filtrar y contar los documentos con rol "moto"
+      travelHistoryMotoCount = querySnapshot.docs
+          .where((doc) => doc.get('rol') == 'moto')
+          .length;
+
+      // Filtrar y contar los documentos con rol "carro"
+      travelHistoryCarroCount = querySnapshot.docs
+          .where((doc) => doc.get('rol') == 'carro')
+          .length;
       notifyListeners(); // Notificamos a los oyentes que el valor ha cambiado
     } catch (error) {
       print('Error al obtener el número de documentos en TravelHistory: $error');
       _travelHistoryCount = 0;
+      travelHistoryMotoCount = 0;
+      travelHistoryCarroCount = 0;
     }
   }
 }

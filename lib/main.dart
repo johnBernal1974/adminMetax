@@ -2,18 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:tay_rona_administrador/Pages/MotociclistasPage/moticlistas_page.dart';
-import 'package:tay_rona_administrador/Pages/OperadoresPage/operadores_page.dart';
-import 'package:tay_rona_administrador/Pages/PricesPage/prices_page.dart';
-import 'package:tay_rona_administrador/Pages/UsuariosPage/usuarios_page.dart';
-import 'package:tay_rona_administrador/providers/client_provider.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
-import 'package:tay_rona_administrador/src/color.dart';
+import 'package:zafiro_administrador/Pages/InfoRecargas/info_recargas.dart';
+import 'package:zafiro_administrador/providers/client_provider.dart';
+import 'package:zafiro_administrador/providers/operador_provider.dart';
+import 'package:zafiro_administrador/src/color.dart';
 import 'Pages/Login_page/login_page.dart';
 import 'Pages/ConductoresPage/conductores_page.dart';
 import 'Pages/GeneralPage/general_page.dart';
+import 'Pages/MotociclistasPage/moticlistas_page.dart';
+import 'Pages/OperadoresPage/operadores_page.dart';
+import 'Pages/PricesPage/prices_page.dart';
 import 'Pages/SingUp_page/View/singUp_page.dart';
 import 'Pages/Splash/splash.dart';
+import 'Pages/UsuariosPage/usuarios_page.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
@@ -24,12 +25,13 @@ void main() async {
     // Inicialización específica para la web
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: "AIzaSyDgVNuJAV4Ocn2qq6FoZFVLOCOOm2kIPRE",
-        authDomain: "tay-rona-flutter.firebaseapp.com",
-        projectId: "tay-rona-flutter",
-        storageBucket: "tay-rona-flutter.appspot.com",
-        messagingSenderId: "427872411983",
-        appId: "1:427872411983:web:69b8bf9abc898e2ff3a53a",
+          apiKey: "AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0",
+          authDomain: "transport-f7c79.firebaseapp.com",
+          projectId: "transport-f7c79",
+          storageBucket: "transport-f7c79.appspot.com",
+          messagingSenderId: "776719847961",
+          appId: "1:776719847961:web:2f69301d843863172a5088",
+          measurementId: "G-0P5JXEVERY"
       ),
     );
   } else {
@@ -54,7 +56,7 @@ class MyApp extends StatelessWidget {
 
       ],
       child: MaterialApp(
-        title: 'Flutter Demo',
+        title: 'Zafiro Administrador',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
             primaryColor: primary,
@@ -73,6 +75,7 @@ class MyApp extends StatelessWidget {
           'antecedentes_page': (context) => const Paginaantecedentes(),
           'prices_page': (context) => PricesPage(),
           'splash': (context) => const Splash(),
+          'recarga_info_page': (context) => RecargaPage(),
           // Añade aquí otras rutas necesarias
         },
       ),

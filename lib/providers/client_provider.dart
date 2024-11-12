@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:tay_rona_administrador/models/usuario_model.dart';
+import 'package:zafiro_administrador/models/usuario_model.dart';
 
 class ClientProvider with ChangeNotifier {
   late CollectionReference _ref;
@@ -25,8 +25,6 @@ class ClientProvider with ChangeNotifier {
     try {
       QuerySnapshot querySnapshot = await _ref.get();
       _clients = querySnapshot.docs.map((doc) {
-        // Imprimir datos de cada documento
-        print('Datos del conductor: ${doc.data()}');
         return Client.fromJson(doc.data() as Map<String, dynamic>);
       }).toList();
       // Imprimir la cantidad de usuarios obtenidos

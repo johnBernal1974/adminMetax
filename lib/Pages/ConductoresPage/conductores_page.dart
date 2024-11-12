@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../common/main_layout.dart';
+import '../../models/conductor_model.dart';
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/driver_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class ConductoresPage extends StatefulWidget {
   ConductoresPage({Key? key}) : super(key: key);
@@ -22,8 +22,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
   String searchQuery = "";
   String filterStatus = "";
   int totalDrivers = 0;
-
   Operador? operador;
+  Driver? driver;
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
 
@@ -39,23 +39,25 @@ class _ConductoresPageState extends State<ConductoresPage> {
         .width <= 600;
 
     Color getStatusColor(driver) {
-      if (driver.verificacionStatus == "registrado") {
+      if (driver?.verificacionStatus == "registrado") {
         return Colors.blueGrey;
-      } else if (driver.verificacionStatus == "foto_tomada") {
+      } else if (driver?.verificacionStatus == "foto_tomada") {
         return Colors.amber;
-      } else if (driver.verificacionStatus == 'Procesando') {
-        return Colors.blueAccent;
-      } else if (driver.verificacionStatus == 'corregida') {
+      } else if ((driver?.the29FotoPerfil == 'corregida' || driver?.the28TarjetaPropiedadTraseraFoto == 'corregida'
+          || driver?.the27TarjetaPropiedadDelanteraFoto == 'corregida' || driver?.the26CedulaTraseraFoto == 'corregida'
+          || driver?.the25CedulaDelanteraFoto == 'corregida') && driver?.verificacionStatus == 'Procesando') {
         return Colors.purple;
-      } else if (driver.verificacionStatus == 'activado') {
+      }else if (driver?.verificacionStatus == 'Procesando') {
+        return Colors.blueAccent;
+      } else if (driver?.verificacionStatus == 'activado') {
         return Colors.green;
-      } else if (driver.verificacionStatus == 'bloqueado') {
+      } else if (driver?.verificacionStatus == 'bloqueado') {
         return Colors.red.shade900;
-      } else if (driver.verificacionStatus == 'bloqueo_AJ') {
+      } else if (driver?.verificacionStatus == 'bloqueo_AJ') {
         return Colors.deepOrange;
-      }else if (driver.verificacionStatus == 'rechazada') {
+      }else if (driver?.verificacionStatus == 'rechazada') {
         return Colors.brown.shade900;
-      } else if (driver.verificacionStatus == 'suspendido') {
+      } else if (driver?.verificacionStatus == 'suspendido') {
         return Colors.black;
       }
       else {
@@ -183,11 +185,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     if (constraints.maxWidth <= 600) {
                       return _buildMobileLayout(
                           context, driverProvider, filteredConductores,
-                          countByStatus, getStatusColor);
+                          countByStatus, getStatusColor as Color Function(dynamic p1));
                     } else {
                       return _buildDesktopLayout(
                           context, driverProvider, filteredConductores,
-                          countByStatus, getStatusColor);
+                          countByStatus, getStatusColor as Color Function(dynamic p1));
                     }
                   },
                 ),
@@ -274,14 +276,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
   Widget _buildSearchField() {
-    return Container(
+    return SizedBox(
       width: 350,
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
           labelText: 'Buscar conductor',
           suffixIcon: IconButton(
-            icon: Icon(Icons.search),
+            icon: const Icon(Icons.search),
             onPressed: () {
               setState(() {
                 searchQuery = searchController.text.trim();
@@ -526,8 +528,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
     ];
   }
 
-  Widget _buildDriverTable(List filteredConductores,
-      Color Function(dynamic) getStatusColor) {
+  Widget _buildDriverTable(List filteredConductores, Color Function(dynamic) getStatusColor) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SingleChildScrollView(
@@ -594,6 +595,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
           ],
           rows: filteredConductores.map((driver) {
             return DataRow(
+              onSelectChanged: (_) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DriverDetailPage(driver: driver),
+                  ),
+                );
+              },
               cells: [
                 DataCell(
                   Container(
@@ -612,34 +621,25 @@ class _ConductoresPageState extends State<ConductoresPage> {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          CircularProgressIndicator(),
+                      placeholder: (context, url) => CircularProgressIndicator(),
                       errorWidget: (context, url, error) => Icon(Icons.error),
                     ),
                   ),
                 ),
-                DataCell(Text(
-                  driver.the01Nombres ?? "Nombre no disponible",
-                  style: TextStyle(color: Colors.black),
-                )),
-                DataCell(Text(
-                  driver.the02Apellidos ?? "Apellidos no disponibles",
-                  style: TextStyle(color: Colors.black),
-                )),
-                DataCell(Text(
-                    driver.the03NumeroDocumento ?? "Documento no disponible")),
+                DataCell(Text(driver.the01Nombres ?? "Nombre no disponible", style: TextStyle(color: Colors.black))),
+                DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
+                DataCell(Text(driver.the03NumeroDocumento ?? "Documento no disponible")),
                 DataCell(Text(driver.the06Email ?? "Email no disponible")),
                 DataCell(Text(driver.the18Placa ?? "Placa no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
                 DataCell(
                   IconButton(
-                    icon: const Icon(Icons.double_arrow_outlined, color: negro),
+                    icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              DriverDetailPage(driver: driver),
+                          builder: (context) => DriverDetailPage(driver: driver),
                         ),
                       );
                     },
@@ -652,6 +652,5 @@ class _ConductoresPageState extends State<ConductoresPage> {
       ),
     );
   }
-
 
 }

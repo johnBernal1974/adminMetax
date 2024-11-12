@@ -1,12 +1,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tay_rona_administrador/providers/driver_provider.dart';
-import 'package:tay_rona_administrador/providers/client_provider.dart';
-import 'package:tay_rona_administrador/src/color.dart';
 import '../../common/main_layout.dart';
 import '../../models/conductor_model.dart';
 import '../../models/usuario_model.dart';
+import '../../providers/client_provider.dart';
+import '../../providers/driver_provider.dart';
+import '../../src/color.dart';
 
 class GeneralPage extends StatefulWidget {
   const GeneralPage({Key? key}) : super(key: key);
@@ -110,7 +110,7 @@ class _GeneralPageState extends State<GeneralPage> {
               const Padding(
                 padding: EdgeInsets.all(6.0),
                 child: Text(
-                  'Información General',
+                  'Información',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -119,7 +119,7 @@ class _GeneralPageState extends State<GeneralPage> {
               ),
 
               IconButton(
-                icon: Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh),
                 onPressed: _refreshData,
               ),
               Wrap(
@@ -157,20 +157,22 @@ class _GeneralPageState extends State<GeneralPage> {
   List<Widget> _buildColumnContent(DriverProvider driverProvider, List<Driver> conductoresisActive, List<Driver> conductoresIsWorking, List<Driver> motociclistasisActive, List<Driver> motociclistasIsWorking) {
     return [
       _buildInfoCard(
-        'Conexión actual',
+        'Estado de Conexión',
         [
-          _buildDataRow('Conductores conectados:', conductoresisActive.length.toString()),
-          _buildDataRow('Conductores en servicio:', conductoresIsWorking.length.toString()),
-          _buildDataRow('Motociclistas conectados:', motociclistasisActive.length.toString()),
-          _buildDataRow('Motociclistas en servicio:', motociclistasIsWorking.length.toString()),
+          _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
+          _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
+          const Divider(),
+          _buildDataRow('Motos conectadas:', motociclistasisActive.length.toString()),
+          _buildDataRow('Motos en servicio:', motociclistasIsWorking.length.toString()),
         ],
       ),
       const SizedBox(height: 30),
       _buildInfoCard(
-        'Cantidad de Viajes',
+        'Cantidad de Viajes realizados',
         [
-          _buildDataRow('Conductores:', "0"),
-          _buildDataRow('Motociclistas:', "0"),
+          _buildDataRow('En vehículo:',  driverProvider.travelHistoryCarroCount.toString()),
+          _buildDataRow('En Moto:',  driverProvider.travelHistoryMotoCount.toString()),
+          const Divider(),
           _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
         ],
       ),
@@ -178,18 +180,18 @@ class _GeneralPageState extends State<GeneralPage> {
       _buildInfoCard(
         'Recargas realizadas',
         [
-          _buildDataRow('Conductores:', "110"),
-          _buildDataRow('Motociclistas:', "1.413"),
-          _buildDataRow('Total recargas:', "1.523"),
+          _buildDataRow('Conductores:', "0"),
+          _buildDataRow('Motociclistas:', "0"),
+          _buildDataRow('Total recargas:', "0"),
         ],
       ),
       const SizedBox(height: 30),
       _buildInfoCard(
         'Bonos',
         [
-          _buildDataRow('Asignados:', "20"),
-          _buildDataRow('Usados:', "17"),
-          _buildDataRow('Bonos usados:', "\$1.834.000"),
+          _buildDataRow('Asignados:', "0"),
+          _buildDataRow('Usados:', "0"),
+          _buildDataRow('Bonos usados:', "\$0"),
         ],
       ),
     ];
@@ -200,12 +202,13 @@ class _GeneralPageState extends State<GeneralPage> {
       Expanded(
         flex: 2,
         child: _buildInfoCard(
-          'Conexión actual',
+          'Estado de Conexión',
           [
-            _buildDataRow('Conductores conectados:', conductoresisActive.length.toString()),
-            _buildDataRow('Conductores en servicio:', conductoresIsWorking.length.toString()),
-            _buildDataRow('Motociclistas conectados:', motociclistasisActive.length.toString()),
-            _buildDataRow('Motociclistas en servicio:', motociclistasIsWorking.length.toString()),
+            _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
+            _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
+            Divider(),
+            _buildDataRow('Motos conectadas:', motociclistasisActive.length.toString()),
+            _buildDataRow('Motos en servicio:', motociclistasIsWorking.length.toString()),
           ],
         ),
       ),
@@ -213,10 +216,11 @@ class _GeneralPageState extends State<GeneralPage> {
       Expanded(
         flex: 2,
         child: _buildInfoCard(
-          'Cantidad de Viajes',
+          'Cantidad de Viajes realizados',
           [
-            _buildDataRow('Conductores:', "0"),
-            _buildDataRow('Motociclistas:', "0"),
+            _buildDataRow('En vehículo:',  driverProvider.travelHistoryCarroCount.toString()),
+            _buildDataRow('En Moto:',  driverProvider.travelHistoryMotoCount.toString()),
+            const Divider(),
             _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
           ],
         ),
@@ -227,9 +231,9 @@ class _GeneralPageState extends State<GeneralPage> {
         child: _buildInfoCard(
           'Recargas realizadas',
           [
-            _buildDataRow('Conductores:', "110"),
-            _buildDataRow('Motociclistas:', "1.413"),
-            _buildDataRow('Total recargas:', "1.523"),
+            _buildDataRow('Conductores:', "0"),
+            _buildDataRow('Motociclistas:', "0"),
+            _buildDataRow('Total recargas:', "0"),
           ],
         ),
       ),
@@ -239,9 +243,9 @@ class _GeneralPageState extends State<GeneralPage> {
         child: _buildInfoCard(
           'Bonos',
           [
-            _buildDataRow('Asignados:', "20"),
-            _buildDataRow('Usados:', "17"),
-            _buildDataRow('Bonos usados:', "\$1.834.000"),
+            _buildDataRow('Asignados:', "0"),
+            _buildDataRow('Usados:', "0"),
+            _buildDataRow('Bonos usados:', "\$0"),
           ],
         ),
       ),

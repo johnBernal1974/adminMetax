@@ -1,9 +1,9 @@
 
 import 'package:flutter/material.dart';
-import 'package:tay_rona_administrador/models/operador_model.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
 import '../../common/main_layout.dart';
+import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 
 class OperadorDetailPage extends StatefulWidget {

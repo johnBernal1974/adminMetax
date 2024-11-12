@@ -1,7 +1,7 @@
 
-import 'package:tay_rona_administrador/providers/auth_provider.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
-import '../models/operador_model.dart'; // Importa tu proveedor de operador aquí
+import '../models/operador_model.dart';
+import 'auth_provider.dart';
+import 'operador_provider.dart'; // Importa tu proveedor de operador aquí
 
 class OperadorService {
   final MyAuthProvider _authProvider;

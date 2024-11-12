@@ -1,11 +1,11 @@
 {
-    "name": "tay_rona_administrador",
-    "short_name": "tay_rona_administrador",
+    "name": "Zafiro Administrador",
+    "short_name": "Zafiro Administrador",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "adminstrador_tay_rona.",
+    "description": "Zafiro Administrador.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tay_rona_administrador/Pages/OperadorDetailPage/operador_detail_page.dart';
-import 'package:tay_rona_administrador/providers/operador_provider.dart';
 import '../../common/main_layout.dart';
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
+import '../OperadorDetailPage/operador_detail_page.dart';
 
 class OperadoresPage extends StatefulWidget {
   const OperadoresPage({Key? key}) : super(key: key);

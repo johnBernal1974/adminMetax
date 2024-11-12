@@ -132,7 +132,6 @@ class Driver {
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
-    print('Datos recibidos para convertir a Driver: $json'); // Imprime los datos antes de convertir
     return Driver (
     id: json["id"],
     rol: json["rol"],

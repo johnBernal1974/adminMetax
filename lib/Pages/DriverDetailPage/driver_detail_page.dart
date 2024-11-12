@@ -46,6 +46,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   double _progress = 0;
   late InAppWebViewController inAppWebViewController;
   bool isRecargasvisible = false;
+  double averageRating = 0.0;
 
 
   Operador? operador;
@@ -66,6 +67,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     selectedTipoServicio = widget.driver.the19TipoServicio;
     selectedTipoVehiculo = widget.driver.the14TipoVehiculo;
     selectedcategoriaLicencia = widget.driver.licenciaCategoria;
+    getClientRatings();
     getOperadorInfo();
   }
 
@@ -1684,7 +1686,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       },
     );
   }
-
   Widget _seccionRecargas () {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1976,12 +1977,47 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         _buildInfoRowHorizontal('Email:   ', widget.driver.the06Email),
         _buildInfoRowHorizontal('Celular:   ', widget.driver.the07Celular),
         _buildInfoRowHorizontal('Vehículo:   ', widget.driver.the14TipoVehiculo),
-        _buildInfoRowHorizontal('Placa:   ', widget.driver.the18Placa),
-        _buildInfoRowHorizontal('Viajes:   ', widget.driver.the30NumeroViajes.toString()),
-        _buildInfoRowHorizontal('Calificación:   ', widget.driver.the31Calificacion.toString()),
-        _buildInfoRowHorizontal('Cancelaciones:   ', widget.driver.the40NumeroCancelaciones.toString()),
+        _buildInfoRowHorizontalBold('Placa:   ', widget.driver.the18Placa),
+        _buildInfoRowHorizontalBold('Viajes:   ', widget.driver.the30NumeroViajes.toString()),
+        _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
+        _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', widget.driver.the40NumeroCancelaciones.toString()),
       ],
     );
+  }
+
+  void getClientRatings() async {
+    final driverId = widget.driver.id;  // Obtienes el ID del conductor
+
+    try {
+      final ratingsSnapshot = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(driverId)
+          .collection('ratings')
+          .get();
+
+      if (ratingsSnapshot.docs.isNotEmpty) {
+        double totalRating = 0;
+        int ratingCount = ratingsSnapshot.docs.length;
+
+        for (var doc in ratingsSnapshot.docs) {
+          totalRating += doc['calificacion'];  // Asegúrate de que 'calificacion' esté en cada documento de la subcolección
+        }
+
+        // Calcular la calificación promedio
+        setState(() {
+          averageRating = totalRating / ratingCount;  // Guardar la calificación promedio
+        });
+      } else {
+        setState(() {
+          averageRating = 0.0;  // Si no hay calificaciones, asignar 0
+        });
+      }
+    } catch (e) {
+      setState(() {
+        averageRating = 0.0;  // Si ocurre algún error, asignar 0
+      });
+      print("Error obteniendo calificaciones: $e");
+    }
   }
 
   Widget _buildActionButtonColumn(BuildContext context) {
@@ -2111,7 +2147,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropGenero() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2150,7 +2185,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropMarca() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2207,7 +2241,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropMarcaMoto() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2270,7 +2303,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropColor() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2320,7 +2352,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropModelo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2333,6 +2364,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 value: selectedModelo,
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "2025", child: Text("2025")),
                   DropdownMenuItem(value: "2024", child: Text("2024")),
                   DropdownMenuItem(value: "2023", child: Text("2023")),
                   DropdownMenuItem(value: "2022", child: Text("2022")),
@@ -2378,7 +2410,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropTipoServicio() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2416,7 +2447,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropTipoVehiculo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2491,7 +2521,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
-
   Widget _dropCategoriaLicencia() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2582,7 +2611,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-
   Widget _buildTextFieldEnteros(int initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue.toString());
     return Padding(
@@ -2646,6 +2674,20 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       });
 
       print('Valor de nueva recarga después de resetear: ${widget.driver.the34NuevaRecarga}');
+
+      // Aquí guardamos los detalles de la recarga en Firestore en la colección "recargas"
+      await FirebaseFirestore.instance.collection('recargas').add({
+        'idDriver': widget.driver.id,
+        'placa': widget.driver.the18Placa,
+        'tipoVehiculo': widget.driver.the14TipoVehiculo,
+        '1saldo_anterior': saldoAnterior,
+        '2nueva_recarga': nuevaRecarga,
+        '3saldo_total': nuevoSaldo,
+        'fecha_hora': Timestamp.now(), // Guarda la fecha y hora actual
+        'operador': '${operador?.the01Nombres ?? ''} ${operador?.the02Apellidos ?? ''}',
+
+      });
+
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al realizar la recarga: $error')),
@@ -2902,7 +2944,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-
   void _showConfirmationFotoPerfil(BuildContext context, String message, String isBloquear) {
     showDialog(
       context: context,
@@ -3005,9 +3046,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         return AlertDialog(
           title: Text(message),
           actions: <Widget>[
-
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("28_Tarjeta_Propiedad_Trasera_foto", isBloquear); // Llama al método para guardar el campo
@@ -3120,7 +3160,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
-
   Widget seleccionarDropTipoVehiculo() {
     rol = widget.driver.rol;
     if (rol == "moto") {
@@ -3129,7 +3168,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       return _dropTipoVehiculo();
     }
   }
-
 
   Widget seleccionarDropMarcaVehiculo(){
     rol = widget.driver.rol;
@@ -3253,7 +3291,74 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           Text(value, style: const TextStyle(fontSize: 12)),
         ],
       );
+  }
 
+  Widget _buildInfoRowHorizontalBold(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildInfoRowHorizontalIconoEstrella(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4), // Espacio entre el valor y el icono
+            const Icon(
+              Icons.star,
+              size: 16,
+              color: Colors.amber, // Puedes ajustar el color según tu preferencia
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRowHorizontalIconocancel(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4), // Espacio entre el valor y el icono
+            const Icon(
+              Icons.cancel,
+              size: 16,
+              color: Colors.redAccent, // Puedes ajustar el color según tu preferencia
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildInfoEstadoConductor(String label, bool value, double fontSize) {
@@ -3295,6 +3400,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   Widget _buildDocumentPhoto(String title, String? imageUrl) {
     bool isZoomed = false;
+
     return Column(
       children: [
         if (imageUrl != null && imageUrl.isNotEmpty)
@@ -3306,14 +3412,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     isZoomed = !isZoomed;
                   });
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   width: isZoomed ? 400 : 150,
                   height: isZoomed ? 320 : 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: NetworkImage(imageUrl),
+                  child: InteractiveViewer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          fit: BoxFit.cover,
+                          image: NetworkImage(imageUrl),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -3326,11 +3437,13 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             size: 100,
           ),
         const SizedBox(height: 10),
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),),  // Mover el título aquí
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
-
 
 
   Widget _buildPerfilPhoto(String? photoUrl) {
@@ -3399,7 +3512,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _openWhatsApp(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Tay-rona.';
+    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Zafiro.';
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
       await launchUrl(whatsappLink);
@@ -3411,12 +3524,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _openWhatsAppWeb(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Tay-rona.';
+    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Zafiro.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
-
-
-
 
 ////metodo para abrir whatsapp web
   Future<void> sendWhatsAppWeb({required String phone,required String text}) async{

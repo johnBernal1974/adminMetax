@@ -39,9 +39,9 @@ class _SplashState extends State<Splash> {
               child:  const Image(
                   height: 100.0,
                   width: 100.0,
-                  image: AssetImage('assets/logo_tay_admin.png'))),
+                  image: AssetImage('assets/imagen_zafiro_azul.png'))),
 
-          const Text("Tay-rona", style: TextStyle(
+          const Text("Zafiro Administrador", style: TextStyle(
               fontFamily: 'Gilroy',
               color: negroLetras,
               fontSize: 24,

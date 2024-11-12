@@ -1,13 +1,13 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:tay_rona_administrador/models/usuario_model.dart';
-import 'package:tay_rona_administrador/providers/client_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../common/main_layout.dart';
 import '../../models/operador_model.dart';
+import '../../models/usuario_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/client_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 
@@ -28,6 +28,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   String? selectedTipoDocumento;
   String? selectedGenero;
   String? rol;
+  double averageRating = 0.0;
 
   Operador? operador;
   OperadorProvider _operadorProvider = OperadorProvider();
@@ -37,9 +38,9 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   @override
   void initState() {
     super.initState();
-
     selectedTipoDocumento = widget.client.the03TipoDeDocumento;
     selectedGenero = widget.client.the09Genero;
+    getClientRatings();
 
   }
 
@@ -970,10 +971,46 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
         _buildInfoRowHorizontal('Email:   ', widget.client.the06Email),
         _buildInfoRowHorizontal('Celular:   ', widget.client.the07Celular),
         _buildInfoRowHorizontal('Viajes:   ', widget.client.the19Viajes.toString()),
-        _buildInfoRowHorizontal('Calificación:   ', widget.client.the18Calificacion.toString()),
-        _buildInfoRowHorizontal('Cancelaciones:   ', widget.client.the22Cancelaciones.toString()),
+        _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
+        _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', widget.client.the22Cancelaciones.toString()),
       ],
     );
+  }
+
+  void getClientRatings() async {
+    final clientId = widget.client.id;
+    print("*Este es el id del cliente**********************$clientId");// Obtienes el ID del conductor
+
+    try {
+      final ratingsSnapshot = await FirebaseFirestore.instance
+          .collection('Clients')
+          .doc(clientId)
+          .collection('ratings')
+          .get();
+
+      if (ratingsSnapshot.docs.isNotEmpty) {
+        double totalRating = 0;
+        int ratingCount = ratingsSnapshot.docs.length;
+
+        for (var doc in ratingsSnapshot.docs) {
+          totalRating += doc['calificacion'];  // Asegúrate de que 'calificacion' esté en cada documento de la subcolección
+        }
+
+        // Calcular la calificación promedio
+        setState(() {
+          averageRating = totalRating / ratingCount;  // Guardar la calificación promedio
+        });
+      } else {
+        setState(() {
+          averageRating = 0.0;  // Si no hay calificaciones, asignar 0
+        });
+      }
+    } catch (e) {
+      setState(() {
+        averageRating = 0.0;  // Si ocurre algún error, asignar 0
+      });
+      print("Error obteniendo calificaciones: $e");
+    }
   }
 
   Widget _buildActionButtonColumn(BuildContext context) {
@@ -1576,6 +1613,60 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
   }
 
+  Widget _buildInfoRowHorizontalIconoEstrella(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4), // Espacio entre el valor y el icono
+            const Icon(
+              Icons.star,
+              size: 16,
+              color: Colors.amber, // Puedes ajustar el color según tu preferencia
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRowHorizontalIconocancel(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4), // Espacio entre el valor y el icono
+            const Icon(
+              Icons.cancel,
+              size: 16,
+              color: Colors.redAccent, // Puedes ajustar el color según tu preferencia
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildDocumentPhoto(String title, String? imageUrl) {
     bool isZoomed = false;
@@ -1590,14 +1681,19 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                     isZoomed = !isZoomed;
                   });
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   width: isZoomed ? 400 : 150,
                   height: isZoomed ? 320 : 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: NetworkImage(imageUrl),
+                  child: InteractiveViewer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          fit: BoxFit.cover,
+                          image: NetworkImage(imageUrl),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1610,7 +1706,10 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
             size: 100,
           ),
         const SizedBox(height: 10),
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),),  // Mover el título aquí
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
