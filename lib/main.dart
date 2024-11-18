@@ -19,8 +19,12 @@ import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
 
+import 'package:intl/date_symbol_data_local.dart';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es_ES', null);
   if (kIsWeb) {
     // Inicialización específica para la web
     await Firebase.initializeApp(

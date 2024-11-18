@@ -27,6 +27,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   bool isComunicacionNotificacionesVisible = false;
   String? selectedTipoDocumento;
   String? selectedGenero;
+  String? selectedRol;
   String? rol;
   double averageRating = 0.0;
 
@@ -40,6 +41,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     super.initState();
     selectedTipoDocumento = widget.client.the03TipoDeDocumento;
     selectedGenero = widget.client.the09Genero;
+    selectedRol = widget.client.the20Rol;
     getClientRatings();
 
   }
@@ -456,6 +458,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                                 _buildTextField(widget.client.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_expedicion_documento"),
                                 _buildTextField(widget.client.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_nacimiento"),
                                 _dropGenero(),
+                                _dropRol(),
                                 const SizedBox(height: 30),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
@@ -647,6 +650,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                                   _buildTextField(widget.client.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_expedicion_documento"),
                                   _buildTextField(widget.client.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_nacimiento"),
                                   _dropGenero(),
+                                  _dropRol(),
                                   const SizedBox(height: 30),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
@@ -973,6 +977,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
         _buildInfoRowHorizontal('Viajes:   ', widget.client.the19Viajes.toString()),
         _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
         _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', widget.client.the22Cancelaciones.toString()),
+        _buildInfoRowHorizontalTpoBold('Rol:   ', widget.client.the20Rol.toString()),
       ],
     );
   }
@@ -1176,6 +1181,47 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               onPressed: () {
                 _saveField("09_Genero", selectedGenero!, () {
                   widget.client.the09Genero;
+                });
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 10)
+      ],
+    );
+  }
+
+  Widget _dropRol() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Rol', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedRol,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "basico", child: Text("basico")),
+                  DropdownMenuItem(value: "hotel", child: Text("hotel")),
+                  DropdownMenuItem(value: "turismo", child: Text("turismo")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedRol = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: () {
+                _saveField("20_Rol", selectedRol!, () {
+                  widget.client.the20Rol;
                 });
               },
             ),
@@ -1662,6 +1708,23 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               color: Colors.redAccent, // Puedes ajustar el color según tu preferencia
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRowHorizontalTpoBold(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ],
     );
