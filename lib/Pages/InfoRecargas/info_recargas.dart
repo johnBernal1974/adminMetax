@@ -200,25 +200,35 @@ class _RecargaPageState extends State<RecargaPage> {
     if (placaSeleccionada.isEmpty) {
       setState(() {
         filteredDocs = []; // Limpia los resultados si no se ingresa una placa
+        totalRecarga = 0;
+        cantidadAutomovil = 0;
+        cantidadMotocicleta = 0;
+        totalRecargaAutomovil = 0;
+        totalRecargaMotocicleta = 0;
       });
       return;
     }
 
     try {
-      // Consulta a Firestore por placa
+      // Obtiene todos los documentos de la colección
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('recargas') // Cambia a tu colección
-          .where('placa', isEqualTo: placaSeleccionada) // Filtrar por placa
           .get();
 
-      // Procesar resultados
+      // Filtra los documentos en el cliente ignorando mayúsculas y minúsculas
+      List<QueryDocumentSnapshot> filteredDocsList = snapshot.docs.where((doc) {
+        String placa = (doc['placa'] ?? '').toString(); // Campo de placa
+        return placa.toLowerCase().contains(placaSeleccionada.toLowerCase());
+      }).toList();
+
+      // Procesar los documentos filtrados
       int total = 0;
       int autos = 0;
       int motos = 0;
       int totalAutos = 0;
       int totalMotos = 0;
 
-      for (var doc in snapshot.docs) {
+      for (var doc in filteredDocsList) {
         int recarga = doc['2nueva_recarga'] ?? 0;
         String tipoVehiculo = doc['tipoVehiculo'] ?? '';
 
@@ -239,12 +249,13 @@ class _RecargaPageState extends State<RecargaPage> {
         cantidadMotocicleta = motos;
         totalRecargaAutomovil = totalAutos;
         totalRecargaMotocicleta = totalMotos;
-        filteredDocs = snapshot.docs; // Guarda los documentos filtrados
+        filteredDocs = filteredDocsList; // Actualiza los documentos filtrados
       });
     } catch (e) {
       print("Error al filtrar por placa: $e");
     }
   }
+
 
 
   @override

@@ -1035,8 +1035,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               ),
               textStyle: TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.block, color: Colors.white), // Icono de Correo
-            label: Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.block, color: Colors.white), // Icono de Correo
+            label: const Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
         const SizedBox(height: 30),
@@ -1047,15 +1047,15 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.green, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: TextStyle(fontSize: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
-            label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            label: const Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
       ],
@@ -1377,13 +1377,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("No"),
+              child: const Text("No"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
               },
             ),
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 activarUsuario(context); // Llama al método para activar el usuario
