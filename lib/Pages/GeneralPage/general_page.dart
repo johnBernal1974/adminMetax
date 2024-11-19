@@ -58,26 +58,29 @@ class _GeneralPageState extends State<GeneralPage> {
     final int totalUsuarios =
         conductores.length + motociclistas.length + clientesActivos.length;
 
-    return Consumer<DriverProvider>(
-      builder: (context, driverProvider, _) {
-        return MainLayout(
-          content: _buildContent(
-            context,
-            isMobileOrTablet,
-            driverProvider,
-            clientProvider,
-            conductores,
-            motociclistas,
-            clientesActivos,
-            totalUsuarios,
-            conductoresIsWorking,
-            motociclistasIsWorking,
-            conductoresisActive,
-            motociclistasisActive,
-          ),
-          pageTitle: 'General',
-        );
-      },
+    return PopScope(
+      canPop: false,
+      child: Consumer<DriverProvider>(
+        builder: (context, driverProvider, _) {
+          return MainLayout(
+            content: _buildContent(
+              context,
+              isMobileOrTablet,
+              driverProvider,
+              clientProvider,
+              conductores,
+              motociclistas,
+              clientesActivos,
+              totalUsuarios,
+              conductoresIsWorking,
+              motociclistasIsWorking,
+              conductoresisActive,
+              motociclistasisActive,
+            ),
+            pageTitle: 'General',
+          );
+        },
+      ),
     );
   }
 
