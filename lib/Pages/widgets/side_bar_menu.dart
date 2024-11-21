@@ -133,6 +133,18 @@ class _SideBarState extends State<SideBar> {
                     );
                   },
                 ),
+
+                DrawerListTitle(
+                  title: "Historial de viajes",
+                  icon: Icons.list_alt_outlined, // Icono de historial
+                  press: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      'historial_viajes_page',
+                          (Route<dynamic> route) => false,
+                    );
+                  },
+                ),
                 DrawerListTitle(
                     title: "Registrar Operadores",
                     icon: Icons.app_registration,

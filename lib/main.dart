@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:zafiro_administrador/Pages/HistorialViajesPage/historia_viajes_page.dart';
 import 'package:zafiro_administrador/Pages/InfoRecargas/info_recargas.dart';
 import 'package:zafiro_administrador/providers/client_provider.dart';
 import 'package:zafiro_administrador/providers/operador_provider.dart';
@@ -24,6 +26,10 @@ import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   await initializeDateFormatting('es_ES', null);
   if (kIsWeb) {
     // Inicialización específica para la web
@@ -43,8 +49,12 @@ void main() async {
     await Firebase.initializeApp();
   }
 
+
+
   runApp(const MyApp());
 }
+
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -80,6 +90,7 @@ class MyApp extends StatelessWidget {
           'prices_page': (context) => PricesPage(),
           'splash': (context) => const Splash(),
           'recarga_info_page': (context) => RecargaPage(),
+          'historial_viajes_page': (context) => const TravelHistoryPage(),
           // Añade aquí otras rutas necesarias
         },
       ),

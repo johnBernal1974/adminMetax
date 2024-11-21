@@ -180,23 +180,23 @@ class _GeneralPageState extends State<GeneralPage> {
         ],
       ),
       const SizedBox(height: 30),
-      _buildInfoCard(
-        'Recargas realizadas',
-        [
-          _buildDataRow('Conductores:', "0"),
-          _buildDataRow('Motociclistas:', "0"),
-          _buildDataRow('Total recargas:', "0"),
-        ],
-      ),
-      const SizedBox(height: 30),
-      _buildInfoCard(
-        'Bonos',
-        [
-          _buildDataRow('Asignados:', "0"),
-          _buildDataRow('Usados:', "0"),
-          _buildDataRow('Bonos usados:', "\$0"),
-        ],
-      ),
+      // _buildInfoCard(
+      //   'Recargas realizadas',
+      //   [
+      //     _buildDataRow('Conductores:', "0"),
+      //     _buildDataRow('Motociclistas:', "0"),
+      //     _buildDataRow('Total recargas:', "0"),
+      //   ],
+      // ),
+      // const SizedBox(height: 30),
+      // _buildInfoCard(
+      //   'Bonos',
+      //   [
+      //     _buildDataRow('Asignados:', "0"),
+      //     _buildDataRow('Usados:', "0"),
+      //     _buildDataRow('Bonos usados:', "\$0"),
+      //   ],
+      // ),
     ];
   }
 
@@ -229,29 +229,29 @@ class _GeneralPageState extends State<GeneralPage> {
         ),
       ),
       const SizedBox(width: 30),
-      Expanded(
-        flex: 2,
-        child: _buildInfoCard(
-          'Recargas realizadas',
-          [
-            _buildDataRow('Conductores:', "0"),
-            _buildDataRow('Motociclistas:', "0"),
-            _buildDataRow('Total recargas:', "0"),
-          ],
-        ),
-      ),
-      const SizedBox(width: 30),
-      Expanded(
-        flex: 2,
-        child: _buildInfoCard(
-          'Bonos',
-          [
-            _buildDataRow('Asignados:', "0"),
-            _buildDataRow('Usados:', "0"),
-            _buildDataRow('Bonos usados:', "\$0"),
-          ],
-        ),
-      ),
+      // Expanded(
+      //   flex: 2,
+      //   child: _buildInfoCard(
+      //     'Recargas realizadas',
+      //     [
+      //       _buildDataRow('Conductores:', "0"),
+      //       _buildDataRow('Motociclistas:', "0"),
+      //       _buildDataRow('Total recargas:', "0"),
+      //     ],
+      //   ),
+      // ),
+      // const SizedBox(width: 30),
+      // Expanded(
+      //   flex: 2,
+      //   child: _buildInfoCard(
+      //     'Bonos',
+      //     [
+      //       _buildDataRow('Asignados:', "0"),
+      //       _buildDataRow('Usados:', "0"),
+      //       _buildDataRow('Bonos usados:', "\$0"),
+      //     ],
+      //   ),
+      // ),
     ];
   }
 
