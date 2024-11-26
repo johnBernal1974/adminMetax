@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../common/main_layout.dart';
 import '../../common/travel_history_filters.dart';
 import '../../src/color.dart';
@@ -14,6 +15,12 @@ class TravelHistoryPage extends StatefulWidget {
 class _TravelHistoryPageState extends State<TravelHistoryPage> {
   DateTimeRange? selectedDateRange; // Rango de fechas seleccionado
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final numberFormat = NumberFormat("#,##0", "es_ES");
+
+  String formatTimestamp(Timestamp timestamp) {
+    DateTime dateTime = timestamp.toDate();
+    return DateFormat('dd/MM/yyyy HH:mm a').format(dateTime); // Formato deseado
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +37,15 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
             },
           ),
           Expanded(
-            // Stream para mostrar los viajes según los filtros
-            child: StreamBuilder<QuerySnapshot>(
+            child: selectedDateRange == null
+                ? const Center(
+              child: Text(
+                'Por favor, selecciona un rango de fechas para ver el historial de viajes.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+                : StreamBuilder<QuerySnapshot>(
               stream: _getFilteredTravelHistory(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -41,153 +55,136 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                   return const Center(child: Text('No hay viajes en el historial.'));
                 }
 
+                // Cantidad de documentos encontrados
+                final documentCount = snapshot.data!.docs.length;
+
                 final travelHistoryDocs = snapshot.data!.docs;
 
-                return ListView.builder(
-                  itemCount: travelHistoryDocs.length,
-                  itemBuilder: (context, index) {
-                    final travel = travelHistoryDocs[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Origen:',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  '${travel['from']}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Destino:',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  '${travel['to']}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Fecha de Solicitud:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['solicitudViaje']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Inicio del Viaje:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['inicioViaje']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Finalización del Viaje:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['finalViaje']}'),
-                              ],
-                            ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Tarifa Inicial:', style: TextStyle(fontSize: 16)),
-                                Text('\$${travel['tarifaInicial']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Descuento:', style: TextStyle(fontSize: 16)),
-                                Text('\$${travel['tarifaDescuento']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Tarifa Final:', style: TextStyle(fontSize: 16)),
-                                Text('\$${travel['tarifa']}'),
-                              ],
-                            ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Calificación al Cliente:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['calificacionAlCliente']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Calificación al Conductor:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['calificacionAlConductor']}'),
-                              ],
-                            ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Apuntes:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['apuntes'] ?? 'Sin apuntes'}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('ID Cliente:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['idClient']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('ID Conductor:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['idDriver']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Rol:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['rol']}'),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Servicio solicitado:', style: TextStyle(fontSize: 16)),
-                                Text('${travel['tipoServicio']}'),
-                              ],
-                            ),
-                          ],
-                        ),
-
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        '$documentCount viajes encontrados', // Muestra la cantidad de documentos
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                    );
-                  },
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: travelHistoryDocs.length,
+                        itemBuilder: (context, index) {
+                          final travel = travelHistoryDocs[index];
+                          final idClient = travel['idClient'];
+                          final idDriver = travel['idDriver'];
+
+                          return FutureBuilder(
+                            future: Future.wait([
+                              _getClientName(idClient), // Obtener nombre del cliente
+                              _getDriverName(idDriver), // Obtener nombre del conductor
+                              _getDriverPlate(idDriver), // Obtener placa del conductor
+                            ]),
+                            builder: (context, futureSnapshot) {
+                              final clientName = futureSnapshot.data?[0] ?? 'Nombre no disponible';
+                              final driverName = futureSnapshot.data?[1] ?? 'Nombre no disponible';
+                              final driverPlate = futureSnapshot.data?[2] ?? 'Placa no disponible';
+
+                              return Align(
+                                alignment: Alignment.topLeft, // Alineación de las tarjetas a la izquierda
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 500),
+                                  child: Card(
+                                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Sección de Origen y Destino
+                                          _buildLabelValue('Origen:', '${travel['from']}'),
+                                          _buildLabelValue('Destino:', '${travel['to']}'),
+                                          const SizedBox(height: 8),
+                                          const Divider(),
+                                          _buildRow(
+                                            'Fecha de Solicitud:',
+                                            formatTimestamp(travel['solicitudViaje']),
+                                          ),
+                                          _buildRow(
+                                            'Inicio del Viaje:',
+                                            formatTimestamp(travel['inicioViaje']),
+                                          ),
+                                          _buildRow(
+                                            'Finalización del Viaje:',
+                                            formatTimestamp(travel['finalViaje']),
+                                          ),
+                                          const Divider(),
+                                          _buildRow('Tarifa Inicial:', '\$${numberFormat.format(travel['tarifaInicial'])}'),
+                                          _buildRow('Descuento:', '\$${numberFormat.format(travel['tarifaDescuento'])}'),
+                                          _buildRow('Tarifa Final:', '\$${numberFormat.format(travel['tarifa'])}', isBold: true),
+                                          const Divider(),
+                                          _buildRow('Calificación al Cliente:', '${travel['calificacionAlCliente']}'),
+                                          _buildRow('Calificación al Conductor:', '${travel['calificacionAlConductor']}'),
+                                          const Divider(),
+                                          _buildRowBold('Apuntes:', '${travel['apuntes'] ?? 'Sin apuntes'}'),
+                                          _buildRow('Cliente:', clientName),
+                                          _buildRow('Conductor:', driverName),
+                                          _buildRow('Rol:', '${travel['rol']}'),
+                                          _buildRow('Placa del Conductor:', driverPlate), // Mostrar la placa aquí
+                                          _buildRow('Servicio solicitado:', '${travel['tipoServicio']}'),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           ),
         ],
       ),
+    );
+  }
+
+
+  Widget _buildLabelValue(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRow(String label, String value, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12)),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+      ],
+    );
+  }
+
+  Widget _buildRowBold(String label, String value, {bool isBold = true}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12)),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+      ],
     );
   }
 
@@ -198,12 +195,61 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
     // Aplicar filtro por rango de fechas
     if (selectedDateRange != null) {
       final start = Timestamp.fromDate(selectedDateRange!.start);
-      final end = Timestamp.fromDate(selectedDateRange!.end);
+      final end = Timestamp.fromDate(
+        selectedDateRange!.end.add(const Duration(days: 1)).subtract(const Duration(microseconds: 1)),
+      );
       query = query
-          .where('date', isGreaterThanOrEqualTo: start)
-          .where('date', isLessThanOrEqualTo: end);
+          .where('solicitudViaje', isGreaterThanOrEqualTo: start) // Usar 'solicitudViaje' como campo de filtro
+          .where('solicitudViaje', isLessThanOrEqualTo: end);
     }
 
+    // Ordenar los resultados por 'solicitudViaje' en orden descendente
+    query = query.orderBy('solicitudViaje', descending: true);
+
     return query.snapshots();
+  }
+
+
+
+  Future<String> _getClientName(String clientId) async {
+    try {
+      final clientDoc = await _firestore.collection('Clients').doc(clientId).get();
+      if (clientDoc.exists) {
+        final clientData = clientDoc.data();
+        return '${clientData?['01_Nombres']} ${clientData?['02_Apellidos']}';
+      } else {
+        return 'Cliente no encontrado';
+      }
+    } catch (e) {
+      return 'Error al obtener cliente';
+    }
+  }
+
+  Future<String> _getDriverName(String driverId) async {
+    try {
+      final driverDoc = await _firestore.collection('Drivers').doc(driverId).get();
+      if (driverDoc.exists) {
+        final driverData = driverDoc.data();
+        return '${driverData?['01_Nombres']} ${driverData?['02_Apellidos']}';
+      } else {
+        return 'Conductor no encontrado';
+      }
+    } catch (e) {
+      return 'Error al obtener conductor';
+    }
+  }
+
+  Future<String> _getDriverPlate(String driverId) async {
+    try {
+      final driverDoc = await _firestore.collection('Drivers').doc(driverId).get();
+      if (driverDoc.exists) {
+        final driverData = driverDoc.data();
+        return driverData?['18_Placa'] ?? 'Placa no disponible';
+      } else {
+        return 'Placa no disponible';
+      }
+    } catch (e) {
+      return 'Error al obtener placa';
+    }
   }
 }
