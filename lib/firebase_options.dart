@@ -41,48 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0',
-    appId: '1:776719847961:web:2f69301d843863172a5088',
-    messagingSenderId: '776719847961',
-    projectId: 'transport-f7c79',
-    authDomain: 'transport-f7c79.firebaseapp.com',
-    storageBucket: 'transport-f7c79.appspot.com',
-    measurementId: 'G-0P5JXEVERY',
+    apiKey: 'AIzaSyCXELqMHM7D8lT-0kexYu4jfqehfLNoRC0',
+    appId: '1:632604677797:web:1fb92982ee10663c3d1f4c',
+    messagingSenderId: '632604677797',
+    projectId: 'apptaxi-e641d',
+    authDomain: 'apptaxi-e641d.firebaseapp.com',
+    storageBucket: 'apptaxi-e641d.firebasestorage.app',
+    measurementId: 'G-NDZ9N4GLPL',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyASx4Osx-gpV0qPm2mmDOtnkdHULXNmWYU',
-    appId: '1:776719847961:android:ed96638a5d1e356e2a5088',
-    messagingSenderId: '776719847961',
-    projectId: 'transport-f7c79',
-    storageBucket: 'transport-f7c79.appspot.com',
+    apiKey: 'AIzaSyDkkBWDtzJIC8Sl_7TzSfwVKuliMMmoTJI',
+    appId: '1:632604677797:android:db205409dff32ea23d1f4c',
+    messagingSenderId: '632604677797',
+    projectId: 'apptaxi-e641d',
+    storageBucket: 'apptaxi-e641d.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAQeJ7rFkX-UfHFzDOT_5zM1EfTf5es6W4',
-    appId: '1:776719847961:ios:7731864044f01d9b2a5088',
-    messagingSenderId: '776719847961',
-    projectId: 'transport-f7c79',
-    storageBucket: 'transport-f7c79.appspot.com',
+    apiKey: 'AIzaSyDXN2NGId0zr3ANUUxjJtF9tA3P1B9TxJ0',
+    appId: '1:632604677797:ios:f569addc0e1666ac3d1f4c',
+    messagingSenderId: '632604677797',
+    projectId: 'apptaxi-e641d',
+    storageBucket: 'apptaxi-e641d.firebasestorage.app',
     iosBundleId: 'com.admintay.tayRonaAdministrador',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAQeJ7rFkX-UfHFzDOT_5zM1EfTf5es6W4',
-    appId: '1:776719847961:ios:7731864044f01d9b2a5088',
-    messagingSenderId: '776719847961',
-    projectId: 'transport-f7c79',
-    storageBucket: 'transport-f7c79.appspot.com',
+    apiKey: 'AIzaSyDXN2NGId0zr3ANUUxjJtF9tA3P1B9TxJ0',
+    appId: '1:632604677797:ios:f569addc0e1666ac3d1f4c',
+    messagingSenderId: '632604677797',
+    projectId: 'apptaxi-e641d',
+    storageBucket: 'apptaxi-e641d.firebasestorage.app',
     iosBundleId: 'com.admintay.tayRonaAdministrador',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0',
-    appId: '1:776719847961:web:9de19fb904f314e82a5088',
-    messagingSenderId: '776719847961',
-    projectId: 'transport-f7c79',
-    authDomain: 'transport-f7c79.firebaseapp.com',
-    storageBucket: 'transport-f7c79.appspot.com',
-    measurementId: 'G-1WVEGNWHD4',
+    apiKey: 'AIzaSyCXELqMHM7D8lT-0kexYu4jfqehfLNoRC0',
+    appId: '1:632604677797:web:47475c8b4c9daafe3d1f4c',
+    messagingSenderId: '632604677797',
+    projectId: 'apptaxi-e641d',
+    authDomain: 'apptaxi-e641d.firebaseapp.com',
+    storageBucket: 'apptaxi-e641d.firebasestorage.app',
+    measurementId: 'G-SDZTFPSRSR',
   );
 }

@@ -16,9 +16,9 @@ class MainLayout extends StatelessWidget {
       backgroundColor: grisMapa,
       drawer: MediaQuery.of(context).size.width < 800 ? const SideBar() : null,
       appBar: AppBar(
-        title: Text(pageTitle, style: const TextStyle(color: blanco),),
+        title: Text(pageTitle, style: const TextStyle(color: Colors.black),),
         backgroundColor: primary,
-        iconTheme: const IconThemeData(color: blanco),// Usar el atributo pageTitle para el título
+        iconTheme: const IconThemeData(color: Colors.black),// Usar el atributo pageTitle para el título
       ),
       body: Row(
         children: [

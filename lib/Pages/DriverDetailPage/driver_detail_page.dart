@@ -42,6 +42,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   String? selectedcategoriaLicencia;
   int nuevaRecarga = 0;
   String? rol;
+  String? nameOperador;
+  String? apellidosOperador;
   String? phoneNumber;
   double _progress = 0;
   late InAppWebViewController inAppWebViewController;
@@ -50,15 +52,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
 
   Operador? operador;
-  OperadorProvider _operadorProvider = OperadorProvider();
-  MyAuthProvider _authProvider = MyAuthProvider();
+  final OperadorProvider _operadorProvider = OperadorProvider();
+  final MyAuthProvider _authProvider = MyAuthProvider();
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    seleccionarDropMarcaVehiculo();
-    //seleccionarDropTipoVehiculo();
+
     selectedTipoDocumento = widget.driver.the04TipoDocumento;
     selectedGenero = widget.driver.the09Genero;
     selectedMarca = widget.driver.the15Marca;
@@ -200,7 +201,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               children: [
                 Column(
                   children: [
-                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
+                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: const TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
                     Text('Conductor desde: ${widget.driver.the10FechaRegistro}',
                       style: TextStyle(fontSize: fontSize),
                     ),
@@ -211,7 +212,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 _buildInfoEstadoConductor('Conectado:', widget.driver.the39EstaConectado ?? false, fontSize),
                 _buildInfoEstadoConductor('Trabajando:', widget.driver.the00_is_working ?? false, fontSize),
                 _buildInfoRowHorizontal('Saldo Recarga', _formatearNumero(widget.driver.the32SaldoRecarga)),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Container(
                   alignment: Alignment.center,
                     width: 200,
@@ -768,14 +769,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                textStyle: TextStyle(fontSize: 16),
+                                textStyle: const TextStyle(fontSize: 16),
                               ),
-                              icon: Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                              label: Text('Antecedentes', style: TextStyle( color: blanco)),
+                              icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
+                              label: const Text('Antecedentes', style: TextStyle( color: blanco)),
                             ),
                           ),
                           Container(
-                            margin: EdgeInsets.symmetric(vertical: 20),
+                            margin: const EdgeInsets.symmetric(vertical: 20),
                             height: 50, // Altura del botón
                             child: ElevatedButton.icon(
                               onPressed: () {
@@ -783,14 +784,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
                               },
                               style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.redAccent, // Color de fondo del botón
+                                padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.redAccent, // Color de fondo del botón
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                textStyle: TextStyle(fontSize: 16),
+                                textStyle: const TextStyle(fontSize: 16),
                               ),
-                              icon: Icon(Icons.cancel, color: Colors.white), // Icono de Correo
-                              label: Text('Bloqueo AJ', style: TextStyle( color: blanco)),
+                              icon: const Icon(Icons.cancel, color: Colors.white), // Icono de Correo
+                              label: const Text('Bloqueo AJ', style: TextStyle( color: blanco)),
                             ),
                           ),
                         ],
@@ -869,7 +870,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                     ],
                                   ),
                                   _buildTextField(widget.driver.the18Placa, 'Placa', "18_Placa"),
-                                  seleccionarDropMarcaVehiculo(),
+                                  _dropMarca(),
                                   _dropModelo(),
                                   _dropColor(),
 
@@ -947,7 +948,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                   ),
 
                                   _dropTipoServicio(),
-                                  seleccionarDropTipoVehiculo(),
+                                  _dropTipoVehiculo(),
                                   _buildTextField(widget.driver.the24NumeroTarjetaPropiedad, 'Licencia de tránsito', "24_Numero_Tarjeta_Propiedad"),
 
                                   const SizedBox(height: 30),
@@ -1063,7 +1064,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                     ],
                                   ),
                                   _buildTextField(widget.driver.the18Placa, 'Placa', "18_Placa"),
-                                  seleccionarDropMarcaVehiculo(),
+                                  _dropMarca(),
                                   _dropModelo(),
                                   _dropColor(),
 
@@ -1140,7 +1141,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                   ),
 
                                   _dropTipoServicio(),
-                                  seleccionarDropTipoVehiculo(),
+                                  _dropTipoVehiculo(),
                                   _buildTextField(widget.driver.the24NumeroTarjetaPropiedad, 'Licencia de tránsito', "24_Numero_Tarjeta_Propiedad"),
 
                                   const SizedBox(height: 30),
@@ -1345,7 +1346,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                       Expanded(
                         flex: 1,
                         child: Container(
-                          margin: EdgeInsets.only(top: 10),
+                          margin: const EdgeInsets.only(top: 10),
                           height: 50, // Altura del botón
                           child: ElevatedButton.icon(
                             onPressed: () async {
@@ -1854,6 +1855,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       operador = await _operadorProvider.getById(user.uid);
       if (operador != null) {
         rol = operador?.the20Rol;
+        nameOperador =operador?.the01Nombres;
+        apellidosOperador= operador?.the02Apellidos;
         if(rol == "Master" || rol == "Recarga Carros"){
           setState(() {
             isRecargasvisible = true;
@@ -1967,6 +1970,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       ],
     );
   }
+
 
   Widget _buildInfoColumns() {
     return Column(
@@ -2196,27 +2200,20 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               child: DropdownButtonFormField<String>(
                 value: selectedMarca,
                 items: const [
-                  DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Chevrolet", child: Text("Chevrolet")),
-                  DropdownMenuItem(value: "Chery", child: Text("Chery")),
-                  DropdownMenuItem(value: "Citroen", child: Text("Citroen")),
-                  DropdownMenuItem(value: "Daihatsu", child: Text("Daihatsu")),
-                  DropdownMenuItem(value: "Fiat", child: Text("Fiat")),
-                  DropdownMenuItem(value: "Ford", child: Text("Ford")),
-                  DropdownMenuItem(value: "Honda", child: Text("Honda")),
-                  DropdownMenuItem(value: "Hyundai", child: Text("Hyundai")),
-                  DropdownMenuItem(value: "Kia", child: Text("Kia")),
-                  DropdownMenuItem(value: "Mazda", child: Text("Mazda")),
-                  DropdownMenuItem(value: "Mitsubishi", child: Text("Mitsubishi")),
-                  DropdownMenuItem(value: "Nissan", child: Text("Nissan")),
-                  DropdownMenuItem(value: "Peugeot", child: Text("Peugeot")),
-                  DropdownMenuItem(value: "Renault", child: Text("Renault")),
-                  DropdownMenuItem(value: "Seat", child: Text("Seat")),
-                  DropdownMenuItem(value: "Skoda", child: Text("Skoda")),
-                  DropdownMenuItem(value: "Subaru", child: Text("Subaru")),
-                  DropdownMenuItem(value: "Suzuki", child: Text("Suzuki")),
-                  DropdownMenuItem(value: "Toyota", child: Text("Toyota")),
-                  DropdownMenuItem(value: "Volkswagen", child: Text("Volkswagen")),
+                  DropdownMenuItem(value: "Hyundai Atos", child: Text("Hyundai Atos")),
+                  DropdownMenuItem(value: "Hyundai Grand I10", child: Text("Hyundai Grand I10")),
+                  DropdownMenuItem(value: "Kia Picanto Ekotaxi", child: Text("Kia Picanto Ekotaxi")),
+                  DropdownMenuItem(value: "Kia Picanto Ekotaxi LX", child: Text("Kia Picanto Ekotaxi LX")),
+                  DropdownMenuItem(value: "Kia Morning", child: Text("Kia Morning")),
+                  DropdownMenuItem(value: "Kia Sephia", child: Text("Kia Sephia")),
+                  DropdownMenuItem(value: "Kia Super VIP", child: Text("Kia Super VIP")),
+                  DropdownMenuItem(value: "Suzuki New Alto K10", child: Text("Suzuki New Alto K10")),
+                  DropdownMenuItem(value: "FAW R7 SUV", child: Text("FAW R7 SUV")),
+                  DropdownMenuItem(value: "FAW taxi V5", child: Text("FAW taxi V5")),
+                  DropdownMenuItem(value: "Hyundai Accent", child: Text("Hyundai Accent")),
+                  DropdownMenuItem(value: "Renault Logan", child: Text("Renault Logan")),
+                  DropdownMenuItem(value: "Renault Clio Express", child: Text("Renault Clio Express")),
+                  DropdownMenuItem(value: "Chevrolet Chevy Taxi", child: Text("Chevrolet Chevy Taxi")),
                   DropdownMenuItem(value: "Otro", child: Text("Otro")),
                 ],
                 onChanged: (value) {
@@ -2230,79 +2227,18 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
+              icon: const Icon(Icons.save),
               onPressed: () {
                 _saveField("15_Marca", selectedMarca!);
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10)
       ],
     );
   }
-  Widget _dropMarcaMoto() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Marca', style: TextStyle(fontSize: 14)),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: selectedMarca,
-                items: const [
-                  DropdownMenuItem(value: "AKT", child: Text("AKT")),
-                  DropdownMenuItem(value: "Apollo", child: Text("Apollo")),
-                  DropdownMenuItem(value: "Aprilia", child: Text("Aprilia")),
-                  DropdownMenuItem(value: "Ayco", child: Text("Ayco")),
-                  DropdownMenuItem(value: "Bajaj", child: Text("Bajaj")),
-                  DropdownMenuItem(value: "Benelli", child: Text("Benelli")),
-                  DropdownMenuItem(value: "CF", child: Text("CF")),
-                  DropdownMenuItem(value: "Hero", child: Text("Hero")),
-                  DropdownMenuItem(value: "Honda", child: Text("Honda")),
-                  DropdownMenuItem(value: "Jialing", child: Text("Jialing")),
-                  DropdownMenuItem(value: "Kawasaki", child: Text("Kawasaki")),
-                  DropdownMenuItem(value: "Keeway", child: Text("Keeway")),
-                  DropdownMenuItem(value: "Kymco", child: Text("Kymco")),
-                  DropdownMenuItem(value: "KTM", child: Text("KTM")),
-                  DropdownMenuItem(value: "Lifan", child: Text("Lifan")),
-                  DropdownMenuItem(value: "Piaggio", child: Text("Piaggio")),
-                  DropdownMenuItem(value: "Pulsar", child: Text("Pulsar")),
-                  DropdownMenuItem(value: "Royal", child: Text("Royal")),
-                  DropdownMenuItem(value: "Sherco", child: Text("Sherco")),
-                  DropdownMenuItem(value: "Starker", child: Text("Starker")),
-                  DropdownMenuItem(value: "Suzuki", child: Text("Suzuki")),
-                  DropdownMenuItem(value: "SYM", child: Text("SYM")),
-                  DropdownMenuItem(value: "Triumph", child: Text("Triumph")),
-                  DropdownMenuItem(value: "TVS", child: Text("TVS")),
-                  DropdownMenuItem(value: "Vespa", child: Text("Vespa")),
-                  DropdownMenuItem(value: "Yamaha", child: Text("Yamaha")),
-                  DropdownMenuItem(value: "YCF", child: Text("YCF")),
-                  DropdownMenuItem(value: "Otro", child: Text("Otro")),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedMarca = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("15_Marca", selectedMarca!);
-              },
-            ),
-          ],
-        ),
-        SizedBox(height: 10)
-      ],
-    );
-  }
+
   Widget _dropColor() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2316,19 +2252,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
                   DropdownMenuItem(value: "Amarillo", child: Text("Amarillo")),
-                  DropdownMenuItem(value: "Azul", child: Text("Azul")),
-                  DropdownMenuItem(value: "Cafe", child: Text("Cafe")),
-                  DropdownMenuItem(value: "Beige", child: Text("Beige")),
                   DropdownMenuItem(value: "Blanco", child: Text("Blanco")),
-                  DropdownMenuItem(value: "Dorado", child: Text("Dorado")),
-                  DropdownMenuItem(value: "Gris", child: Text("Gris")),
-                  DropdownMenuItem(value: "Morado", child: Text("Morado")),
-                  DropdownMenuItem(value: "Naranja", child: Text("Naranja")),
-                  DropdownMenuItem(value: "Negro", child: Text("Negro")),
-                  DropdownMenuItem(value: "Plateado", child: Text("Plateado")),
-                  DropdownMenuItem(value: "Rojo", child: Text("Rojo")),
-                  DropdownMenuItem(value: "Verde", child: Text("Verde")),
-                  DropdownMenuItem(value: "Vinotinto", child: Text("Vinotinto")),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -2399,7 +2323,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
+              icon: const Icon(Icons.save),
               onPressed: () {
                 _saveField("17_Modelo", selectedModelo!);
               },
@@ -2422,8 +2346,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 value: selectedTipoServicio,
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Particular", child: Text("Particular")),
                   DropdownMenuItem(value: "Público", child: Text("Público")),
+                  DropdownMenuItem(value: "Operación Nacional", child: Text("Operación Nacional")),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -2443,7 +2367,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10)
       ],
     );
   }
@@ -2458,10 +2382,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               child: DropdownButtonFormField<String>(
                 value: selectedTipoVehiculo,
                 items: const [
-                  DropdownMenuItem(value: "Automovil", child: Text("Automovil")),
-                  DropdownMenuItem(value: "Minivan", child: Text("Minivan")),
-                  DropdownMenuItem(value: "Camioneta", child: Text("Camioneta")),
-                  DropdownMenuItem(value: "Taxi", child: Text("Taxi")),
+                  DropdownMenuItem(value: "Tipo automovil", child: Text("Tipo automovil")),
+                  DropdownMenuItem(value: "Tipo camioneta", child: Text("Tipo camioneta")),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -2481,46 +2403,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10)
       ],
     );
   }
-  Widget _dropTipoVehiculoMotos() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Tipo de Vehículo', style: TextStyle(fontSize: 14)),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: selectedTipoVehiculo,
-                items: const [
-                  DropdownMenuItem(value: "Moto", child: Text("Moto")),
 
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedTipoVehiculo = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("14_Tipo_Vehiculo", selectedTipoVehiculo!);
-              },
-            ),
-          ],
-        ),
-        SizedBox(height: 10)
-      ],
-    );
-  }
   Widget _dropCategoriaLicencia() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2760,17 +2647,33 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               TextButton(
                 child: const Text('Activar'),
                 onPressed: () {
+                  // Guardar el estado del conductor en Firestore
                   _saveFieldBool("11_Esta_activado", true);
                   _saveFieldBool("38_Esta_bloqueado", false);
-                  _saveField("Verificacion_Status", "activado"); // Llama al método para guardar el campo
+                  _saveField("Verificacion_Status", "activado");
+                  _saveField(
+                      "13_Nombre_Activador",
+                      "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}"
+                  );
+                  _saveFieldFecha("12_Fecha_Activacion", DateTime.now());
 
+
+                  // Actualizar el estado localmente
                   setState(() {
                     widget.driver.the11EstaActivado = true;
                     widget.driver.the38EstaBloqueado = false;
                     widget.driver.verificacionStatus = "activado";
                   });
 
-                  Navigator.of(context).pop(); // Cerrar el diálogo
+                  // Cerrar el diálogo
+                  Navigator.of(context).pop();
+
+                  // Verificar si es móvil o web y abrir WhatsApp
+                  if (!kIsWeb) {
+                    _openWhatsAppActivacion(context); // Llamada a la app móvil de WhatsApp
+                  } else {
+                    _openWhatsAppWebActivacion(context); // Llamada a la versión web de WhatsApp
+                  }
                 },
               ),
           ],
@@ -2778,7 +2681,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       },
     );
   }
-
 
 
   void bloquearUsuario(BuildContext context) {
@@ -2863,8 +2765,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       },
     );
   }
-
-
 
   String _formatearNumero(int valor) {
     final format = NumberFormat("#,###", "es_CO");
@@ -3131,17 +3031,43 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _saveField(String key, dynamic value) async {
     print("Guardando campo con key '$key' y valor '$value'");
 
+    Map<String, String> data = {key: value,
+    };
+    try {
+      await _driverProvider.update(data, widget.driver.id);
+      if(context.mounted){
+        _showSnackBar(context, 'Actualización exitosa');
+      }
+    } catch (error) {
+      if(context.mounted){
+        _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      }
+    }
+  }
+
+  void _saveFieldFecha(String key, DateTime date) async {
+    // Formatear la fecha como cadena
+    String formattedDate = DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES').format(date);
+
+    print("Guardando campo con key '$key' y valor '$formattedDate'");
+
     Map<String, String> data = {
-      key: value,
+      key: formattedDate,
     };
 
     try {
       await _driverProvider.update(data, widget.driver.id);
-      _showSnackBar(context, 'Actualización exitosa');
+      if (context.mounted) {
+        _showSnackBar(context, 'Actualización exitosa');
+      }
     } catch (error) {
-      _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      }
     }
   }
+
+
 
   void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(
@@ -3160,23 +3086,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
-  Widget seleccionarDropTipoVehiculo() {
-    rol = widget.driver.rol;
-    if (rol == "moto") {
-      return _dropTipoVehiculoMotos();
-    } else {
-      return _dropTipoVehiculo();
-    }
-  }
-
-  Widget seleccionarDropMarcaVehiculo(){
-    rol = widget.driver.rol;
-    if(rol == "moto"){
-      return _dropMarcaMoto();
-    }else{
-      return _dropMarca();
-    }
-  }
 
   Widget _buildTextFieldRecarga(int initialValue, String label) {
     return Padding(
@@ -3288,7 +3197,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
           ),
           const SizedBox(height: 3),
-          Text(value, style: const TextStyle(fontSize: 12)),
+          Text(value, style: const TextStyle(fontSize: 10)),
         ],
       );
   }
@@ -3445,7 +3354,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-
   Widget _buildPerfilPhoto(String? photoUrl) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -3512,7 +3420,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _openWhatsApp(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Zafiro.';
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
       await launchUrl(whatsappLink);
@@ -3521,18 +3429,83 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
+
+  void _openWhatsAppActivacion(BuildContext context) async {
+    String phoneNumber = widget.driver.the07Celular;
+    String? name = widget.driver.the01Nombres;
+    String message = '''
+    ¡Hola $name! 
+
+    Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
+  Haz clic en el siguiente enlace para ver más información:
+  https://mizafiro.com/wp-content/uploads/2024/11/Conductor_activado.png
+
+  Si tienes alguna duda, no dudes en contactarnos.
+
+  Saludos cordiales,
+  El equipo de Zafiro
+  ''';
+    final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
+    try {
+      await launchUrl(whatsappLink);
+    } catch (e) {
+      showNoWhatsAppInstalledDialog(context);
+    }
+  }
+
+
   void _openWhatsAppWeb(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es John del equipo de asistencia de Zafiro.';
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
 
+  void _openWhatsAppWebActivacion(BuildContext context) async {
+    String phoneNumber = widget.driver.the07Celular;
+    String? driverName = widget.driver.the01Nombres;
+
+    String message = '''
+  Hola $driverName,
+
+  Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
+  Haz clic en el siguiente enlace para ver más información:
+  https://mizafiro.com/wp-content/uploads/2024/11/Conductor_activado.png
+
+  Si tienes alguna duda, no dudes en contactarnos.
+
+  Saludos cordiales,
+  El equipo de Zafiro
+  ''';
+
+    // Asegurarse de que el número de teléfono tiene el código de país
+    final String fullPhoneNumber = "57$phoneNumber".replaceAll(RegExp(r'\s+'), '');
+
+    // Codificar el mensaje para la URL utilizando encodeFull, que maneja caracteres especiales
+    final String encodedMessage = Uri.encodeFull(message);
+
+    // Crear la URL con el número de teléfono y el mensaje codificado
+    final Uri whatsappWebUri = Uri.parse("https://wa.me/$fullPhoneNumber?text=$encodedMessage");
+
+    // Intentar abrir WhatsApp Web con la URL generada
+    if (!await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se puede enviar un mensaje a $fullPhoneNumber');
+    }
+  }
+
 ////metodo para abrir whatsapp web
-  Future<void> sendWhatsAppWeb({required String phone,required String text}) async{
-      if(!await launchUrl(Uri.parse("https://wa.me/$phone? text= $text"))) {
-        throw Exception('No se puede enviar un mensaje a $phone');
-      }
+  Future<void> sendWhatsAppWeb({required String phone, required String text}) async {
+    const String countryCode = "57"; // Código de país para Colombia
+    final String fullPhoneNumber = "$countryCode$phone".replaceAll(RegExp(r'\s+'), '');
+
+    // Codifica el mensaje completamente
+    final String encodedText = Uri.encodeFull(text);
+
+    final Uri whatsappWebUri = Uri.parse("https://wa.me/$fullPhoneNumber?text=$encodedText");
+
+    if (!await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se puede enviar un mensaje a $fullPhoneNumber');
+    }
   }
 
   void showNoWhatsAppInstalledDialog(BuildContext context) {

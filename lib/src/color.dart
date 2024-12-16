@@ -2,13 +2,14 @@
 import 'package:flutter/material.dart';
 
 const gris = Color.fromARGB(255, 139, 139, 139);
+const amarilloOscuro = Color.fromARGB(255, 255, 182, 50);
 const grisMedio = Color.fromARGB(255, 215, 215, 215);
 const grisClaro = Color.fromARGB(255, 237, 237, 237);
 const grisClaroDegradado = Color.fromARGB(18, 237, 237, 237);
 const grisMapa = Color.fromARGB(255, 221, 227, 227);
 
 
-const primary = azulOscuro;
+const primary = amarilloOscuro;
 const amarillo = Color.fromARGB(255, 206, 160, 32);
 const rojo = Color.fromARGB(255, 233, 7, 7);
 const rojoDegradado = Color.fromARGB(255, 238, 139, 139);

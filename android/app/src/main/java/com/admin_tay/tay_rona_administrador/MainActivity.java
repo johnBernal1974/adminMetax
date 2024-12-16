@@ -1,4 +1,4 @@
-package com.zafiro_administrador;
+package com.metax_administrador;
 
 import io.flutter.embedding.android.FlutterActivity;
 

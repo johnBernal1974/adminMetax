@@ -30,6 +30,7 @@ class _SplashState extends State<Splash> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark));
     return  Scaffold(
+      backgroundColor: gris,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -37,11 +38,11 @@ class _SplashState extends State<Splash> {
           Container(
               alignment: Alignment.center,
               child:  const Image(
-                  height: 100.0,
-                  width: 100.0,
-                  image: AssetImage('assets/imagen_zafiro_azul.png'))),
+                  height: 200.0,
+                  width: 200.0,
+                  image: AssetImage('assets/logo_metax_combinado.png'))),
 
-          const Text("Zafiro Administrador", style: TextStyle(
+          const Text("Administrador", style: TextStyle(
               fontFamily: 'Gilroy',
               color: negroLetras,
               fontSize: 24,

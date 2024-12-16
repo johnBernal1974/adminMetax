@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "776719847961",
-    "project_id": "transport-f7c79",
-    "storage_bucket": "transport-f7c79.appspot.com"
+    "project_number": "632604677797",
+    "project_id": "apptaxi-e641d",
+    "storage_bucket": "apptaxi-e641d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:776719847961:android:ed96638a5d1e356e2a5088",
+        "mobilesdk_app_id": "1:632604677797:android:57076b1536f60afd3d1f4c",
         "android_client_info": {
-          "package_name": "com.zafiro_administrador"
+          "package_name": "com.app_taxis.apptaxis"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyASx4Osx-gpV0qPm2mmDOtnkdHULXNmWYU"
+          "current_key": "AIzaSyDkkBWDtzJIC8Sl_7TzSfwVKuliMMmoTJI"
         }
       ],
       "services": {
@@ -26,15 +26,15 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:776719847961:android:775717916c8ad20c2a5088",
+        "mobilesdk_app_id": "1:632604677797:android:157cfe92518691e73d1f4c",
         "android_client_info": {
-          "package_name": "com.zafiro_cliente"
+          "package_name": "com.apptaxxic.apptaxisc"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyASx4Osx-gpV0qPm2mmDOtnkdHULXNmWYU"
+          "current_key": "AIzaSyDkkBWDtzJIC8Sl_7TzSfwVKuliMMmoTJI"
         }
       ],
       "services": {
@@ -45,15 +45,15 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:776719847961:android:cfb3a542f8f258e82a5088",
+        "mobilesdk_app_id": "1:632604677797:android:db205409dff32ea23d1f4c",
         "android_client_info": {
-          "package_name": "com.zafiro_conductor"
+          "package_name": "com.metax_administrador"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyASx4Osx-gpV0qPm2mmDOtnkdHULXNmWYU"
+          "current_key": "AIzaSyDkkBWDtzJIC8Sl_7TzSfwVKuliMMmoTJI"
         }
       ],
       "services": {

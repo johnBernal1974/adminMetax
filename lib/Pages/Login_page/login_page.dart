@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/operador_provider.dart';
+import '../../src/color.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -13,42 +14,45 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  MyAuthProvider _authProvider = MyAuthProvider();
-  OperadorProvider _operadorProvider = OperadorProvider();
+  final MyAuthProvider _authProvider = MyAuthProvider();
+  final OperadorProvider _operadorProvider = OperadorProvider();
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: gris,
       appBar: AppBar(
-        title: Text('Login'),
+        title: const Text('Login', style: TextStyle(
+          color: Colors.black, fontWeight: FontWeight.bold
+        ),),
       ),
       body: SingleChildScrollView(
         child: Center(
           child: Container(
-            constraints: BoxConstraints(maxWidth: 400),
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 // Espacio entre la imagen y el formulario
-                SizedBox(height: 50.0),
+                const SizedBox(height: 50.0),
 
                 // Imagen en la parte superior
                 Container(
                   alignment: Alignment.topCenter,
-                  margin: EdgeInsets.only(top: 16.0),
+                  margin: const EdgeInsets.only(top: 16.0),
                   child: Image.asset(
-                    'assets/imagen_zafiro_azul.png', // Ajusta la ruta según la ubicación de tu imagen
-                    height: 100.0,
+                    'assets/logo_metax_combinado.png', // Ajusta la ruta según la ubicación de tu imagen
+                    height: 50.0,
                     fit: BoxFit.contain,
                   ),
                 ),
 
                 // Formulario de login
                 Container(
-                  margin: EdgeInsets.symmetric(vertical: 16.0),
-                  padding: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.symmetric(vertical: 16.0),
+                  padding: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10.0),
@@ -57,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
                         color: Colors.grey.withOpacity(0.5),
                         spreadRadius: 5,
                         blurRadius: 7,
-                        offset: Offset(0, 3), // changes position of shadow
+                        offset: const Offset(0, 3), // changes position of shadow
                       ),
                     ],
                   ),
@@ -85,13 +89,15 @@ class _LoginPageState extends State<LoginPage> {
                       ElevatedButton(
                         onPressed: () => login(emailController.text.trim(), passwordController.text.trim(), context),
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white, backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white, backgroundColor: amarilloOscuro,
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                        child: const Text('Ingresar'),
+                        child: const Text('Ingresar', style: TextStyle(
+                          color: Colors.black
+                        ),),
                       ),
                       const SizedBox(height: 30),
                     ],

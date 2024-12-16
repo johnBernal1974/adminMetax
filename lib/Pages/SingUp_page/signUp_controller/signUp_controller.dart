@@ -170,7 +170,7 @@ class SignUpController{
 
      }else{
        ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text('El operador no se pudo registrar')),
+         const SnackBar(content: Text('El operador no se pudo registrar')),
        );
 
 

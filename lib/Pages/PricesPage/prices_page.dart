@@ -130,7 +130,6 @@ class _PricesPageState extends State<PricesPage> {
     );
   }
 
-
   Widget _seccionConfiguracion(){
     return LayoutBuilder(
         builder: (context, constraints){
@@ -155,8 +154,6 @@ class _PricesPageState extends State<PricesPage> {
                             Column(
                               children: [
                                 const Text("Info de contacto", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextField(_priceData!.theCorreoConductores.toString(), 'Etiqueta del Precio', "clave_del_precio"),
-                                _buildTextField( _priceData!.theCorreoUsuarios.toString(), 'Correo para Clientes', "correo_usuarios"),
                                 _buildTextField(_priceData!.theCelularAtencionConductores.toString(), 'Celular para Conductores', "celular_atencion_conductores"),
                                 _buildTextField(_priceData!.theCelularAtencionUsuarios.toString(), 'Celular para Clientes', "celular_atencion_usuarios"),
                                 _buildTextField(_priceData!.theLinkCancelarCuenta.toString(), 'Link cancelación cuenta', "link_cancelar_cuenta"),
@@ -170,9 +167,7 @@ class _PricesPageState extends State<PricesPage> {
                               children: [
                                 const Text("Tarifas", style: TextStyle(fontWeight: FontWeight.bold),),
                                 _buildTextFieldEnteros(_priceData!.theTarifaAeropuerto.toString(),"Aeropuerto", "tarifa_aeropuerto"),
-                                _buildTextFieldEnteros(_priceData!.theTarifaMinimaHotel.toString(), 'Mínima hotel', "tarifa_minima_hotel"),
                                 _buildTextFieldEnteros(_priceData!.theTarifaMinimaRegular.toString(), 'Mínima regular', "tarifa_minima_regular"),
-                                _buildTextFieldEnteros(_priceData!.theTarifaMinimaTurismo.toString(), 'Mínima turismo', "tarifa_minima_turismo"),
                                 _buildTextFieldEnteros(_priceData!.theDistanciaTarifaMinima.toString(), 'Distancia tarifa mínima', "distancia_tarifa_minima"),
                                 _buildTextFieldEnteros(_priceData!.theComision.toString(), 'Comisión %', "comision"),
                               ],
@@ -182,21 +177,8 @@ class _PricesPageState extends State<PricesPage> {
                             const SizedBox(height: 20),
                             Column(
                               children: [
-                                const Text("Versiones", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextField(_priceData!.theVersionConductorAndroid.toString(), 'Conductor android', "version_conductor_android"),
-                                _buildTextField(_priceData!.theVersionUsuarioAndroid.toString(), 'Usuario android', "version_usuario_android"),
-                                _buildTextField(_priceData!.theVersionusuarioIos.toString(), 'Usuario IOS', "version_usuario_ios"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
                                 const Text("Valores kilometro", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theValorKmHotel.toString(), '\$Km Hotel', "valor_km_hotel"),
                                 _buildTextFieldEnteros(_priceData!.theValorKmRegular.toString(), '\$Km Regular', "valor_km_regular"),
-                                _buildTextFieldEnteros(_priceData!.theValorKmTurismo.toString(), '\$Km Turismo', "valor_km_turismo"),
                               ],
                             ),
                             const SizedBox(height: 20),
@@ -205,20 +187,7 @@ class _PricesPageState extends State<PricesPage> {
                             Column(
                               children: [
                                 const Text("Valores Minuto", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theValorMinHotel.toString(), '\$Min Hotel', "valor_min_hotel"),
                                 _buildTextFieldEnteros(_priceData!.theValorMinRegular.toString(), '\$Min Regular', "valor_min_regular"),
-                                _buildTextFieldEnteros(_priceData!.theValorMinTurismo.toString(), '\$Min Turismo', "valor_min_turismo"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Adicionales", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theValorAdicionalMaps.toString(), 'Adicional Maps', "valor_adicional_maps"),
-                                _buildTextFieldEnteros(_priceData!.theValorIva.toString(), 'Iva', "valor_Iva"),
-                                _dropDinamica(),
                               ],
                             ),
                             const SizedBox(height: 20),
@@ -276,8 +245,6 @@ class _PricesPageState extends State<PricesPage> {
                               child: Column(
                                 children: [
                                   const Text("Info de contacto", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextField(_priceData!.theCorreoConductores.toString(), 'Etiqueta del Precio', "clave_del_precio"),
-                                  _buildTextField( _priceData!.theCorreoUsuarios.toString(), 'Correo para Clientes', "correo_usuarios"),
                                   _buildTextField(_priceData!.theCelularAtencionConductores.toString(), 'Celular para Conductores', "celular_atencion_conductores"),
                                   _buildTextField(_priceData!.theCelularAtencionUsuarios.toString(), 'Celular para Clientes', "celular_atencion_usuarios"),
                                   _buildTextField(_priceData!.theLinkCancelarCuenta.toString(), 'Link cancelación cuenta', "link_cancelar_cuenta"),
@@ -292,26 +259,14 @@ class _PricesPageState extends State<PricesPage> {
                                 children: [
                                   const Text("Tarifas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
                                   _buildTextFieldEnteros(_priceData!.theTarifaAeropuerto.toString(),"Aeropuerto", "tarifa_aeropuerto"),
-                                  _buildTextFieldEnteros(_priceData!.theTarifaMinimaHotel.toString(), 'Mínima hotel', "tarifa_minima_hotel"),
                                   _buildTextFieldEnteros(_priceData!.theTarifaMinimaRegular.toString(), 'Mínima regular', "tarifa_minima_regular"),
-                                  _buildTextFieldEnteros(_priceData!.theTarifaMinimaTurismo.toString(), 'Mínima turismo', "tarifa_minima_turismo"),
                                   _buildTextFieldEnteros(_priceData!.theDistanciaTarifaMinima.toString(), 'Distancia tarifa mínima', "distancia_tarifa_minima"),
                                   _buildTextFieldEnteros(_priceData!.theComision.toString(), 'Comisión %', "comision"),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 20),// Espacio entre columnas
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Versiones", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextField(_priceData!.theVersionConductorAndroid.toString(), 'Conductor android', "version_conductor_android"),
-                                  _buildTextField(_priceData!.theVersionUsuarioAndroid.toString(), 'Usuario android', "version_usuario_android"),
-                                  _buildTextField(_priceData!.theVersionusuarioIos.toString(), 'Usuario IOS', "version_usuario_ios"),
 
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 50),
@@ -323,9 +278,7 @@ class _PricesPageState extends State<PricesPage> {
                               child: Column(
                                 children: [
                                   const Text("Valores kilómetro", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theValorKmHotel.toString(), '\$Km Hotel', "valor_km_hotel"),
                                   _buildTextFieldEnteros(_priceData!.theValorKmRegular.toString(), '\$Km Regular', "valor_km_regular"),
-                                  _buildTextFieldEnteros(_priceData!.theValorKmTurismo.toString(), '\$Km Turismo', "valor_km_turismo"),
                                 ],
                               ),
                             ),
@@ -335,9 +288,7 @@ class _PricesPageState extends State<PricesPage> {
                               child: Column(
                                 children: [
                                   const Text("Valores Minuto", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theValorMinHotel.toString(), '\$Min Hotel', "valor_min_hotel"),
                                   _buildTextFieldEnteros(_priceData!.theValorMinRegular.toString(), '\$Min Regular', "valor_min_regular"),
-                                  _buildTextFieldEnteros(_priceData!.theValorMinTurismo.toString(), '\$Min Turismo', "valor_min_turismo"),
                                 ],
                               ),
                             ),
@@ -346,8 +297,6 @@ class _PricesPageState extends State<PricesPage> {
                               child: Column(
                                 children: [
                                   const Text("Adicionales", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theValorAdicionalMaps.toString(), 'Adicional Maps', "valor_adicional_maps"),
-                                  _buildTextFieldEnteros(_priceData!.theValorIva.toString(), 'Iva', "valor_Iva"),
                                   _dropDinamica(),
                                 ],
                               ),
@@ -567,7 +516,6 @@ class _PricesPageState extends State<PricesPage> {
     );
   }
 
-
   //// widget para textedit strings////////
   Widget _buildTextField(String initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue);
@@ -645,8 +593,6 @@ class _PricesPageState extends State<PricesPage> {
     }
   }
 
-
-
   void _saveField(String key, dynamic value, Function updateStateCallback) async {
     print("Guardando campo con key '$key' y valor '$value'");
 
@@ -660,7 +606,6 @@ class _PricesPageState extends State<PricesPage> {
       _showSnackBar(context, 'Error al actualizar el cliente: $error');
     }
   }
-
 
   void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(

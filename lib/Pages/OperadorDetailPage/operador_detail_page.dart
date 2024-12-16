@@ -99,8 +99,6 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("este es el operador"),
-                    const SizedBox(height: 20),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
@@ -846,7 +844,7 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: photoUrl != null
+              child: (photoUrl != null && photoUrl.isNotEmpty)
                   ? Image.network(
                 photoUrl,
                 fit: BoxFit.cover,
@@ -893,5 +891,6 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
       ),
     );
   }
+
 
 }

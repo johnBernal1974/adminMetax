@@ -1,17 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:metax_administrador/providers/client_provider.dart';
+import 'package:metax_administrador/providers/operador_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:zafiro_administrador/Pages/HistorialViajesPage/historia_viajes_page.dart';
-import 'package:zafiro_administrador/Pages/InfoRecargas/info_recargas.dart';
-import 'package:zafiro_administrador/providers/client_provider.dart';
-import 'package:zafiro_administrador/providers/operador_provider.dart';
-import 'package:zafiro_administrador/src/color.dart';
+import 'package:metax_administrador/Pages/HistorialViajesPage/historia_viajes_page.dart';
+import 'package:metax_administrador/Pages/InfoRecargas/info_recargas.dart';
+import 'package:metax_administrador/src/color.dart';
 import 'Pages/Login_page/login_page.dart';
 import 'Pages/ConductoresPage/conductores_page.dart';
 import 'Pages/GeneralPage/general_page.dart';
-import 'Pages/MotociclistasPage/moticlistas_page.dart';
 import 'Pages/OperadoresPage/operadores_page.dart';
 import 'Pages/PricesPage/prices_page.dart';
 import 'Pages/SingUp_page/View/singUp_page.dart';
@@ -20,7 +19,6 @@ import 'Pages/UsuariosPage/usuarios_page.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
-
 import 'package:intl/date_symbol_data_local.dart';
 
 
@@ -35,13 +33,13 @@ void main() async {
     // Inicialización específica para la web
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-          apiKey: "AIzaSyDZyI0VVcdENZoRTwW5Ze3bQYRLQgp_Xl0",
-          authDomain: "transport-f7c79.firebaseapp.com",
-          projectId: "transport-f7c79",
-          storageBucket: "transport-f7c79.appspot.com",
-          messagingSenderId: "776719847961",
-          appId: "1:776719847961:web:2f69301d843863172a5088",
-          measurementId: "G-0P5JXEVERY"
+        apiKey: 'AIzaSyCXELqMHM7D8lT-0kexYu4jfqehfLNoRC0',
+        appId: '1:632604677797:web:1fb92982ee10663c3d1f4c',
+        messagingSenderId: '632604677797',
+        projectId: 'apptaxi-e641d',
+        authDomain: 'apptaxi-e641d.firebaseapp.com',
+        storageBucket: 'apptaxi-e641d.firebasestorage.app',
+        measurementId: 'G-VBGVGQZ8KG',
       ),
     );
   } else {
@@ -70,7 +68,7 @@ class MyApp extends StatelessWidget {
 
       ],
       child: MaterialApp(
-        title: 'Zafiro Administrador',
+        title: 'Metax Administrador',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
             primaryColor: primary,
@@ -83,7 +81,6 @@ class MyApp extends StatelessWidget {
           'signUp': (context) => SignUpPage(),
           'general_page': (context) => GeneralPage(),
           'conductores_page': (context) => ConductoresPage(),
-          'motociclistas_page': (context) => MotociclistasPage(),
           'usuarios_page': (context) => const UsuariosPage(),
           'operadores_page': (context) => const OperadoresPage(),
           'antecedentes_page': (context) => const Paginaantecedentes(),

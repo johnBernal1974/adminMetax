@@ -393,16 +393,19 @@ class _OperadoresPageState extends State<OperadoresPage> {
                 ),
                 DataCell(
                   ClipOval(
-                    child: CachedNetworkImage(
+                    child: operador.image != null && operador.image.isNotEmpty
+                        ? CachedNetworkImage(
                       imageUrl: operador.image,
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => CircularProgressIndicator(),
                       errorWidget: (context, url, error) => Icon(Icons.error),
-                    ),
+                    )
+                        : Icon(Icons.person, size: 50), // Muestra un ícono si la URL está vacía
                   ),
                 ),
+
                 DataCell(Text(
                   operador.the01Nombres ?? "Nombre no disponible",
                   style: TextStyle(color: Colors.black),

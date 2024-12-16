@@ -1,6 +1,8 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../common/main_layout.dart';
@@ -29,6 +31,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   String? selectedGenero;
   String? selectedRol;
   String? rol;
+  String? nameOperador;
+  String? apellidosOperador;
   double averageRating = 0.0;
 
   Operador? operador;
@@ -39,35 +43,35 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   @override
   void initState() {
     super.initState();
-    selectedTipoDocumento = widget.client.the03TipoDeDocumento;
     selectedGenero = widget.client.the09Genero;
     selectedRol = widget.client.the20Rol;
     getClientRatings();
+    //getOperadorInfo();
 
   }
 
   Color getStatusColor() {
-    if (widget.client.verificacionStatus == "registrado"
+    if (widget.client.status == "registrado"
     ) {
       return Colors.blueGrey;
     }
-    else if (widget.client.verificacionStatus == "foto_tomada") {
+    else if (widget.client.status == "foto_tomada") {
       return Colors.amber;
     }
-    else if (widget.client.verificacionStatus == 'Procesando') {
+    else if (widget.client.status == 'verificando_email') {
       return Colors.blueAccent;
     }
-    else if (widget.client.verificacionStatus == 'corregida') {
+    else if (widget.client.status == 'corregida') {
       return Colors.purple;
     }
 
-    else if (widget.client.verificacionStatus == 'activado') {
+    else if (widget.client.status == 'activado') {
       return Colors.green;
     }
-    else if (widget.client.verificacionStatus == 'bloqueado') {
+    else if (widget.client.status == 'bloqueado') {
       return Colors.red.shade900;
     }
-    else if (widget.client.verificacionStatus == '') {
+    else if (widget.client.status == '') {
       return Colors.brown.shade900;
     }
     else {
@@ -133,7 +137,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                           const Divider(),
                           _seccionDatosGenerales(),
                           const Divider(),
-                          _seccionDocumentosdeIdentidad(),
+                          _seccionInfoClientEditable(),
                           const Divider(),
                           _seccionComunicacionNotificaciones(),
                           const SizedBox(height: 50,)
@@ -173,11 +177,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${widget.client.the01Nombres} ${widget.client.the02Apellidos}', style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
-                Text('Cliente desde: ${widget.client.the21FechaDeRegistro}',
-                  style: TextStyle(fontSize: fontSize),
-                ),
-                Divider(),
-
+                Text('Cliente desde: ${widget.client.the21FechaDeRegistro}'),
+                const Divider(),
                 Container(
                     alignment: Alignment.center,
                     width: 200,
@@ -192,9 +193,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('${widget.client.the01Nombres} ${widget.client.the02Apellidos}', style: const TextStyle( fontSize: 24, fontWeight: FontWeight.bold)),
-                    Text('Cliente desde: ${widget.client.the21FechaDeRegistro}',
-                      style: TextStyle(fontSize: fontSize),
-                    ),
+                    Text('Cliente desde: ${widget.client.the21FechaDeRegistro}')
+
                   ],
                 ),
                 _buildVerificationStatus(fontSize),
@@ -219,7 +219,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Datos Generales' ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionTitle('Datos Generales' ),
+                botonesComunicacion(context)
+              ],
+            ),
             isMobile
                 ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,13 +267,164 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
 
-  Widget _seccionDocumentosdeIdentidad(){
+  Widget botonesComunicacion (context){
+    bool isMobile = !kIsWeb;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        GestureDetector(
+          onTap: () {
+            if(isMobile){
+              _openWhatsApp(context);
+            }
+            _openWhatsAppWeb(context);
+          },
+          child: Image.asset(
+            'assets/icono_whatsapp.png', // Ruta de la imagen de WhatsApp
+            width: 30,
+            height: 30,
+          ),
+        ),
+        const SizedBox(width: 20), // Espacio entre la imagen y el icono
+        GestureDetector(
+          onTap: () {
+            makePhoneCall(widget.client.the07Celular);
+          },
+          child: const Icon(
+            Icons.phone,
+            color: Colors.black, // Color del icono de llamada
+            size: 30,
+          ),
+        ),
+        Divider()
+      ],
+    );
+  }
+
+  void _openWhatsApp(BuildContext context) async {
+    String phoneNumber = widget.client.the07Celular;
+    String? name = widget.client.the01Nombres;
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
+    final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
+    try {
+      await launchUrl(whatsappLink);
+    } catch (e) {
+      showNoWhatsAppInstalledDialog(context);
+    }
+  }
+
+
+  void _openWhatsAppActivacion(BuildContext context) async {
+    String phoneNumber = widget.client.the07Celular;
+    String? name = widget.client.the01Nombres;
+    String message = '''
+    ¡Hola $name! 
+
+    Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Cliente* ya está activada. 
+  Haz clic en el siguiente enlace para ver más información:
+  https://mizafiro.com/wp-content/uploads/2024/11/Cliente-_activado.png
+
+  Si tienes alguna duda, no dudes en contactarnos.
+
+  Saludos cordiales,
+  El equipo de Zafiro
+  ''';
+    final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
+    try {
+      await launchUrl(whatsappLink);
+    } catch (e) {
+      showNoWhatsAppInstalledDialog(context);
+    }
+  }
+
+  void _openWhatsAppWeb(BuildContext context) async {
+    String phoneNumber = widget.client.the07Celular;
+    String? name = widget.client.the01Nombres;
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
+    sendWhatsAppWeb(phone: phoneNumber, text: message);
+  }
+
+  void _openWhatsAppWebActivacion(BuildContext context) async {
+    String phoneNumber = widget.client.the07Celular;
+    String? driverName = widget.client.the01Nombres;
+
+    String message = '''
+  Hola $driverName,
+
+  Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Cliente* ya está activada.   
+
+  Si tienes alguna duda, no dudes en contactarnos.
+
+  Saludos cordiales,
+  El equipo de Metax
+  ''';
+
+    // Asegurarse de que el número de teléfono tiene el código de país
+    final String fullPhoneNumber = "57$phoneNumber".replaceAll(RegExp(r'\s+'), '');
+
+    // Codificar el mensaje para la URL utilizando encodeFull, que maneja caracteres especiales
+    final String encodedMessage = Uri.encodeFull(message);
+
+    // Crear la URL con el número de teléfono y el mensaje codificado
+    final Uri whatsappWebUri = Uri.parse("https://wa.me/$fullPhoneNumber?text=$encodedMessage");
+
+    // Intentar abrir WhatsApp Web con la URL generada
+    if (!await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se puede enviar un mensaje a $fullPhoneNumber');
+    }
+  }
+
+////metodo para abrir whatsapp web
+  Future<void> sendWhatsAppWeb({required String phone, required String text}) async {
+    const String countryCode = "57"; // Código de país para Colombia
+    final String fullPhoneNumber = "$countryCode$phone".replaceAll(RegExp(r'\s+'), '');
+
+    // Codifica el mensaje completamente
+    final String encodedText = Uri.encodeFull(text);
+
+    final Uri whatsappWebUri = Uri.parse("https://wa.me/$fullPhoneNumber?text=$encodedText");
+
+    if (!await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se puede enviar un mensaje a $fullPhoneNumber');
+    }
+  }
+
+  void makePhoneCall(String phoneNumber) async {
+    final phoneCallUrl = 'tel:$phoneNumber';
+
+    try {
+      await launch(phoneCallUrl);
+    } catch (e) {
+      print('No se pudo realizar la llamada: $e');
+    }
+  }
+
+  void showNoWhatsAppInstalledDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('WhatsApp no instalado', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          content: const Text('No tienes WhatsApp en tu dispositivo. Instálalo e intenta de nuevo'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Aceptar', style: TextStyle(color: negro, fontWeight: FontWeight.w900, fontSize: 14)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _seccionInfoClientEditable(){
     return LayoutBuilder(
         builder: (context, constraints){
           double screenWidth = constraints.maxWidth;
           // Define el tamaño de la letra según el ancho de la pantalla
           double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
           // Define si es móvil o no
           bool isMobile = screenWidth < 600;
           return Column(
@@ -285,7 +442,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                               isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
                             });
                           },
-                          child: _buildSectionTitle('Documento de identidad')),
+                          child: _buildSectionTitle('Más Info')),
 
                       IconButton(
                         onPressed: () {
@@ -310,208 +467,15 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                           children: [
                             Column(
                               children: [
-                                Stack(
-                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
-                                  children: [
-                                    _buildDocumentPhoto("Cédula parte delantera", widget.client.fotoCedulaDelantera),
-                                    Positioned(
-                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
-                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
-                                      child: Container(
-                                        width: 20,
-                                        height: 20,
-                                        decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.client.the13FotoCedulaDelantera),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                                 _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
                                 _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
-                                _dropTipoDocumento (),
-                                _buildTextField(widget.client.the04NumeroDocumento, 'Número de Documento', "04_Numero_documento"),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    SizedBox(
-                                      height: 30,
-                                      width: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          _showConfirmationFotoCedulaDelantera(context, "¿Aceptar la foto del documento de identidad en su parte delantera?", "aceptada");
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 25),
-                                    SizedBox(
-                                      height: 30,
-                                      width: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada", () {});
-
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 25),
-                                Row(
-                                  children: [
-                                    SizedBox(
-                                      height: 40,
-                                      width: 40,
-                                      child: ElevatedButton(
-                                        onPressed: () async {
-                                          const url = 'https://antecedentes.policia.gov.co:7005/WebJudicial/';
-                                          if (await canLaunch(url)) {
-                                            await launch(url);
-                                          } else {
-                                            throw 'Could not launch $url';
-                                          }
-
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: primary,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.add_chart_sharp, color: Colors.white, size: 30), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 25),
-                                    SizedBox(
-                                      height: 40,
-                                      width: 40,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.person_off, color: Colors.white, size: 30), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 20),
-                            Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                Stack(
-                                  clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
-                                  children: [
-                                    _buildDocumentPhoto("Cédula parte trasera", widget.client.fotoCedulaTrasera),
-                                    Positioned(
-                                      top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
-                                      right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
-                                      child: Container(
-                                        width: 20,
-                                        height: 20,
-                                        decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.client.the14FotoCedulaTrasera),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                _buildTextField(widget.client.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_expedicion_documento"),
-                                _buildTextField(widget.client.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_nacimiento"),
                                 _dropGenero(),
                                 _dropRol(),
-                                const SizedBox(height: 30),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    SizedBox(
-                                      height: 30,
-                                      width: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          _showConfirmationFotoCedulaTrasera(context, "¿Aceptar la foto del documento de identidad en su parte trasera?", "aceptada");
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 25),
-                                    SizedBox(
-                                      height: 30,
-                                      width: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada", () {});
-
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                        ),
-                                        child: const Center(
-                                          child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 30),
-                              ],
+                                                              ],
                             ),
+                            const SizedBox(height: 20),
                           ],
                         ),
-
                       ],
                     ),
                   ),
@@ -528,7 +492,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                               isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
                             });
                           },
-                          child: _buildSectionTitle('Documento de identidad')),
+                          child: _buildSectionTitle('Más info')),
 
                       IconButton(
                         onPressed: () {
@@ -554,73 +518,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                             Expanded(
                               child: Column(
                                 children: [
-                                  Stack(
-                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
-                                    children: [
-                                      _buildDocumentPhoto("Cédula parte delantera", widget.client.fotoCedulaDelantera),
-                                      Positioned(
-                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
-                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
-                                        child: Container(
-                                          width: 20,
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            color: getStatusColorFotos(widget.client.the13FotoCedulaDelantera),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                   _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
                                   _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
-                                  _dropTipoDocumento (),
-                                  _buildTextField(widget.client.the04NumeroDocumento, 'Número de Documento', "04_Numero_documento"),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        height: 30,
-                                        width: 30,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            _showConfirmationFotoCedulaDelantera(context, "¿Aceptar la foto del documento de identidad en su parte delantera?", "aceptada");
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 25),
-                                      SizedBox(
-                                        height: 30,
-                                        width: 30,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
-                                            _saveField("Verificacion_Status", "rechazada", () {});
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                 ],
                               ),
                             ),
@@ -628,125 +527,9 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                             Expanded(
                               child: Column(
                                 children: [
-                                  Stack(
-                                    clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
-                                    children: [
-                                      _buildDocumentPhoto("Cédula parte trasera", widget.client.fotoCedulaTrasera),
-                                      Positioned(
-                                        top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
-                                        right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
-                                        child: Container(
-                                          width: 20,
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            color: getStatusColorFotos(widget.client.the14FotoCedulaTrasera),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  _buildTextField(widget.client.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_expedicion_documento"),
-                                  _buildTextField(widget.client.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_nacimiento"),
                                   _dropGenero(),
                                   _dropRol(),
-                                  const SizedBox(height: 30),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      SizedBox(
-                                        height: 30,
-                                        width: 30,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            _showConfirmationFotoCedulaTrasera(context, "¿Aceptar la foto del documento de identidad en su parte trasera?", "aceptada");
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.check_circle, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 25),
-                                      SizedBox(
-                                        height: 30,
-                                        width: 30,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
-                                            _saveField("Verificacion_Status", "rechazada", () {});
-
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            padding: EdgeInsets.zero, // Ajuste para eliminar cualquier padding interno
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.block, color: Colors.white, size: 20), // Ajusta el tamaño del icono según sea necesario
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 50),
                                 ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Container(
-                              margin: EdgeInsets.symmetric(vertical: 20),
-                              height: 50, // Altura del botón
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  const url = 'https://antecedentes.policia.gov.co:7005/WebJudicial/';
-                                  if (await canLaunch(url)) {
-                                    await launch(url);
-                                  } else {
-                                    throw 'Could not launch $url';
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: TextStyle(fontSize: 16),
-                                ),
-                                icon: Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                                label: Text('Antecedentes', style: TextStyle( color: blanco)),
-                              ),
-                            ),
-                            Container(
-                              margin: EdgeInsets.symmetric(vertical: 20),
-                              height: 50, // Altura del botón
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  // Lógica para informar activación por Mail
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: Colors.redAccent, // Color de fondo del botón
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: TextStyle(fontSize: 16),
-                                ),
-                                icon: Icon(Icons.cancel, color: Colors.white), // Icono de Correo
-                                label: Text('Bloqueo AJ', style: TextStyle( color: blanco)),
                               ),
                             ),
                           ],
@@ -893,9 +676,17 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  void getOperadorInfo() async {
+    var user = _authProvider.getUser();
+    if (user != null) {
+      operador = await _operadorProvider.getById(user.uid);
+      if (operador != null) {
+        nameOperador =operador?.the01Nombres;
+        apellidosOperador =operador?.the02Apellidos;
+      }
+    }
+    print('Datos del operador ***************************************** $rol');
+  }
 
   Widget _buildButtonRowAceptarRechazarFotoPerfil(BuildContext context) {
     return Row(
@@ -970,8 +761,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRowHorizontal('Fecha activación:   ', widget.client.the11FechaActivacion),
-        _buildInfoRowHorizontal('Activador:   ', widget.client.the12NombreActivador),
         _buildInfoRowHorizontal('Email:   ', widget.client.the06Email),
         _buildInfoRowHorizontal('Celular:   ', widget.client.the07Celular),
         _buildInfoRowHorizontal('Viajes:   ', widget.client.the19Viajes.toString()),
@@ -1044,7 +833,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           height: 40, // Altura del botón
           child: ElevatedButton.icon(
             onPressed: () {
-              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+             _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1103,49 +892,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
             label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _dropTipoDocumento() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Tipo de Documento', style: TextStyle(fontSize: 14)),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: selectedTipoDocumento,
-                items: const [
-                  DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Cédula de Ciudadanía", child: Text("Cédula de Ciudadanía")),
-                  DropdownMenuItem(value: "Cédula de extranjería", child: Text("Cédula de extranjería")),
-                  DropdownMenuItem(value: "Pasaporte", child: Text("Pasaporte")),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedTipoDocumento = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("03_Tipo_de_documento", selectedTipoDocumento!, () {
-                  setState(() {
-                    widget.client.the03TipoDeDocumento;
-                  });
-                });
-              },
-            ),
-          ],
-        ),
-        SizedBox(height: 10)
       ],
     );
   }
@@ -1231,7 +977,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
       ],
     );
   }
-
   //// widget para textedit strings////////
   Widget _buildTextField(String initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue);
@@ -1262,21 +1007,12 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     bool canActivate = false; // Variable para determinar si se puede activar el usuario
 
     // Verificar si el conductor ya está activado
-    if (widget.client.the10EstaActivado == true) {
+    if (widget.client.status == "activado") {
       message = 'El cliente ya se encuentra activado';
     } else {
-      // Condiciones para determinar si se puede activar el usuario
-      if (widget.client.the15FotoPerfilUsuario == "aceptada" &&
-          widget.client.the13FotoCedulaDelantera == "aceptada" &&
-          widget.client.the14FotoCedulaTrasera == "aceptada" &&
-          widget.client.the05FechaExpedicionDocumento.isNotEmpty &&
-          widget.client.the08FechaNacimiento.isNotEmpty &&
-          widget.client.the09Genero.isNotEmpty) {
-        message = 'El cliente ya puede ser activado';
-        canActivate = true;
-      } else {
-        message = 'Hay alguna verificación que no se ha hecho y evita activar al cliente';
-      }
+      message = 'El cliente ya puede ser activado';
+      canActivate = true;
+
     }
 
     showDialog(
@@ -1290,17 +1026,20 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               TextButton(
                 child: const Text('Activar'),
                 onPressed: () {
-                  _saveFieldBool("10_Esta_activado", true);
-                  _saveFieldBool("16_Esta_bloqueado", false);
-                  _saveField("Verificacion_Status", "activado", () {}); // Llama al método para guardar el campo
+                  _saveField("status", "activado", () {});
 
                   setState(() {
-                    widget.client.the10EstaActivado = true;
-                    widget.client.the16EstaBloqueado = false;
-                    widget.client.verificacionStatus = "activado";
+                    widget.client.status = "activado";
                   });
 
                   Navigator.of(context).pop(); // Cerrar el diálogo
+
+                  // Verificar si es móvil o web y abrir WhatsApp
+                  if (!kIsWeb) {
+                    _openWhatsAppActivacion(context); // Llamada a la app móvil de WhatsApp
+                  } else {
+                    _openWhatsAppWebActivacion(context); // Llamada a la versión web de WhatsApp
+                  }
                 },
               ),
           ],
@@ -1312,7 +1051,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   void bloquearUsuario(BuildContext context) {
 
     // Verificar si el usuario ya está bloqueado
-    if (widget.client.the16EstaBloqueado == true) {
+    if (widget.client.status == "bloqueado") {
       // Si ya está bloqueado, mostramos el mensaje y salimos
       showDialog(
         context: context,
@@ -1345,14 +1084,10 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
             TextButton(
               child: const Text('Bloquear'),
               onPressed: () {
-                _saveFieldBool("16_Esta_bloqueado", true); // Marcar como bloqueado
-                _saveFieldBool("10_Esta_activado", false); // Marcar como bloqueado
-                _saveField("Verificacion_Status", "bloqueado", () {}); // Actualizar el estado
+                _saveField("status", "bloqueado", () {}); // Actualizar el estado
 
                 setState(() {
-                  widget.client.the10EstaActivado = false;
-                  widget.client.the16EstaBloqueado = true;
-                  widget.client.verificacionStatus = "bloqueado";
+                  widget.client.status = "bloqueado";
                 });
                 Navigator.of(context).pop(); // Cerrar el diálogo
               },
@@ -1423,7 +1158,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
 
-
   void _showConfirmationFotoPerfil(BuildContext context, String message, String isBloquear) {
     showDialog(
       context: context,
@@ -1448,96 +1182,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
 
-  void _showConfirmationFotoCedulaDelantera(BuildContext context, String message, String isBloquear) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(message),
-          actions: <Widget>[
-
-            TextButton(
-              child: Text("Sí"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-                _saveField("13_Foto_cedula_delantera", isBloquear, () {}); // Llama al método para guardar el campo
-                setState(() {
-                  widget.client.the13FotoCedulaDelantera = isBloquear;
-                });
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showConfirmationFotoCedulaTrasera(BuildContext context, String message, String isBloquear) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(message),
-          actions: <Widget>[
-
-            TextButton(
-              child: Text("Sí"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-                _saveField("14_Foto_cedula_trasera", isBloquear, () {}); // Llama al método para guardar el campo
-                setState(() {
-                  widget.client.the14FotoCedulaTrasera = isBloquear;
-                });
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-
-  //// metodo para guardar los editfield enteros/////
-  Future<void> _saveFieldEnteros(String key, String value) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('Clients')
-          .doc(widget.client.id)
-          .update({key: int.parse(value)});
-      print('Campo guardado exitosamente con key: $key y valor: $value');
-    } catch (error) {
-      print('Error al guardar campo con key: $key y valor: $value. Error: $error');
-      throw error;
-    }
-  }
-
-
-  void _saveFieldBool(String key, dynamic value) async {
-    print("Guardando campo con key '$key' y valor '$value'");
-
-    bool boolValue = false;
-    if (value is String) {
-      boolValue = bool.fromEnvironment(value.toLowerCase());
-    } else if (value is bool) {
-      boolValue = value;
-    } else {
-      print("Error: El valor '$value' no puede ser convertido a bool.");
-      return;
-    }
-
-    Map<String, dynamic> data = {
-      key: boolValue,
-    };
-
-    try {
-      await _clientProviderr.update(data, widget.client.id);
-      _showSnackBar(context, 'Actualización exitosa');
-    } catch (error) {
-      _showSnackBar(context, 'Error al actualizar el cliente: $error');
-    }
-  }
-
-
   //// metodo para guardar los editfield strings/////
   void _saveField(String key, dynamic value, Function updateStateCallback) async {
     print("Guardando campo con key '$key' y valor '$value'");
@@ -1557,7 +1201,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     }
   }
 
-
   void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -1566,28 +1209,27 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-
   Widget _buildVerificationStatus(double fontSize) {
     Color statusColor = getStatusColor();
     String statusText = '';
 
-    if (widget.client.verificacionStatus == "registrado") {
+    if (widget.client.status == "registrado") {
       statusText = 'Registrado';
-    } else if (widget.client.verificacionStatus == "foto_tomada") {
+    } else if (widget.client.status == "foto_tomada") {
       statusText = 'Fotos faltantes';
-    } else if (widget.client.verificacionStatus == 'Procesando') {
-      statusText = 'Procesando';
+    } else if (widget.client.status == 'verificando_email') {
+      statusText = 'Verificando email';
     }
-    else if (widget.client.verificacionStatus == 'corregida') {
+    else if (widget.client.status == 'corregida') {
       statusText = 'Corregida';
     }
-    else if (widget.client.verificacionStatus == 'rechazada') {
+    else if (widget.client.status == 'rechazada') {
       statusText = 'En espera';
     }
-    else if (widget.client.verificacionStatus == 'activado') {
+    else if (widget.client.status == 'activado') {
       statusText = 'Activado';
     }
-    else if (widget.client.verificacionStatus == 'bloqueado') {
+    else if (widget.client.status == 'bloqueado') {
       statusText = 'Bloqueado';
     }
 
@@ -1623,23 +1265,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
       child: Text(
         title,
         style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 3),
-          Text(value),
-        ],
       ),
     );
   }
@@ -1725,53 +1350,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
         Text(
           value,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-
-  Widget _buildDocumentPhoto(String title, String? imageUrl) {
-    bool isZoomed = false;
-    return Column(
-      children: [
-        if (imageUrl != null && imageUrl.isNotEmpty)
-          StatefulBuilder(
-            builder: (context, setState) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isZoomed = !isZoomed;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isZoomed ? 400 : 150,
-                  height: isZoomed ? 320 : 100,
-                  child: InteractiveViewer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        image: DecorationImage(
-                          fit: BoxFit.cover,
-                          image: NetworkImage(imageUrl),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          )
-        else
-          const Icon(
-            Icons.image,
-            size: 100,
-          ),
-        const SizedBox(height: 10),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ],
     );

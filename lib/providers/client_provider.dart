@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:zafiro_administrador/models/usuario_model.dart';
+import 'package:metax_administrador/models/usuario_model.dart';
 
 class ClientProvider with ChangeNotifier {
   late CollectionReference _ref;

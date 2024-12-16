@@ -113,7 +113,7 @@ class _GeneralPageState extends State<GeneralPage> {
               const Padding(
                 padding: EdgeInsets.all(6.0),
                 child: Text(
-                  'Información',
+                  'Información General',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -164,18 +164,13 @@ class _GeneralPageState extends State<GeneralPage> {
         [
           _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
           _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
-          const Divider(),
-          _buildDataRow('Motos conectadas:', motociclistasisActive.length.toString()),
-          _buildDataRow('Motos en servicio:', motociclistasIsWorking.length.toString()),
+
         ],
       ),
       const SizedBox(height: 30),
       _buildInfoCard(
-        'Cantidad de Viajes realizados',
+        'Viajes realizados',
         [
-          _buildDataRow('En vehículo:',  driverProvider.travelHistoryCarroCount.toString()),
-          _buildDataRow('En Moto:',  driverProvider.travelHistoryMotoCount.toString()),
-          const Divider(),
           _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
         ],
       ),
@@ -209,9 +204,6 @@ class _GeneralPageState extends State<GeneralPage> {
           [
             _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
             _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
-            Divider(),
-            _buildDataRow('Motos conectadas:', motociclistasisActive.length.toString()),
-            _buildDataRow('Motos en servicio:', motociclistasIsWorking.length.toString()),
           ],
         ),
       ),
@@ -219,11 +211,8 @@ class _GeneralPageState extends State<GeneralPage> {
       Expanded(
         flex: 2,
         child: _buildInfoCard(
-          'Cantidad de Viajes realizados',
+          'Viajes realizados',
           [
-            _buildDataRow('En vehículo:',  driverProvider.travelHistoryCarroCount.toString()),
-            _buildDataRow('En Moto:',  driverProvider.travelHistoryMotoCount.toString()),
-            const Divider(),
             _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
           ],
         ),
@@ -270,7 +259,7 @@ class _GeneralPageState extends State<GeneralPage> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: primary,
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 10),
@@ -293,16 +282,14 @@ class _GeneralPageState extends State<GeneralPage> {
 
   List<Widget> _buildMobileContainers(BuildContext context, DriverProvider driverProvider, int conductores, int motociclistas, int clientes, int totalUsuarios) {
     return [
-      _buildInfoContainerMobil(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.orange.shade300),
+
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'conductores_page'),
           child: _buildInfoContainerMobil(context, 'Conductores', Icons.directions_car, conductores.toString(), Colors.lightBlue.shade300)),
       GestureDetector(
-          onTap: () => Navigator.pushNamed(context, 'motociclistas_page'),
-          child: _buildInfoContainerMobil(context, 'Motociclistas', Icons.motorcycle_outlined, motociclistas.toString(), Colors.grey)),
-      GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
           child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
+      _buildInfoContainerMobil(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey),
       //_buildInfoContainerMobil(context, 'Viajes', Icons.info_outline,  driverProvider.travelHistoryCount.toString(), Colors.purple.shade300),
       // Agregar más contenedores según sea necesario
     ];
@@ -313,23 +300,20 @@ class _GeneralPageState extends State<GeneralPage> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Expanded(
-            child: _buildInfoContainer(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.orange.shade300),
-          ),
+
           Expanded(
             child: GestureDetector(
                 onTap: () => Navigator.pushNamed(context, 'conductores_page'),
                 child: _buildInfoContainer(context, 'Conductores', Icons.directions_car, conductores.toString(), Colors.lightBlue.shade300)),
           ),
-          Expanded(
-            child: GestureDetector(
-                onTap: () => Navigator.pushNamed(context, 'motociclistas_page'),
-                child: _buildInfoContainer(context, 'Motociclistas', Icons.motorcycle_outlined, motociclistas.toString(), Colors.grey)),
-          ),
+
           Expanded(
             child: GestureDetector(
                 onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
                 child: _buildInfoContainer(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
+          ),
+          Expanded(
+            child: _buildInfoContainer(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey.shade400),
           ),
           // Expanded(
           //   child: _buildInfoContainer(context, 'Viajes', Icons.add_chart_rounded, driverProvider.travelHistoryCount.toString(), Colors.purple.shade300),

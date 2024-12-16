@@ -13,37 +13,30 @@ class SideBar extends StatefulWidget {
 
 class _SideBarState extends State<SideBar> {
 
-  MyAuthProvider _authProvider = MyAuthProvider();
-  OperadorProvider _operadorProvider = OperadorProvider();
+  final MyAuthProvider _authProvider = MyAuthProvider();
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
       elevation: 1,
       child: Container(
-        color: grisMapa,
+        color: gris,
         child: (
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ListView(
+              padding: EdgeInsets.zero, // Asegura que no haya padding extra
               children: [
                 Container(
-                    margin: const EdgeInsets.only(top: 35),
                     alignment: Alignment.center,
-                    child: Image.asset("assets/imagen_zafiro_azul.png", width: 60, height: 60,)
+                    child: Image.asset("assets/logo_metax_combinado.png", width: 150, height: 150,)
                 ),
-                Container(
-                    alignment: Alignment.center,
-                    child: Image.asset("assets/logo_zafiro-pequeño.png", width: 60, height: 60,)
-                ),
-                const SizedBox(height: 20),
                 const Divider(height: 1, color: gris),
                 
                 Container(
-                  margin : const EdgeInsets.symmetric( horizontal: 20, vertical: 10),
+                  margin : const EdgeInsets.symmetric( horizontal: 20),
                   child: const Text('Panel de control', style:  TextStyle(
                       fontSize: 20,
-                      color: primary,
-                      fontWeight: FontWeight.w500
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900
                   ),),
                 ),
 
@@ -69,18 +62,6 @@ class _SideBarState extends State<SideBar> {
                           (Route<dynamic> route) => false,
                     );
 
-                  },
-                ),
-
-                DrawerListTitle(
-                  title: "Motociclistas",
-                  icon: Icons.motorcycle, // Icono de una motocicleta
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'motociclistas_page',
-                          (Route<dynamic> route) => false,
-                    );
                   },
                 ),
 
@@ -216,10 +197,10 @@ class DrawerListTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: press,
-      leading: Icon(icon), // Usa el IconData para crear el Icono
+      leading: Icon(icon, color: Colors.white,), // Usa el IconData para crear el Icono
       title: Text(
         title,
-        style: const TextStyle(color: Colors.black, fontSize: 14),
+        style: const TextStyle(color: Colors.white, fontSize: 14),
       ),
     );
   }
