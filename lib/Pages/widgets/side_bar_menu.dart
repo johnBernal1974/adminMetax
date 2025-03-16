@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 
 class SideBar extends StatefulWidget {

@@ -1,11 +1,11 @@
 {
-    "name": "Zafiro Administrador",
-    "short_name": "Zafiro Administrador",
+    "name": "Metax Administrador",
+    "short_name": "Metax Administrador",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#hexcode",
-    "theme_color": "#hexcode",
-    "description": "Zafiro Administrador.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFFFFF",
+    "description": "Metax Administrador.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

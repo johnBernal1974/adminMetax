@@ -69,8 +69,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icono_admin_metax.png"
-    background_color: "#hexcode"
-    theme_color: "#hexcode"
+    background_color: "#FFFFFFF"
+    theme_color: "#FFFFFFF"
   windows:
     generate: true
     image_path: "assets/icono_admin_metax.png"

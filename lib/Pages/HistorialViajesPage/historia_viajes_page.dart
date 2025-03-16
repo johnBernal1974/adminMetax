@@ -129,7 +129,7 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                                           _buildRow('Conductor:', driverName),
                                           _buildRow('Rol:', '${travel['rol']}'),
                                           _buildRow('Placa del Conductor:', driverPlate), // Mostrar la placa aquí
-                                          _buildRow('Servicio solicitado:', '${travel['tipoServicio']}'),
+                                          //_buildRow('Servicio solicitado:', '${travel['tipoServicio']}'),
                                         ],
                                       ),
                                     ),
