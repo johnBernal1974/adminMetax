@@ -84,7 +84,7 @@ class MyApp extends StatelessWidget {
           'antecedentes_page': (context) => const Paginaantecedentes(),
           'prices_page': (context) => PricesPage(),
           'splash': (context) => const Splash(),
-          'recarga_info_page': (context) => RecargaPage(),
+          'recarga_info_page': (context) => AdminTransaccionesPage(),
           'historial_viajes_page': (context) => const TravelHistoryPage(),
           // Añade aquí otras rutas necesarias
         },
