@@ -49,6 +49,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   late InAppWebViewController inAppWebViewController;
   bool isRecargasvisible = false;
   double averageRating = 0.0;
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
+
 
 
   Operador? operador;
@@ -70,7 +73,25 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     selectedcategoriaLicencia = widget.driver.licenciaCategoria;
     getClientRatings();
     getOperadorInfo();
+
+    _initController(
+      "24_Numero_Tarjeta_Propiedad",
+      widget.driver.the24NumeroTarjetaPropiedad,
+    );
+
+    _initController(
+      "08_Fecha_Nacimiento",
+      widget.driver.the08FechaNacimiento,
+    );
+
+
   }
+
+  void _initController(String key, String? value) {
+    _controllers[key] = TextEditingController(text: value ?? '');
+    _focusNodes[key] = FocusNode();
+  }
+
 
   Color getStatusColor() {
     if (widget.driver.verificacionStatus == "registrado"
@@ -1209,6 +1230,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         }
     );
   }
+
+
   Widget _seccionSOAT() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -3166,7 +3189,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(
         title,
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -3179,7 +3202,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 3),
           Text(value),
@@ -3457,7 +3480,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _openWhatsAppWeb(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
 
@@ -3468,14 +3491,12 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     String message = '''
   Hola $driverName,
 
-  Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
-  Haz clic en el siguiente enlace para ver más información:
-  https://mizafiro.com/wp-content/uploads/2024/11/Conductor_activado.png
+  Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
 
   Si tienes alguna duda, no dudes en contactarnos.
 
   Saludos cordiales,
-  El equipo de Zafiro
+  El equipo de Metax
   ''';
 
     // Asegurarse de que el número de teléfono tiene el código de país
