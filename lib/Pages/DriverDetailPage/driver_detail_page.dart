@@ -2057,15 +2057,15 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.red, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: TextStyle(fontSize: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.block, color: Colors.white), // Icono de Correo
-            label: Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.block, color: Colors.white), // Icono de Correo
+            label: const Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
         const SizedBox(height: 30),
@@ -2076,15 +2076,15 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.green, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: TextStyle(fontSize: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
-            label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            label: const Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
       ],
@@ -2102,15 +2102,15 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.red, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: TextStyle(fontSize: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.block, color: Colors.white), // Icono de Correo
-            label: Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.block, color: Colors.white), // Icono de Correo
+            label: const Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
         const SizedBox(height: 30),
@@ -2121,15 +2121,15 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.green, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: TextStyle(fontSize: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
-            label: Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
+            icon: const Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            label: const Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
       ],
@@ -2606,6 +2606,31 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
+  Future<void> activarConductorEnFirestore() async {
+    final data = {
+      "11_Esta_activado": true,
+      "38_Esta_bloqueado": false,
+      "Verificacion_Status": "activado",
+      "13_Nombre_Activador":
+      "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
+      "12_Fecha_Activacion":
+      DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
+          .format(DateTime.now()),
+    };
+
+    try {
+      await _driverProvider.update(data, widget.driver.id);
+
+      if (!context.mounted) return;
+      _showSnackBar(context, 'Conductor activado correctamente');
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnackBar(context, 'Error al activar conductor');
+      rethrow;
+    }
+  }
+
+
   void activarUsuario(BuildContext context) {
     String message;
     bool canActivate = false; // Variable para determinar si se puede activar el usuario
@@ -2669,33 +2694,25 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             if (canActivate)
               TextButton(
                 child: const Text('Activar'),
-                onPressed: () {
-                  // Guardar el estado del conductor en Firestore
-                  _saveFieldBool("11_Esta_activado", true);
-                  _saveFieldBool("38_Esta_bloqueado", false);
-                  _saveField("Verificacion_Status", "activado");
-                  _saveField(
-                      "13_Nombre_Activador",
-                      "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}"
-                  );
-                  _saveFieldFecha("12_Fecha_Activacion", DateTime.now());
+                onPressed: () async {
+                  Navigator.of(context).pop(); // cerrar diálogo primero
 
+                  try {
+                    await activarConductorEnFirestore();
 
-                  // Actualizar el estado localmente
-                  setState(() {
-                    widget.driver.the11EstaActivado = true;
-                    widget.driver.the38EstaBloqueado = false;
-                    widget.driver.verificacionStatus = "activado";
-                  });
+                    setState(() {
+                      widget.driver.the11EstaActivado = true;
+                      widget.driver.the38EstaBloqueado = false;
+                      widget.driver.verificacionStatus = "activado";
+                    });
 
-                  // Cerrar el diálogo
-                  Navigator.of(context).pop();
-
-                  // Verificar si es móvil o web y abrir WhatsApp
-                  if (!kIsWeb) {
-                    _openWhatsAppActivacion(context); // Llamada a la app móvil de WhatsApp
-                  } else {
-                    _openWhatsAppWebActivacion(context); // Llamada a la versión web de WhatsApp
+                    if (!kIsWeb) {
+                      _openWhatsAppActivacion(context);
+                    } else {
+                      _openWhatsAppWebActivacion(context);
+                    }
+                  } catch (_) {
+                    // El error ya se muestra en el SnackBar
                   }
                 },
               ),
@@ -2765,8 +2782,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             TextButton(
               child: const Text('Bloquear'),
               onPressed: () {
-                _saveFieldBool("38_Esta_bloqueado", true); // Marcar como bloqueado
-                _saveFieldBool("11_Esta_activado", false); // Marcar como no activado
+                _saveField("38_Esta_bloqueado", true); // Marcar como bloqueado
+                _saveField("11_Esta_activado", false); // Marcar como no activado
                 _saveField("Verificacion_Status", "bloqueado"); // Actualizar el estado
 
                 setState(() {
@@ -2821,17 +2838,29 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("No"),
+              child: const Text("No"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
               },
             ),
             TextButton(
-              child: Text("Sí"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-                activarUsuario(context); // Llama al método para activar el usuario
+              child: const Text("Sí"),
+              onPressed: () async {
+                Navigator.of(context).pop(); // cerrar diálogo primero
 
+                await activarConductorEnFirestore();
+
+                setState(() {
+                  widget.driver.the11EstaActivado = true;
+                  widget.driver.the38EstaBloqueado = false;
+                  widget.driver.verificacionStatus = "activado";
+                });
+
+                if (!kIsWeb) {
+                  _openWhatsAppActivacion(context);
+                } else {
+                  _openWhatsAppWebActivacion(context);
+                }
               },
             ),
           ],
@@ -2848,13 +2877,13 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("No"),
+              child: const Text("No"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
               },
             ),
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 bloquearUsuario(context); // Llama al método para activar el usuario
@@ -2875,7 +2904,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("29_Foto_perfil", isBloquear);
@@ -2899,7 +2928,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           actions: <Widget>[
 
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("25_Cedula_Delantera_foto", isBloquear); // Llama al método para guardar el campo
@@ -2923,7 +2952,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           actions: <Widget>[
 
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("26_Cedula_Trasera_foto", isBloquear); // Llama al método para guardar el campo
@@ -2947,7 +2976,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           actions: <Widget>[
 
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("27_Tarjeta_Propiedad_Delantera_foto", isBloquear); // Llama al método para guardar el campo
@@ -3023,7 +3052,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
-  //// metodo para guardar los editfield enteros/////
+
   void _saveFieldBool(String key, dynamic value) async {
     print("Guardando campo con key '$key' y valor '$value'");
 
@@ -3043,9 +3072,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
     try {
       await _driverProvider.update(data, widget.driver.id);
-      _showSnackBar(context, 'Actualizacion exitosa');
+      if(context.mounted){
+        _showSnackBar(context, 'Actualizacion exitosa');
+      }
+
     } catch (error) {
-      _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      if(context.mounted){
+        _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      }
     }
   }
 

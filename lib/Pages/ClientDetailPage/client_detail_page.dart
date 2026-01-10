@@ -46,7 +46,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     selectedGenero = widget.client.the09Genero;
     selectedRol = widget.client.the20Rol;
     getClientRatings();
-    //getOperadorInfo();
+    getOperadorInfo();
 
   }
 
@@ -817,7 +817,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
             },
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               backgroundColor: Colors.red, // Color de fondo del botón
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -1139,13 +1139,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("No"),
+              child: const Text("No"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
               },
             ),
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 bloquearUsuario(context); // Llama al método para activar el usuario
@@ -1166,7 +1166,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           title: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text("Sí"),
+              child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
                 _saveField("15_Foto_perfil_usuario", isBloquear, () {});
@@ -1204,7 +1204,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(
       content: Text(message),
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
@@ -1264,7 +1264,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(
         title,
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
     );
   }
