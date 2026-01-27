@@ -3125,11 +3125,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
-
   void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(
       content: Text(message),
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
@@ -3493,14 +3492,12 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     String message = '''
     ¡Hola $name! 
 
-    Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
-  Haz clic en el siguiente enlace para ver más información:
-  https://mizafiro.com/wp-content/uploads/2024/11/Conductor_activado.png
-
-  Si tienes alguna duda, no dudes en contactarnos.
+    Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
+  
+  Si tienes alguna inquietud, no dudes en contactarnos.
 
   Saludos cordiales,
-  El equipo de Zafiro
+  El equipo de Metax
   ''';
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
@@ -3527,7 +3524,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
 
-  Si tienes alguna duda, no dudes en contactarnos.
+  Si tienes alguna inquietud, no dudes en contactarnos.
 
   Saludos cordiales,
   El equipo de Metax

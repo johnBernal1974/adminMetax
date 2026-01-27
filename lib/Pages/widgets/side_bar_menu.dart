@@ -40,6 +40,16 @@ class _SideBarState extends State<SideBar> {
                 ),
 
                 DrawerListTitle(
+                  title: "Mapa conductores",
+                  icon: Icons.info_outline, // Icono de información
+                  press: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      'map_drivers_admin_page',
+                          (Route<dynamic> route) => false,
+                    );
+                  },
+                ),DrawerListTitle(
                   title: "General",
                   icon: Icons.info_outline, // Icono de información
                   press: () {

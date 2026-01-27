@@ -16,6 +16,7 @@ import 'Pages/PricesPage/prices_page.dart';
 import 'Pages/SingUp_page/View/singUp_page.dart';
 import 'Pages/Splash/splash.dart';
 import 'Pages/UsuariosPage/usuarios_page.dart';
+import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
@@ -86,6 +87,7 @@ class MyApp extends StatelessWidget {
           'splash': (context) => const Splash(),
           'recarga_info_page': (context) => AdminTransaccionesPage(),
           'historial_viajes_page': (context) => const TravelHistoryPage(),
+          'map_drivers_admin_page': (context) => const AdminDriversMapPage(),
           // Añade aquí otras rutas necesarias
         },
       ),
