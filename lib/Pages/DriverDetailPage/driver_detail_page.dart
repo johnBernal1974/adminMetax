@@ -13,6 +13,8 @@ import '../../providers/driver_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
+
 
 class DriverDetailPage extends StatefulWidget {
   Driver driver;
@@ -60,7 +62,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
 
     selectedTipoDocumento = widget.driver.the04TipoDocumento;
@@ -71,25 +72,120 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     selectedTipoServicio = widget.driver.the19TipoServicio;
     selectedTipoVehiculo = widget.driver.the14TipoVehiculo;
     selectedcategoriaLicencia = widget.driver.licenciaCategoria;
+    _initAllControllers();
+
     getClientRatings();
     getOperadorInfo();
-
-    _initController(
-      "24_Numero_Tarjeta_Propiedad",
-      widget.driver.the24NumeroTarjetaPropiedad,
-    );
-
-    _initController(
-      "08_Fecha_Nacimiento",
-      widget.driver.the08FechaNacimiento,
-    );
-
-
   }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    for (final f in _focusNodes.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  //selector de fecha reutilizable
+
+  Widget _buildDateField({
+    required String label,
+    required String key,
+    required String initialValue,
+  }) {
+    final controller = _controllers[key] ??= TextEditingController(text: initialValue);
+    final focusNode = _focusNodes[key] ??= FocusNode();
+
+    // Parser para tu formato dd/MM/yyyy
+    DateTime? _parse(String s) {
+      final t = s.trim();
+      if (t.isEmpty) return null;
+      try {
+        return DateFormat('dd/MM/yyyy').parseStrict(t);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    Future<void> _pickDate() async {
+      // Cierra teclado si lo hubiera
+      FocusScope.of(context).unfocus();
+
+      final now = DateTime.now();
+      final current = _parse(controller.text);
+
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: current ?? now,
+        firstDate: DateTime(1900),
+        lastDate: DateTime(now.year + 30),
+        helpText: label,
+        locale: const Locale('es', 'CO'),
+      );
+
+      if (picked == null) return;
+
+      final formatted = DateFormat('dd/MM/yyyy').format(picked);
+
+      // ✅ 1) actualiza el texto (para que no se borre)
+      controller.text = formatted;
+
+      // ✅ 2) guarda en Firestore
+      await _saveField(key, formatted);
+
+      // ✅ 3) sincroniza el objeto local driver
+      _updateDriverLocal(key, formatted);
+
+      if (mounted) setState(() {});
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        readOnly: true,              // ✅ no editable manual
+        onTap: _pickDate,            // ✅ abre calendario
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.calendar_month),
+            onPressed: _pickDate,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+
+
 
   void _initController(String key, String? value) {
     _controllers[key] = TextEditingController(text: value ?? '');
     _focusNodes[key] = FocusNode();
+  }
+
+  void _initAllControllers() {
+    _initController("01_Nombres", widget.driver.the01Nombres);
+    _initController("02_Apellidos", widget.driver.the02Apellidos);
+    _initController("03_Numero_Documento", widget.driver.the03NumeroDocumento);
+    _initController("05_Fecha_Expedicion_Documento", widget.driver.the05FechaExpedicionDocumento);
+    _initController("08_Fecha_Nacimiento", widget.driver.the08FechaNacimiento);
+
+    _initController("18_Placa", widget.driver.the18Placa);
+    _initController("20_Numero_Soat", widget.driver.the20NumeroSoat);
+    _initController("21_Vigencia_Soat", widget.driver.the21VigenciaSoat);
+    _initController("22_Numero_Tecno", widget.driver.the22NumeroTecno);
+    _initController("23_Vigencia_Tecno", widget.driver.the23VigenciaTecno);
+    _initController("24_Numero_Tarjeta_Propiedad", widget.driver.the24NumeroTarjetaPropiedad);
+
+    _initController("licencia_vigencia", widget.driver.licenciaVigencia);
+
+    // Enteros
+    _initController("34_Nueva_Recarga", (widget.driver.the34NuevaRecarga ?? 0).toString());
   }
 
 
@@ -183,10 +279,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     _seccionSOAT(),
                     const Divider(),
                     _seccionLicencia(),
-                    const Divider(),
-                    _seccionComunicacionNotificaciones(),
-                    const Divider(),
-                    _seccionRecargas(),
+                    // const Divider(),
+                    // _seccionComunicacionNotificaciones(),
+                    // const Divider(),
+                    // _seccionRecargas(),
                     const SizedBox(height: 50,)
                   ],
                 ),
@@ -521,8 +617,16 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                   ],
                                 ),
 
-                                _buildTextField(widget.driver.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_Expedicion_Documento"),
-                                _buildTextField(widget.driver.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_Nacimiento"),
+                                _buildDateField(
+                                  label: 'Fecha de expedición',
+                                  key: '05_Fecha_Expedicion_Documento',
+                                  initialValue: widget.driver.the05FechaExpedicionDocumento,
+                                ),
+                                _buildDateField(
+                                  label: 'Fecha de nacimiento',
+                                  key: '08_Fecha_Nacimiento',
+                                  initialValue: widget.driver.the08FechaNacimiento,
+                                ),
                                 _dropGenero(),
                                 const SizedBox(height: 30),
                                 Row(
@@ -713,8 +817,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                   ],
                                 ),
 
-                                _buildTextField(widget.driver.the05FechaExpedicionDocumento, 'Fecha de expedición', "05_Fecha_Expedicion_Documento"),
-                                _buildTextField(widget.driver.the08FechaNacimiento, 'Fecha de nacimiento', "08_Fecha_Nacimiento"),
+                                _buildDateField(
+                                  label: 'Fecha de expedición',
+                                  key: '05_Fecha_Expedicion_Documento',
+                                  initialValue: widget.driver.the05FechaExpedicionDocumento,
+                                ),
+                                _buildDateField(
+                                  label: 'Fecha de nacimiento',
+                                  key: '08_Fecha_Nacimiento',
+                                  initialValue: widget.driver.the08FechaNacimiento,
+                                ),
+
                                 _dropGenero(),
                                 const SizedBox(height: 30),
                                 Row(
@@ -1282,9 +1395,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
-                            _buildTextField(widget.driver.the21VigenciaSoat, 'Vigencia del SOAT', "21_Vigencia_Soat"),
+                            _buildDateField(
+                              label: 'Vigencia del SOAT',
+                              key: '21_Vigencia_Soat',
+                              initialValue: widget.driver.the21VigenciaSoat,
+                            ),
                             _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
-                            _buildTextField(widget.driver.the23VigenciaTecno, 'Vigencia Revisión tecnomecánica', "23_Vigencia_Tecno"),
+                            _buildDateField(
+                              label: 'Vigencia Revisión tecnomecánica',
+                              key: '23_Vigencia_Tecno',
+                              initialValue: widget.driver.the23VigenciaTecno,
+                            ),
                             const SizedBox(height: 50),
                           ],
                         ),
@@ -1358,9 +1479,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
-                            _buildTextField(widget.driver.the21VigenciaSoat, 'Vigencia del SOAT', "21_Vigencia_Soat"),
+                            _buildDateField(
+                              label: 'Vigencia del SOAT',
+                              key: '21_Vigencia_Soat',
+                              initialValue: widget.driver.the21VigenciaSoat,
+                            ),
                             _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
-                            _buildTextField(widget.driver.the23VigenciaTecno, 'Vigencia Revisión tecnomecánica', "23_Vigencia_Tecno"),
+                            _buildDateField(
+                              label: 'Vigencia Revisión tecnomecánica',
+                              key: '23_Vigencia_Tecno',
+                              initialValue: widget.driver.the23VigenciaTecno,
+                            ),
                             const SizedBox(height: 50),
                           ],
                         ),
@@ -1461,8 +1590,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _dropCategoriaLicencia(),
-                          _buildTextField(widget.driver.licenciaVigencia, 'Videncia de la licencia', "licencia_vigencia"),
-
+                          _buildDateField(
+                            label: 'Vigencia de la licencia',
+                            key: 'licencia_vigencia',
+                            initialValue: widget.driver.licenciaVigencia,
+                          ),
                           const SizedBox(height: 50),
                         ],
                       ),
@@ -1536,8 +1668,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _dropCategoriaLicencia(),
-                            _buildTextField(widget.driver.licenciaVigencia, 'Videncia de la licencia', "licencia_vigencia"),
-
+                            _buildDateField(
+                              label: 'Vigencia de la licencia',
+                              key: 'licencia_vigencia',
+                              initialValue: widget.driver.licenciaVigencia,
+                            ),
                             const SizedBox(height: 50),
                           ],
                         ),
@@ -2148,8 +2283,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 value: selectedTipoDocumento,
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Cédula de Ciudadanía", child: Text("Cédula de Ciudadanía")),
-                  DropdownMenuItem(value: "Cédula de extranjería", child: Text("Cédula de extranjería")),
+                  DropdownMenuItem(
+                    value: "Cédula de Ciudadanía",
+                    child: Text("Cédula de Ciudadanía"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Cédula de extranjería",
+                    child: Text("Cédula de extranjería"),
+                  ),
                   DropdownMenuItem(value: "Pasaporte", child: Text("Pasaporte")),
                 ],
                 onChanged: (value) {
@@ -2163,17 +2304,25 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("04_Tipo_Documento", selectedTipoDocumento!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedTipoDocumento ?? "").trim();
+
+                await _saveField("04_Tipo_Documento", valueToSave);
+
+                setState(() {
+                  widget.driver.the04TipoDocumento = valueToSave;
+                });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
+
   Widget _dropGenero() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2196,22 +2345,32 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("09_Genero", selectedGenero!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedGenero ?? "").trim();
+
+                await _saveField("09_Genero", valueToSave);
+
+                setState(() {
+                  widget.driver.the09Genero = valueToSave;
+                });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
+
   Widget _dropMarca() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2223,6 +2382,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               child: DropdownButtonFormField<String>(
                 value: selectedMarca,
                 items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
                   DropdownMenuItem(value: "Hyundai Atos", child: Text("Hyundai Atos")),
                   DropdownMenuItem(value: "Hyundai Grand I10", child: Text("Hyundai Grand I10")),
                   DropdownMenuItem(value: "Kia Picanto Ekotaxi", child: Text("Kia Picanto Ekotaxi")),
@@ -2251,16 +2411,23 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             ),
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: () {
-                _saveField("15_Marca", selectedMarca!);
+              onPressed: () async {
+                final valueToSave = (selectedMarca ?? "").trim();
+
+                await _saveField("15_Marca", valueToSave);
+
+                setState(() {
+                  widget.driver.the15Marca = valueToSave;
+                });
               },
             ),
           ],
         ),
-        const SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
 
   Widget _dropColor() {
     return Column(
@@ -2288,17 +2455,24 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("16_Color", selectedColor!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedColor ?? "").trim();
+
+                await _saveField("16_Color", valueToSave);
+
+                setState(() {
+                  widget.driver.the16Color = valueToSave;
+                });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
   Widget _dropModelo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2341,22 +2515,31 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: () {
-                _saveField("17_Modelo", selectedModelo!);
+              onPressed: () async {
+                final valueToSave = (selectedModelo ?? "").trim();
+
+                await _saveField("17_Modelo", valueToSave);
+
+                setState(() {
+                  widget.driver.the17Modelo = valueToSave;
+                });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
   Widget _dropTipoServicio() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2370,7 +2553,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
                   DropdownMenuItem(value: "Público", child: Text("Público")),
-                  DropdownMenuItem(value: "Operación Nacional", child: Text("Operación Nacional")),
+                  DropdownMenuItem(
+                    value: "Operación Nacional",
+                    child: Text("Operación Nacional"),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -2378,22 +2564,31 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("19_Tipo_Servicio", selectedTipoServicio!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedTipoServicio ?? "").trim();
+
+                await _saveField("19_Tipo_Servicio", valueToSave);
+
+                setState(() {
+                  widget.driver.the19TipoServicio = valueToSave;
+                });
               },
             ),
           ],
         ),
-        const SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
   Widget _dropTipoVehiculo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2405,6 +2600,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               child: DropdownButtonFormField<String>(
                 value: selectedTipoVehiculo,
                 items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
                   DropdownMenuItem(value: "Tipo automovil", child: Text("Tipo automovil")),
                   DropdownMenuItem(value: "Tipo camioneta", child: Text("Tipo camioneta")),
                 ],
@@ -2419,23 +2615,30 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("14_Tipo_Vehiculo", selectedTipoVehiculo!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedTipoVehiculo ?? "").trim();
+
+                await _saveField("14_Tipo_Vehiculo", valueToSave);
+
+                setState(() {
+                  widget.driver.the14TipoVehiculo = valueToSave;
+                });
               },
             ),
           ],
         ),
-        const SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
 
   Widget _dropCategoriaLicencia() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Categoria', style: TextStyle(fontSize: 14)),
+        const Text('Categoría', style: TextStyle(fontSize: 14)),
         Row(
           children: [
             Expanded(
@@ -2458,68 +2661,153 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("licencia_categoria", selectedcategoriaLicencia!);
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedcategoriaLicencia ?? "").trim();
+
+                await _saveField("licencia_categoria", valueToSave);
+
+                setState(() {
+                  widget.driver.licenciaCategoria = valueToSave;
+                });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
 
+
   //// widget para textedit strings////////
+  // Widget _buildTextField(String initialValue, String label, String key) {
+  //   TextEditingController controller = TextEditingController(text: initialValue);
+  //   FocusNode focusNode = FocusNode();
+  //   ValueNotifier<Color> borderColorNotifier = ValueNotifier<Color>(Colors.grey);
+  //
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 8.0),
+  //     child: ValueListenableBuilder<Color>(
+  //       valueListenable: borderColorNotifier,
+  //       builder: (context, borderColor, child) {
+  //         return TextField(
+  //           controller: controller,
+  //           focusNode: focusNode,
+  //           decoration: InputDecoration(
+  //             labelText: label,
+  //             suffixIcon: IconButton(
+  //               icon: Icon(Icons.save),
+  //               onPressed: () {
+  //                 _saveField(key, controller.text);
+  //                 borderColorNotifier.value = Colors.grey; // Retornar al color inicial
+  //                 focusNode.unfocus(); // Quitar el foco del TextField
+  //               },
+  //             ),
+  //             border: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(10),
+  //               borderSide: BorderSide(color: borderColor),
+  //             ),
+  //             focusedBorder: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(10),
+  //               borderSide: BorderSide(color: borderColor),
+  //             ),
+  //             enabledBorder: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(10),
+  //               borderSide: BorderSide(color: borderColor),
+  //             ),
+  //           ),
+  //           onChanged: (text) {
+  //             borderColorNotifier.value = Colors.red; // Cambiar a color rojo al modificar
+  //           },
+  //         );
+  //       },
+  //     ),
+  //   );
+  // } comentado emjora para no recrear los textfield
+
   Widget _buildTextField(String initialValue, String label, String key) {
-    TextEditingController controller = TextEditingController(text: initialValue);
-    FocusNode focusNode = FocusNode();
-    ValueNotifier<Color> borderColorNotifier = ValueNotifier<Color>(Colors.grey);
+    final controller = _controllers[key] ??= TextEditingController(text: initialValue);
+    final focusNode = _focusNodes[key] ??= FocusNode();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ValueListenableBuilder<Color>(
-        valueListenable: borderColorNotifier,
-        builder: (context, borderColor, child) {
-          return TextField(
-            controller: controller,
-            focusNode: focusNode,
-            decoration: InputDecoration(
-              labelText: label,
-              suffixIcon: IconButton(
-                icon: Icon(Icons.save),
-                onPressed: () {
-                  _saveField(key, controller.text);
-                  borderColorNotifier.value = Colors.grey; // Retornar al color inicial
-                  focusNode.unfocus(); // Quitar el foco del TextField
-                },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: borderColor),
-              ),
-            ),
-            onChanged: (text) {
-              borderColorNotifier.value = Colors.red; // Cambiar a color rojo al modificar
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () async {
+             _saveField(key, controller.text);
+
+              // ✅ actualiza el modelo local para que la UI siempre refleje lo mismo
+              _updateDriverLocal(key, controller.text);
+
+              if (mounted) focusNode.unfocus();
             },
-          );
-        },
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }
+  //new
+
+  void _updateDriverLocal(String key, String value) {
+    setState(() {
+      switch (key) {
+        case "01_Nombres":
+          widget.driver.the01Nombres = value;
+          break;
+        case "02_Apellidos":
+          widget.driver.the02Apellidos = value;
+          break;
+        case "03_Numero_Documento":
+          widget.driver.the03NumeroDocumento = value;
+          break;
+        case "05_Fecha_Expedicion_Documento":
+          widget.driver.the05FechaExpedicionDocumento = value;
+          break;
+        case "08_Fecha_Nacimiento":
+          widget.driver.the08FechaNacimiento = value;
+          break;
+
+        case "18_Placa":
+          widget.driver.the18Placa = value;
+          break;
+        case "20_Numero_Soat":
+          widget.driver.the20NumeroSoat = value;
+          break;
+        case "21_Vigencia_Soat":
+          widget.driver.the21VigenciaSoat = value;
+          break;
+        case "22_Numero_Tecno":
+          widget.driver.the22NumeroTecno = value;
+          break;
+        case "23_Vigencia_Tecno":
+          widget.driver.the23VigenciaTecno = value;
+          break;
+        case "24_Numero_Tarjeta_Propiedad":
+          widget.driver.the24NumeroTarjetaPropiedad = value;
+          break;
+
+        case "licencia_vigencia":
+          widget.driver.licenciaVigencia = value;
+          break;
+      }
+    });
+  }
+
+
 
   Widget _buildTextFieldEnteros(int initialValue, String label, String key) {
     TextEditingController controller = TextEditingController(text: initialValue.toString());
@@ -3085,22 +3373,40 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
 
   //// metodo para guardar los editfield strings/////
-  void _saveField(String key, dynamic value) async {
-    print("Guardando campo con key '$key' y valor '$value'");
+  // void _saveField(String key, dynamic value) async {
+  //   print("Guardando campo con key '$key' y valor '$value'");
+  //
+  //   Map<String, String> data = {key: value,
+  //   };
+  //   try {
+  //     await _driverProvider.update(data, widget.driver.id);
+  //     if(context.mounted){
+  //       _showSnackBar(context, 'Actualización exitosa');
+  //     }
+  //   } catch (error) {
+  //     if(context.mounted){
+  //       _showSnackBar(context, 'Error al actualizar el conductor: $error');
+  //     }
+  //   }
+  // } comentado mejora
 
-    Map<String, String> data = {key: value,
-    };
+  Future<void> _saveField(String key, dynamic value) async {
     try {
-      await _driverProvider.update(data, widget.driver.id);
-      if(context.mounted){
+      await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(widget.driver.id)
+          .update({key: value});
+
+      if (context.mounted) {
         _showSnackBar(context, 'Actualización exitosa');
       }
     } catch (error) {
-      if(context.mounted){
-        _showSnackBar(context, 'Error al actualizar el conductor: $error');
+      if (context.mounted) {
+        _showSnackBar(context, 'Error al actualizar: $error');
       }
     }
   }
+
 
   void _saveFieldFecha(String key, DateTime date) async {
     // Formatear la fecha como cadena

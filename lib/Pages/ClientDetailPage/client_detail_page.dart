@@ -39,15 +39,40 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
 
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
+
+
 
   @override
   void initState() {
     super.initState();
     selectedGenero = widget.client.the09Genero;
     selectedRol = widget.client.the20Rol;
+
+    _initController("01_Nombres", widget.client.the01Nombres);
+    _initController("02_Apellidos", widget.client.the02Apellidos);
+
     getClientRatings();
     getOperadorInfo();
 
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    for (final f in _focusNodes.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+
+  void _initController(String key, String? value) {
+    _controllers[key] = TextEditingController(text: value ?? '');
+    _focusNodes[key] = FocusNode();
   }
 
   Color getStatusColor() {
@@ -913,9 +938,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                   DropdownMenuItem(value: "Otro", child: Text("Otro")),
                 ],
                 onChanged: (value) {
-                  setState(() {
-                    selectedGenero = value;
-                  });
+                  setState(() => selectedGenero = value);
                 },
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -923,19 +946,24 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () {
-                _saveField("09_Genero", selectedGenero!, () {
-                  widget.client.the09Genero;
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedGenero ?? "").trim();
+
+                _saveField("09_Genero", valueToSave, () {
+                  setState(() {
+                    widget.client.the09Genero = valueToSave;
+                  });
                 });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
 
   Widget _dropRol() {
     return Column(
@@ -949,14 +977,12 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 value: selectedRol,
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "basico", child: Text("basico")),
+                  DropdownMenuItem(value: "regular", child: Text("regular")),
                   DropdownMenuItem(value: "hotel", child: Text("hotel")),
                   DropdownMenuItem(value: "turismo", child: Text("turismo")),
                 ],
                 onChanged: (value) {
-                  setState(() {
-                    selectedRol = value;
-                  });
+                  setState(() => selectedRol = value);
                 },
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -965,42 +991,56 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
             ),
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: () {
-                _saveField("20_Rol", selectedRol!, () {
-                  widget.client.the20Rol;
+              onPressed: () async {
+                final valueToSave = (selectedRol ?? "").trim();
+
+                _saveField("20_Rol", valueToSave, () {
+                  setState(() {
+                    widget.client.the20Rol = valueToSave;
+                  });
                 });
               },
             ),
           ],
         ),
-        SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
+
   //// widget para textedit strings////////
   Widget _buildTextField(String initialValue, String label, String key) {
-    TextEditingController controller = TextEditingController(text: initialValue);
+    final controller = _controllers[key] ??= TextEditingController(text: initialValue);
+    final focusNode = _focusNodes[key] ??= FocusNode();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         decoration: InputDecoration(
           labelText: label,
           suffixIcon: IconButton(
-            icon: Icon(Icons.save),
+            icon: const Icon(Icons.save),
             onPressed: () {
-              _saveField(key, controller.text, () {
+              final valueToSave = controller.text;
 
+              _saveField(key, valueToSave, () {
+                setState(() {
+                  if (key == "01_Nombres") widget.client.the01Nombres = valueToSave;
+                  if (key == "02_Apellidos") widget.client.the02Apellidos = valueToSave;
+                });
               });
+
+              focusNode.unfocus();
             },
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
   }
+
 
   void activarUsuario(BuildContext context) {
     String message;
@@ -1192,13 +1232,14 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
     try {
       await _clientProviderr.update(data, widget.client.id);
+      if (!mounted) return;
       _showSnackBar(context, 'Actualización exitosa');
-
-      // Llamar al callback de actualización del estado
       updateStateCallback();
     } catch (error) {
+      if (!mounted) return;
       _showSnackBar(context, 'Error al actualizar el cliente: $error');
     }
+
   }
 
   void _showSnackBar(BuildContext context, String message) {

@@ -21,6 +21,8 @@ import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 
 
 void main() async {
@@ -90,6 +92,17 @@ class MyApp extends StatelessWidget {
           'map_drivers_admin_page': (context) => const AdminDriversMapPage(),
           // Añade aquí otras rutas necesarias
         },
+
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'CO'),
+          Locale('es', 'ES'),
+          Locale('en', 'US'),
+        ],
       ),
     );
   }
