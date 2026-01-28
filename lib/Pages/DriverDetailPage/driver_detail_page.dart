@@ -1348,373 +1348,300 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   Widget _seccionSOAT() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
-        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
-        // Define si es móvil o no
-        bool isMobile = screenWidth < 600;
+        final screenWidth = constraints.maxWidth;
+        final isMobile = screenWidth < 600;
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            isMobile ?
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                        onTap: (){
-                          setState(() {
-                            isSoatTecnoVisible = !isSoatTecnoVisible;
-                          });
-                        },
-                        child: _buildSectionTitle('SOAT y Tecnomecánica')),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          isSoatTecnoVisible = !isSoatTecnoVisible;
-                        });
-                      },
-                      icon: Icon(
-                        isSoatTecnoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        size: 30,
-                      ),
-                    ),
-                  ],
+                GestureDetector(
+                  onTap: () => setState(() => isSoatTecnoVisible = !isSoatTecnoVisible),
+                  child: _buildSectionTitle('SOAT y Tecnomecánica'),
                 ),
-                Visibility(
-                  visible: isSoatTecnoVisible,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
-                            _buildDateField(
-                              label: 'Vigencia del SOAT',
-                              key: '21_Vigencia_Soat',
-                              initialValue: widget.driver.the21VigenciaSoat,
-                            ),
-                            _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
-                            _buildDateField(
-                              label: 'Vigencia Revisión tecnomecánica',
-                              key: '23_Vigencia_Tecno',
-                              initialValue: widget.driver.the23VigenciaTecno,
-                            ),
-                            const SizedBox(height: 50),
-                          ],
-                        ),
-
-                      const SizedBox(width: 60),
-
-                       Container(
-                          margin: const EdgeInsets.only(top: 10),
-                          height: 50, // Altura del botón
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
-                              if (await canLaunch(url)) {
-                                await launch(url);
-                              } else {
-                                throw 'Could not launch $url';
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              textStyle: const TextStyle(fontSize: 16),
-                            ),
-                            icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                            label: const Text('Abrir pagina RUNT', style: TextStyle( color: blanco)),
-                          ),
-                        ),
-                      const SizedBox(height: 30)
-                    ],
+                IconButton(
+                  onPressed: () => setState(() => isSoatTecnoVisible = !isSoatTecnoVisible),
+                  icon: Icon(
+                    isSoatTecnoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 30,
                   ),
                 ),
               ],
-            ) :
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                        onTap: (){
-                          setState(() {
-                            isSoatTecnoVisible = !isSoatTecnoVisible;
-                          });
-                        },
-                        child: _buildSectionTitle('SOAT y Tecnomecánica')),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          isSoatTecnoVisible = !isSoatTecnoVisible;
-                        });
+            ),
+
+            // Body
+            Visibility(
+              visible: isSoatTecnoVisible,
+              child: isMobile
+                  ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
+
+                  // ✅ SOAT: fecha BD + badge
+                  _dateWithBadge(
+                    label: 'Fecha BD SOAT',
+                    key: '21_Vigencia_Soat',
+                    initialValue: widget.driver.the21VigenciaSoat,
+                    fechaBd: widget.driver.the21VigenciaSoat,
+                    calcularVence: vencimientoDiaAntesDesdeBD,
+
+                  ),
+
+                  _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
+
+                  // ✅ Tecno: fecha BD + badge
+                  _dateWithBadge(
+                    label: 'Fecha BD Tecnomecánica',
+                    key: '23_Vigencia_Tecno',
+                    initialValue: widget.driver.the23VigenciaTecno,
+                    fechaBd: widget.driver.the23VigenciaTecno,
+                    calcularVence: vencimientoDiaAntesDesdeBD,
+
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
+                        if (await canLaunch(url)) {
+                          await launch(url);
+                        }
                       },
-                      icon: Icon(
-                        isSoatTecnoVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        size: 30,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        backgroundColor: primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                      label: const Text('Abrir pagina RUNT', style: TextStyle(color: blanco)),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              )
+                  : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
+
+                        _dateWithBadge(
+                          label: 'Fecha BD SOAT',
+                          key: '21_Vigencia_Soat',
+                          initialValue: widget.driver.the21VigenciaSoat,
+                          fechaBd: widget.driver.the21VigenciaSoat,
+                          calcularVence: vencimientoDiaAntesDesdeBD,
+
+                        ),
+
+                        _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
+
+                        _dateWithBadge(
+                          label: 'Fecha BD Tecnomecánica',
+                          key: '23_Vigencia_Tecno',
+                          initialValue: widget.driver.the23VigenciaTecno,
+                          fechaBd: widget.driver.the23VigenciaTecno,
+                          calcularVence: vencimientoDiaAntesDesdeBD,
+
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 60),
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
+                          if (await canLaunch(url)) {
+                            await launch(url);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          backgroundColor: primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                        label: const Text('Abrir pagina RUNT', style: TextStyle(color: blanco)),
                       ),
                     ),
-                  ],
-                ),
-                Visibility(
-                  visible: isSoatTecnoVisible,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTextField(widget.driver.the20NumeroSoat, 'Número del SOAT', "20_Numero_Soat"),
-                            _buildDateField(
-                              label: 'Vigencia del SOAT',
-                              key: '21_Vigencia_Soat',
-                              initialValue: widget.driver.the21VigenciaSoat,
-                            ),
-                            _buildTextField(widget.driver.the22NumeroTecno, 'Número Revisión tecnomecánica', "22_Numero_Tecno"),
-                            _buildDateField(
-                              label: 'Vigencia Revisión tecnomecánica',
-                              key: '23_Vigencia_Tecno',
-                              initialValue: widget.driver.the23VigenciaTecno,
-                            ),
-                            const SizedBox(height: 50),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 60),
-                      Expanded(
-                        flex: 1,
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 10),
-                          height: 50, // Altura del botón
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
-                              if (await canLaunch(url)) {
-                                await launch(url);
-                              } else {
-                                throw 'Could not launch $url';
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              textStyle: TextStyle(fontSize: 16),
-                            ),
-                            icon: Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                            label: Text('Abrir pagina RUNT', style: TextStyle( color: blanco)),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Container(),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Container(),
-                      ),
-                    ],
                   ),
-                ),
-              ],
-            )
-
+                ],
+              ),
+            ),
           ],
         );
       },
     );
   }
-  Widget _seccionLicencia () {
+
+
+  Widget _seccionLicencia() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
-        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
-        // Define si es móvil o no
-        bool isMobile = screenWidth < 600;
+        final screenWidth = constraints.maxWidth;
+        final isMobile = screenWidth < 600;
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            isMobile ?
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                        onTap: (){
-                          setState(() {
-                            isLicenciaisible = !isLicenciaisible;
-                          });
-                        },
-                        child: _buildSectionTitle('Licencia de conducción')),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          isLicenciaisible = !isLicenciaisible;
-                        });
-                      },
-                      icon: Icon(
-                        isLicenciaisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        size: 30,
-                      ),
-                    ),
-                  ],
+                GestureDetector(
+                  onTap: () => setState(() => isLicenciaisible = !isLicenciaisible),
+                  child: _buildSectionTitle('Licencia de conducción'),
                 ),
-                Visibility(
-                  visible: isLicenciaisible,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _dropCategoriaLicencia(),
-                          _buildDateField(
-                            label: 'Vigencia de la licencia',
-                            key: 'licencia_vigencia',
-                            initialValue: widget.driver.licenciaVigencia,
-                          ),
-                          const SizedBox(height: 50),
-                        ],
-                      ),
-
-                      const SizedBox(width: 60),
-
-                      Container(
-                        margin: const EdgeInsets.only(top: 10),
-                        height: 50, // Altura del botón
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
-                            if (await canLaunch(url)) {
-                              await launch(url);
-                            } else {
-                              throw 'Could not launch $url';
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            textStyle: const TextStyle(fontSize: 16),
-                          ),
-                          icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                          label: const Text('Abrir página RUNT Conductores', style: TextStyle( color: blanco)),
-                        ),
-                      ),
-                      const SizedBox(height: 30)
-                    ],
+                IconButton(
+                  onPressed: () => setState(() => isLicenciaisible = !isLicenciaisible),
+                  icon: Icon(
+                    isLicenciaisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 30,
                   ),
                 ),
               ],
-            ) :
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                        onTap: (){
-                          setState(() {
-                            isLicenciaisible = !isLicenciaisible;
-                          });
-                        },
-                        child: _buildSectionTitle('Licencia de conducción')),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          isLicenciaisible = !isLicenciaisible;
-                        });
-                      },
-                      icon: Icon(
-                        isLicenciaisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        size: 30,
-                      ),
-                    ),
-                  ],
-                ),
-                Visibility(
-                  visible: isLicenciaisible,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+
+            Visibility(
+              visible: isLicenciaisible,
+              child: isMobile
+                  ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _dropCategoriaLicencia(),
+
+                  // ✅ FECHA + BADGE
+                  Row(
                     children: [
-                      Container(
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Expanded(
+                        child: _buildDateField(
+                          label: 'Vigencia Licencia (fecha BD)',
+                          key: 'licencia_vigencia',
+                          initialValue: widget.driver.licenciaVigencia,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      badgeVigencia(
+                        fechaBd: widget.driver.licenciaVigencia,
+                        calcularVence: vencimientoDiaAntesDesdeBD,
+                        diasAlerta: 30,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                        if (await canLaunch(url)) {
+                          await launch(url);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        backgroundColor: primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                      icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                      label: const Text('Abrir página RUNT Conductores', style: TextStyle(color: blanco)),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              )
+                  : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ✅ Columna izquierda (campos)
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _dropCategoriaLicencia(),
+
+                        // ✅ FECHA + BADGE (en escritorio también)
+                        Row(
                           children: [
-                            _dropCategoriaLicencia(),
-                            _buildDateField(
-                              label: 'Vigencia de la licencia',
-                              key: 'licencia_vigencia',
-                              initialValue: widget.driver.licenciaVigencia,
+                            Expanded(
+                              child: _buildDateField(
+                                label: 'Vigencia Licencia (fecha BD)',
+                                key: 'licencia_vigencia',
+                                initialValue: widget.driver.licenciaVigencia,
+                              ),
                             ),
-                            const SizedBox(height: 50),
+                            const SizedBox(width: 10),
+                            badgeVigencia(
+                              fechaBd: widget.driver.licenciaVigencia,
+                              calcularVence: vencimientoDiaAntesDesdeBD,
+                              diasAlerta: 30,
+                            ),
                           ],
                         ),
-                      ),
 
-                      const SizedBox(width: 60),
-
-                      Container(
-                        margin: const EdgeInsets.only(top: 10),
-                        height: 50, // Altura del botón
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
-                            if (await canLaunch(url)) {
-                              await launch(url);
-                            } else {
-                              throw 'Could not launch $url';
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20), backgroundColor: primary, // Color de fondo del botón
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            textStyle: const TextStyle(fontSize: 16),
-                          ),
-                          icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // Icono de Correo
-                          label: const Text('Abrir página RUNT Conductores', style: TextStyle( color: blanco)),
-                        ),
-                      ),
-                      const SizedBox(height: 30)
-                    ],
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            )
 
+                  const SizedBox(width: 60),
+
+                  // ✅ Botón derecha
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                          if (await canLaunch(url)) {
+                            await launch(url);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          backgroundColor: primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          textStyle: const TextStyle(fontSize: 16),
+                        ),
+                        icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                        label: const Text('Abrir página RUNT Conductores', style: TextStyle(color: blanco)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       },
     );
   }
+
   Widget _seccionComunicacionNotificaciones(){
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2005,7 +1932,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   void getOperadorInfo() async {
     var user = _authProvider.getUser();
@@ -3977,5 +3903,132 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
+
+
+  //Funciones para calcular la fecha real de vencimiento
+
+  DateTime? parseFechaCO(String? s) {
+    if (s == null) return null;
+    final t = s.trim();
+    if (t.isEmpty) return null;
+    try {
+      return DateFormat('dd/MM/yyyy').parseStrict(t);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime? vencimientoDiaAntesDesdeBD(String? fechaBd) {
+    final f = parseFechaCO(fechaBd);
+    if (f == null) return null;
+    return DateTime(f.year, f.month, f.day).subtract(const Duration(days: 1));
+  }
+
+
+  Color _colorEstado(VigenciaEstado e) {
+    switch (e) {
+      case VigenciaEstado.vencido:
+        return Colors.red;
+      case VigenciaEstado.porVencer:
+        return Colors.orange;
+      case VigenciaEstado.vigente:
+        return Colors.green;
+      case VigenciaEstado.sinFecha:
+        return Colors.grey;
+    }
+  }
+
+  Widget badgeVigencia({
+    required String? fechaBd,
+    required DateTime? Function(String?) calcularVence,
+    int diasAlerta = 30,
+  }) {
+    final fechaVence = calcularVence(fechaBd);
+    final info = calcularEstadoVigencia(fechaVence, diasAlerta: diasAlerta);
+    final c = _colorEstado(info.estado);
+
+    final venceStr = (info.fechaVence == null)
+        ? ""
+        : DateFormat('dd/MM/yyyy').format(info.fechaVence!);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.12),
+        border: Border.all(color: c, width: 1.5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        venceStr.isEmpty ? textoEstado(info) : "${textoEstado(info)} · Vence: $venceStr",
+        style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _dateWithBadge({
+    required String label,
+    required String key,
+    required String initialValue,
+    required String? fechaBd,
+    required DateTime? Function(String?) calcularVence,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildDateField(
+            label: label,
+            key: key,
+            initialValue: initialValue,
+          ),
+        ),
+        const SizedBox(width: 10),
+        badgeVigencia(
+          fechaBd: fechaBd,
+          calcularVence: calcularVence,
+          diasAlerta: 30,
+        ),
+      ],
+    );
+  }
+
 }
+// class para calcular la fecha real de vencimiento
+enum VigenciaEstado { sinFecha, vencido, porVencer, vigente }
+
+class VigenciaInfo {
+  final VigenciaEstado estado;
+  final int? diasRestantes;
+  final DateTime? fechaVence;
+
+  VigenciaInfo(this.estado, this.diasRestantes, this.fechaVence);
+}
+
+VigenciaInfo calcularEstadoVigencia(DateTime? fechaVence, {int diasAlerta = 30}) {
+  if (fechaVence == null) return VigenciaInfo(VigenciaEstado.sinFecha, null, null);
+
+  final now = DateTime.now();
+  final hoy = DateTime(now.year, now.month, now.day);
+  final vence = DateTime(fechaVence.year, fechaVence.month, fechaVence.day);
+
+  final diff = vence.difference(hoy).inDays;
+
+  if (diff < 0) return VigenciaInfo(VigenciaEstado.vencido, diff, fechaVence);
+  if (diff <= diasAlerta) return VigenciaInfo(VigenciaEstado.porVencer, diff, fechaVence);
+  return VigenciaInfo(VigenciaEstado.vigente, diff, fechaVence);
+}
+
+String textoEstado(VigenciaInfo info) {
+  switch (info.estado) {
+    case VigenciaEstado.sinFecha:
+      return "Sin fecha";
+    case VigenciaEstado.vencido:
+      return "Vencido (${info.diasRestantes!.abs()} días)";
+    case VigenciaEstado.porVencer:
+      return "Por vencer (${info.diasRestantes} días)";
+    case VigenciaEstado.vigente:
+      return "Vigente";
+  }
+}
+
 

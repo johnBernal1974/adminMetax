@@ -9,6 +9,8 @@ import '../../providers/driver_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
+import 'package:intl/intl.dart';
+
 
 class ConductoresPage extends StatefulWidget {
   ConductoresPage({Key? key}) : super(key: key);
@@ -26,6 +28,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
   Driver? driver;
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
+
+
+  String filterVigencia = ""; // "", "vencido", "porVencer", "sinFecha", "vigente"
+
+
 
 
 
@@ -99,6 +106,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
             break;
         }
       }
+
+      if (filterVigencia.isNotEmpty) {
+        matchesFilter = matchesFilter && (vigenciaEstadoTexto(driver) == filterVigencia);
+      }
+
       if (driver.rol.isNotEmpty) {
         matchesFilter = matchesFilter && driver.rol == "carro";
       }
@@ -117,6 +129,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   searchQuery.toLowerCase()));
     }).toList();
     totalDrivers = filteredConductores.length;
+
+
 
     int countByStatus(String status) {
       return conductores.where((driver) {
@@ -202,6 +216,118 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
+  Widget _buildFilterVigenciaButtons(List conductores) {
+    bool isSelected(String v) => filterVigencia == v;
+
+    ButtonStyle style(Color c, bool selected) {
+      return ElevatedButton.styleFrom(
+        backgroundColor: selected ? c : c,
+        elevation: selected ? 6 : 1,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      );
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        ElevatedButton(
+          onPressed: () => setState(() => filterVigencia = "vencido"),
+          style: style(Colors.red, isSelected("vencido")),
+          child: Text("Vencidos (${countByVigenciaFiltrada(conductores, "vencido")})", style: const TextStyle(color: Colors.white)),
+
+        ),
+        ElevatedButton(
+          onPressed: () => setState(() => filterVigencia = "porVencer"),
+          style: style(Colors.orange, isSelected("porVencer")),
+          child: Text("Por vencer (${countByVigenciaFiltrada(conductores, "porVencer")})", style: const TextStyle(color: Colors.white)),
+
+        ),
+        ElevatedButton(
+          onPressed: () => setState(() => filterVigencia = "vigente"),
+          style: style(Colors.green, isSelected("vigente")),
+          child: Text("Vigentes (${countByVigenciaFiltrada(conductores, "vigente")})", style: const TextStyle(color: Colors.white)),
+        ),
+        ElevatedButton(
+          onPressed: () => setState(() => filterVigencia = "sinFecha"),
+          style: style(Colors.grey, isSelected("sinFecha")),
+          child: Text("Sin fecha (${countByVigenciaFiltrada(conductores, "sinFecha")})", style: const TextStyle(color: Colors.white)),
+        ),
+        IconButton(
+          tooltip: "Reset vigencia",
+          onPressed: () => setState(() => filterVigencia = ""),
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    );
+  }
+
+  int countByVigenciaFiltrada(List conductores, String vig) {
+    return conductores.where((driver) {
+      bool matches = true;
+
+      // ✅ status
+      if (filterStatus.isNotEmpty) {
+        switch (filterStatus) {
+          case 'registrado':
+            matches = driver.verificacionStatus == 'registrado';
+            break;
+          case 'foto_tomada':
+            matches = driver.verificacionStatus == 'foto_tomada';
+            break;
+          case 'Procesando':
+            matches = driver.verificacionStatus == 'Procesando';
+            break;
+          case 'corregida':
+            matches = driver.verificacionStatus == 'corregida';
+            break;
+          case 'rechazada':
+            matches = driver.verificacionStatus == 'rechazada';
+            break;
+          case 'activado':
+            matches = driver.verificacionStatus == 'activado';
+            break;
+          case 'bloqueado':
+            matches = driver.verificacionStatus == 'bloqueado';
+            break;
+          case 'bloqueo_AJ':
+            matches = driver.verificacionStatus == 'bloqueo_AJ';
+            break;
+          case 'suspendido':
+            matches = driver.the41SuspendidoPorCancelaciones == true;
+            break;
+        }
+      }
+
+      // ✅ rol carro
+      if (driver.rol.isNotEmpty) {
+        matches = matches && driver.rol == "carro";
+      }
+
+      // ✅ búsqueda
+      final q = searchQuery.toLowerCase();
+      if (q.isNotEmpty) {
+        matches = matches &&
+            (driver.the01Nombres.toLowerCase().contains(q) ||
+                driver.the02Apellidos.toLowerCase().contains(q) ||
+                driver.the03NumeroDocumento.toLowerCase().contains(q) ||
+                driver.the06Email.toLowerCase().contains(q) ||
+                driver.the18Placa.toLowerCase().contains(q) ||
+                driver.the07Celular.toLowerCase().contains(q));
+      }
+
+      // ✅ vigencia
+      matches = matches && (vigenciaEstadoTexto(driver) == vig);
+
+      return matches;
+    }).length;
+  }
+
+
+
+
+
   Widget _buildMobileLayout(BuildContext context, DriverProvider driverProvider,
       List filteredConductores, int Function(String) countByStatus,
       Color Function(dynamic) getStatusColor) {
@@ -230,6 +356,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
         _buildSearchField(),
         const SizedBox(height: 30),
         _buildFilterButtons(true, countByStatus),
+        const SizedBox(height: 10),
+        const Divider(height: 1, color: grisMedio),
+        const SizedBox(height: 10),
+        const Text("Filtrado vigencia documentos", style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 10),
+        _buildFilterVigenciaButtons(driverProvider.drivers),
+        const SizedBox(height: 10),
+        const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
         _buildDriverTable(filteredConductores, getStatusColor),
       ],
@@ -268,7 +402,19 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const Divider(color: Colors.grey, height: 20, thickness: 2),
         _buildSearchField(),
         const SizedBox(height: 30),
+        const Text("filtrado principal", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        const SizedBox(height: 10),
         _buildFilterButtons(false, countByStatus),
+        const SizedBox(height: 10),
+        const Divider(height: 1, color: grisMedio),
+        const SizedBox(height: 10),
+        const Text("filtrado vigencia de documentos", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        const SizedBox(height: 10),
+        _buildFilterVigenciaButtons(driverProvider.drivers),
+        const SizedBox(height: 10),
+        const Divider(height: 1, color: grisMedio),
+        const SizedBox(height: 10),
+
         const SizedBox(height: 10),
         _buildDriverTable(filteredConductores, getStatusColor),
       ],
@@ -587,6 +733,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
               ),
             ),
             DataColumn(
+              label: Center(
+                child: Text(
+                  'Vigencia documentos',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            DataColumn(
               label: Text(
                 'Acción',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -633,6 +787,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 DataCell(Text(driver.the18Placa ?? "Placa no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
                 DataCell(
+                  Center(
+                    child: vigenciaCell(driver),
+                  ),
+                ),
+                DataCell(
                   IconButton(
                     icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
                     onPressed: () {
@@ -654,3 +813,111 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
 }
+
+DateTime? _parseFechaCO(String? s) {
+  if (s == null) return null;
+  final t = s.trim();
+  if (t.isEmpty) return null;
+  try {
+    return DateFormat('dd/MM/yyyy').parseStrict(t);
+  } catch (_) {
+    return null;
+  }
+}
+
+// PARA VER VIGENCIA DE DOCUMENTOS
+
+// Regla: vence un día antes de la fecha en BD
+DateTime? _venceDiaAntes(String? fechaBd) {
+  final f = _parseFechaCO(fechaBd);
+  if (f == null) return null;
+  return DateTime(f.year, f.month, f.day).subtract(const Duration(days: 1));
+}
+
+enum _VigEstado { sinFecha, vencido, porVencer, vigente }
+
+_VigEstado _estadoVig(DateTime? vence, {int diasAlerta = 30}) {
+  if (vence == null) return _VigEstado.sinFecha;
+
+  final now = DateTime.now();
+  final hoy = DateTime(now.year, now.month, now.day);
+  final v = DateTime(vence.year, vence.month, vence.day);
+  final diff = v.difference(hoy).inDays;
+
+  if (diff < 0) return _VigEstado.vencido;
+  if (diff <= diasAlerta) return _VigEstado.porVencer;
+  return _VigEstado.vigente;
+}
+
+_VigEstado _peorEstado(List<_VigEstado> estados) {
+  if (estados.contains(_VigEstado.vencido)) return _VigEstado.vencido;
+  if (estados.contains(_VigEstado.porVencer)) return _VigEstado.porVencer;
+  if (estados.contains(_VigEstado.sinFecha)) return _VigEstado.sinFecha;
+  return _VigEstado.vigente;
+}
+
+Color _colorVig(_VigEstado e) {
+  switch (e) {
+    case _VigEstado.vencido:
+      return Colors.red;
+    case _VigEstado.porVencer:
+      return Colors.orange;
+    case _VigEstado.vigente:
+      return Colors.green;
+    case _VigEstado.sinFecha:
+      return Colors.grey;
+  }
+}
+
+String _tooltipVig(_VigEstado e) {
+  switch (e) {
+    case _VigEstado.vencido:
+      return 'Hay documentos vencidos';
+    case _VigEstado.porVencer:
+      return 'Hay documentos por vencer (≤ 30 días)';
+    case _VigEstado.vigente:
+      return 'Documentos vigentes';
+    case _VigEstado.sinFecha:
+      return 'Faltan fechas de vigencia';
+  }
+}
+
+_VigEstado _vigenciaGlobalDriver(driver) {
+  final soat = _estadoVig(_venceDiaAntes(driver.the21VigenciaSoat));
+  final tecno = _estadoVig(_venceDiaAntes(driver.the23VigenciaTecno));
+  final lic = _estadoVig(_venceDiaAntes(driver.licenciaVigencia));
+  return _peorEstado([soat, tecno, lic]);
+}
+
+Widget vigenciaCell(driver) {
+  final estado = _vigenciaGlobalDriver(driver);
+  return Tooltip(
+    message: _tooltipVig(estado),
+    child: Center(
+      child: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: _colorVig(estado),
+          shape: BoxShape.circle,
+        ),
+      ),
+    ),
+  );
+}
+
+String vigenciaEstadoTexto(driver) {
+  final estado = _vigenciaGlobalDriver(driver);
+
+  switch (estado) {
+    case _VigEstado.vencido:
+      return "vencido";
+    case _VigEstado.porVencer:
+      return "porVencer";
+    case _VigEstado.vigente:
+      return "vigente";
+    case _VigEstado.sinFecha:
+      return "sinFecha";
+  }
+}
+
