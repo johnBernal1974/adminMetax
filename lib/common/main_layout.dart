@@ -13,7 +13,7 @@ class MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: grisMapa,
+      backgroundColor: blancoCards,
       drawer: MediaQuery.of(context).size.width < 800 ? const SideBar() : null,
       appBar: AppBar(
         title: Text(pageTitle, style: const TextStyle(color: Colors.black),),

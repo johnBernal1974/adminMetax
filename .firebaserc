@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "apptaxi-e641d"
-  }
+  },
+  "targets": {
+    "apptaxi-e641d": {
+      "hosting": {
+        "admin": [
+          "apptaxi-e641d"
+        ],
+        "landing": [
+          "metax-landing"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

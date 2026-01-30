@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../common/main_layout.dart';
-import '../../common/travel_history_filters.dart';
 
 class TravelHistoryPage extends StatefulWidget {
   const TravelHistoryPage({Key? key}) : super(key: key);
@@ -21,10 +20,12 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
   int? selectedMonth; // 1-12
   int? selectedDay;   // 1-31
   String placaQuery = "";
+  String numeroViajeQuery = "";
 
-  final Map<String, String> _plateCache = {}; // idDriver -> placa
 
-
+  bool isDesktop(BuildContext context) {
+    return MediaQuery.of(context).size.width >= 900;
+  }
 
   String formatTimestamp(Timestamp timestamp) {
     DateTime dateTime = timestamp.toDate();
@@ -38,14 +39,11 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
       pageTitle: 'Historial de Viajes',
       content: Column(
         children: [
-          // Widget para los filtros (solo rango de fechas)
-          TravelHistoryFilters(
-            onFilterChange: (dateRange) {
-              setState(() {
-                selectedDateRange = dateRange;
-              });
-            },
-          ),
+
+          const SizedBox(height: 40),
+          const Text("Buscar viajes por dia, placa o numero de viaje", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 20),
+          
           Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(
@@ -55,13 +53,29 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
               children: [
                 SizedBox(
                   width: 140,
-                  child: DropdownButtonFormField<int>(
+                  child: DropdownButtonFormField<int?>(
                     value: selectedYear,
-                    decoration: const InputDecoration(labelText: "Año"),
+                    decoration: InputDecoration(
+                      labelText: "Año",
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                     items: [
-                      const DropdownMenuItem<int>(value: null, child: Text("Selecciona")),
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text("Selecciona"),
+                      ),
                       ...List.generate(6, (i) => DateTime.now().year - i).map(
-                            (y) => DropdownMenuItem<int>(value: y, child: Text("$y")),
+                            (y) => DropdownMenuItem<int?>(
+                          value: y,
+                          child: Text("$y"),
+                        ),
                       ),
                     ],
                     onChanged: (v) => setState(() {
@@ -74,13 +88,29 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
 
                 SizedBox(
                   width: 140,
-                  child: DropdownButtonFormField<int>(
+                  child: DropdownButtonFormField<int?>(
                     value: selectedMonth,
-                    decoration: const InputDecoration(labelText: "Mes"),
+                    decoration: InputDecoration(
+                      labelText: "Mes",
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                     items: [
-                      const DropdownMenuItem<int>(value: null, child: Text("Todos")),
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text("Todos"),
+                      ),
                       ...List.generate(12, (i) => i + 1).map(
-                            (m) => DropdownMenuItem<int>(value: m, child: Text("$m")),
+                            (m) => DropdownMenuItem<int?>(
+                          value: m,
+                          child: Text("$m"),
+                        ),
                       ),
                     ],
                     onChanged: (v) => setState(() {
@@ -90,15 +120,32 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                   ),
                 ),
 
+
                 SizedBox(
                   width: 140,
-                  child: DropdownButtonFormField<int>(
+                  child: DropdownButtonFormField<int?>(
                     value: selectedDay,
-                    decoration: const InputDecoration(labelText: "Día"),
+                    decoration: InputDecoration(
+                      labelText: "Día",
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                     items: [
-                      const DropdownMenuItem<int>(value: null, child: Text("Todos")),
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text("Todos"),
+                      ),
                       ...List.generate(31, (i) => i + 1).map(
-                            (d) => DropdownMenuItem<int>(value: d, child: Text("$d")),
+                            (d) => DropdownMenuItem<int?>(
+                          value: d,
+                          child: Text("$d"),
+                        ),
                       ),
                     ],
                     onChanged: (v) => setState(() => selectedDay = v),
@@ -108,15 +155,42 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                 SizedBox(
                   width: 220,
                   child: TextField(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: "Placa",
                       hintText: "ABC123 o ABC-123",
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                     onChanged: (v) => setState(() {
                       placaQuery = v.trim().toUpperCase();
                       print("PLACA QUERY: $placaQuery");
-
                     }),
+                  ),
+                ),
+
+                SizedBox(
+                  width: 220,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      labelText: "N° Viaje",
+                      hintText: "Ej: 2026-000001",
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onChanged: (v) =>
+                        setState(() => numeroViajeQuery = v.trim()),
                   ),
                 ),
 
@@ -134,10 +208,10 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
             ),
           ),
           Expanded(
-            child: (range == null && placaQuery.isEmpty)
+            child: (range == null && placaQuery.isEmpty && numeroViajeQuery.isEmpty)
                 ? const Center(
               child: Text(
-                'Selecciona un año o escribe una placa para ver el historial.',
+                'Selecciona un año o escribe una placa / N° de viaje para ver el historial.',
                 textAlign: TextAlign.center,
               ),
             )
@@ -151,37 +225,36 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                   return const Center(child: Text('No hay viajes en el historial.'));
                 }
 
-                final travelHistoryDocs = snapshot.data!.docs.cast<QueryDocumentSnapshot>();
+                final travelHistoryDocs =
+                snapshot.data!.docs.cast<QueryDocumentSnapshot>();
 
-                final q = _normPlaca(placaQuery);
+                // ✅ normalizamos filtros
+                final placaQ = _normPlaca(placaQuery);
+                final numQ = numeroViajeQuery.trim().toLowerCase();
 
-// ✅ filtro real por placa (primero placa_norm, si no existe usa placa_show/placa)
-                final filteredDocs = (q.isEmpty)
-                    ? travelHistoryDocs
-                    : travelHistoryDocs.where((doc) {
+                // ✅ filtro combinado: placa + numeroViaje
+                final filteredDocs = travelHistoryDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
 
-                  print('🔥 TRAVEL DOC: $data');
+                  // placa_norm (ya viene guardada)
+                  final placaNorm =
+                  (data['placa_norm'] ?? '').toString().toUpperCase();
+                  final okPlaca =
+                  placaQ.isEmpty ? true : placaNorm.contains(placaQ);
 
-                  final placaNorm = (data['placa_norm'] ?? '').toString().toUpperCase();
-                  print('🔥 PLACA_NORM EN DOC: "$placaNorm"');
-                  print('🔥 QUERY: "$q"');
+                  // numeroViaje (exacto del nodo)
+                  final numeroViaje = (data['numeroViaje'] ?? '').toString();
+                  final okNumero = numQ.isEmpty
+                      ? true
+                      : numeroViaje.toLowerCase().contains(numQ);
 
-                  return placaNorm.contains(q);
+                  return okPlaca && okNumero;
                 }).toList();
 
-
-// ✅ debug fuerte (mira consola)
-                print("TOTAL=${travelHistoryDocs.length} | FILTRADOS=${filteredDocs.length} | q=$q");
-                if (q.isNotEmpty && travelHistoryDocs.isNotEmpty) {
-                  final sample = travelHistoryDocs.first;
-                  print("SAMPLE placa_norm=${_safeGetString(sample, 'placa_norm')} placa_show=${_safeGetString(sample, 'placa_show')} placa=${_safeGetString(sample, 'placa')}");
-                }
-
-
-
                 if (filteredDocs.isEmpty) {
-                  return const Center(child: Text('No hay viajes con esa placa en el rango seleccionado.'));
+                  return const Center(
+                    child: Text('No hay viajes con esos filtros en el rango seleccionado.'),
+                  );
                 }
 
                 return Column(
@@ -190,71 +263,16 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                       padding: const EdgeInsets.all(8.0),
                       child: Text(
                         '${filteredDocs.length} viajes encontrados',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: filteredDocs.length,
-                        itemBuilder: (context, index) {
-                          final travel = filteredDocs[index];
-
-                          final idClient = travel['idClient'];
-                          final idDriver = travel['idDriver'];
-
-                          // ✅ placa directa del TravelHistory
-                          final driverPlate = (travel['placa_show'] ?? 'Placa no disponible').toString();
-
-                          return FutureBuilder(
-                            future: Future.wait([
-                              _getClientName(idClient),
-                              _getDriverName(idDriver), // ojo: si idDriver puede ser DocumentReference, te lo ajusto abajo
-                            ]),
-                            builder: (context, futureSnapshot) {
-                              final clientName = futureSnapshot.data?[0] ?? 'Nombre no disponible';
-                              final driverName = futureSnapshot.data?[1] ?? 'Nombre no disponible';
-
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 500),
-                                  child: Card(
-                                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _buildLabelValue('Origen:', '${travel['from']}'),
-                                          _buildLabelValue('Destino:', '${travel['to']}'),
-                                          const SizedBox(height: 8),
-                                          const Divider(),
-                                          _buildRow('Fecha de Solicitud:', formatTimestamp(travel['solicitudViaje'])),
-                                          _buildRow('Inicio del Viaje:', formatTimestamp(travel['inicioViaje'])),
-                                          _buildRow('Finalización del Viaje:', formatTimestamp(travel['finalViaje'])),
-                                          const Divider(),
-                                          _buildRow('Tarifa Inicial:', '\$${numberFormat.format(travel['tarifaInicial'])}'),
-                                          _buildRow('Descuento:', '\$${numberFormat.format(travel['tarifaDescuento'])}'),
-                                          _buildRow('Tarifa Final:', '\$${numberFormat.format(travel['tarifa'])}', isBold: true),
-                                          const Divider(),
-                                          _buildRow('Calificación al Cliente:', '${travel['calificacionAlCliente']}'),
-                                          _buildRow('Calificación al Conductor:', '${travel['calificacionAlConductor']}'),
-                                          const Divider(),
-                                          _buildRowBold('Apuntes:', '${travel['apuntes'] ?? 'Sin apuntes'}'),
-                                          _buildRow('Cliente:', clientName),
-                                          _buildRow('Conductor:', driverName),
-                                          _buildRow('Rol:', '${travel['rol']}'),
-                                          _buildRow('Placa del Conductor:', driverPlate),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                      child: isDesktop(context)
+                          ? _buildTable(filteredDocs)
+                          : _buildCards(filteredDocs),
                     ),
                   ],
                 );
@@ -265,6 +283,244 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
       ),
     );
   }
+
+  Widget _buildTable(List<QueryDocumentSnapshot> docs) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('N° Viaje', style: TextStyle(fontWeight: FontWeight.w800))),
+          DataColumn(label: Text('Destino del viaje', style: TextStyle(fontWeight: FontWeight.w800))),
+          DataColumn(label: Text('Cliente / Conductor', style: TextStyle(fontWeight: FontWeight.w800))),
+          DataColumn(label: Text('Fecha solicitud', style: TextStyle(fontWeight: FontWeight.w800))),
+          DataColumn(label: Text('Tarifa', style: TextStyle(fontWeight: FontWeight.w800))),
+        ],
+        rows: docs.map((travelDoc) {
+          final data = travelDoc.data() as Map<String, dynamic>;
+
+          // ✅ OJO: en tu BD es numero_viaje (no numeroViaje)
+          final numeroViaje = (data['numeroViaje'] ?? '—').toString();
+
+          final idClient = data['idClient'];
+          final idDriver = data['idDriver'];
+
+          return DataRow(
+            onSelectChanged: (_) => _openTravelDetailModal(travelDoc),
+            cells: [
+              DataCell(Text(numeroViaje)),
+
+              DataCell(Text('${data['to'] ?? ''}')),
+
+              // ✅ Cliente/Conductor consultando Firestore
+              DataCell(
+                FutureBuilder<List<String>>(
+                  future: Future.wait([
+                    _getClientName(idClient),
+                    _getDriverName(idDriver),
+                  ]),
+                  builder: (context, snap) {
+                    final clientName = (snap.data != null && snap.data!.isNotEmpty)
+                        ? snap.data![0]
+                        : 'Cargando...';
+                    final driverName = (snap.data != null && snap.data!.length > 1)
+                        ? snap.data![1]
+                        : 'Cargando...';
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Cliente: $clientName'),
+                        Text('Conductor: $driverName'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  data['solicitudViaje'] != null
+                      ? formatTimestamp(data['solicitudViaje'])
+                      : '—',
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  '\$${numberFormat.format((data['tarifa'] ?? 0))}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _openTravelDetailModal(QueryDocumentSnapshot travelDoc) {
+    final data = travelDoc.data() as Map<String, dynamic>;
+
+    final idClient = data['idClient'];
+    final idDriver = data['idDriver'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: FutureBuilder<List<String>>(
+              future: Future.wait([
+                _getClientName(idClient),
+                _getDriverName(idDriver),
+              ]),
+              builder: (context, snap) {
+                final clientName =
+                (snap.data != null && snap.data!.isNotEmpty) ? snap.data![0] : 'Cargando...';
+                final driverName =
+                (snap.data != null && snap.data!.length > 1) ? snap.data![1] : 'Cargando...';
+
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Detalle del viaje ${data['numero_viaje'] ?? ''}',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(),
+
+                      _detailRow('Origen', (data['from'] ?? '').toString()),
+                      _detailRow('Destino', (data['to'] ?? '').toString()),
+
+                      const Divider(),
+                      _detailRow(
+                        'Solicitud',
+                        data['solicitudViaje'] != null ? formatTimestamp(data['solicitudViaje']) : '—',
+                      ),
+                      _detailRow(
+                        'Inicio',
+                        data['inicioViaje'] != null ? formatTimestamp(data['inicioViaje']) : '—',
+                      ),
+                      _detailRow(
+                        'Final',
+                        data['finalViaje'] != null ? formatTimestamp(data['finalViaje']) : '—',
+                      ),
+
+                      const Divider(),
+                      _detailRow('Tarifa inicial', '\$${numberFormat.format((data['tarifaInicial'] ?? 0))}'),
+                      _detailRow('Descuento', '\$${numberFormat.format((data['tarifaDescuento'] ?? 0))}'),
+                      _detailRow('Tarifa final', '\$${numberFormat.format((data['tarifa'] ?? 0))}'),
+
+                      const Divider(),
+                      _detailRow('Calificación dada al cliente', '${data['calificacionAlCliente'] ?? 0} ⭐'),
+                      _detailRow('Calificación dada al conductor', '${data['calificacionAlConductor'] ?? 0} ⭐'),
+
+                      const Divider(),
+                      // ✅ Nombres consultando BD
+                      _detailRow('Cliente', clientName),
+                      _detailRow('Conductor', driverName),
+
+                      _detailRow('Placa', (data['placa_show'] ?? data['placa'] ?? '—').toString()),
+                      _detailRow('Rol', (data['rol'] ?? '—').toString()),
+
+                      const Divider(),
+                      _detailRow('Apuntes', (data['apuntes'] ?? 'Sin apuntes').toString()),
+
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                          label: const Text('Cerrar'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 250,
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildCards(List<QueryDocumentSnapshot> docs) {
+    return ListView.builder(
+      itemCount: docs.length,
+      itemBuilder: (context, index) {
+        final travel = docs[index];
+
+        final idClient = travel['idClient'];
+        final idDriver = travel['idDriver'];
+        final driverPlate = (travel['placa_show'] ?? '').toString();
+
+        return FutureBuilder(
+          future: Future.wait([
+            _getClientName(idClient),
+            _getDriverName(idDriver),
+          ]),
+          builder: (context, snapshot) {
+            final clientName = snapshot.data?[0] ?? '';
+            final driverName = snapshot.data?[1] ?? '';
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabelValue('Origen:', travel['from']),
+                    _buildLabelValue('Destino:', travel['to']),
+                    const Divider(),
+                    _buildRow('Fecha:', formatTimestamp(travel['solicitudViaje'])),
+                    _buildRow('Tarifa:', '\$${numberFormat.format(travel['tarifa'])}', isBold: true),
+                    const Divider(),
+                    _buildRow('Cliente:', clientName),
+                    _buildRow('Conductor:', driverName),
+                    _buildRow('Placa:', driverPlate),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+
 
   //new para filtrado
 

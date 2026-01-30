@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Metax | Plataforma de gestión</title>
+    <meta name="description" content="Metax: plataforma para gestión y operación. Soporte, privacidad y eliminación de cuenta." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="icon" href="assets/logo_metax_landing.png" />
+</head>
+<body>
+<div class="container">
+    <header class="nav">
+        <div class="brand">
+            <img src="assets/logo_metax_landing.png" alt="Metax" style="max-width:200px;">
+
+
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+            <a class="btn" href="soporte.html">Soporte</a>
+
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="card">
+            <span class="pill">Sitio oficial • Documentación pública</span>
+            <h1 class="h1">Metax</h1>
+            <p class="p">
+                Plataforma orientada a la operación y gestión. Aquí encontrarás soporte, políticas y el proceso para
+                eliminar tu cuenta o darte de baja.
+            </p>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+                <a class="btn" href="baja.html">Eliminar cuenta</a>
+                <a class="btn" href="privacidad.html">Política de privacidad</a>
+                <a class="btn" href="terminos.html">Términos</a>
+            </div>
+
+            <div class="grid">
+                <div class="kpi">
+                    <b>Soporte</b>
+                    <div class="small">Canales oficiales y tiempos de respuesta.</div>
+                </div>
+                <div class="kpi">
+                    <b>Privacidad</b>
+                    <div class="small">Qué datos se usan y por qué.</div>
+                </div>
+                <div class="kpi">
+                    <b>Eliminación</b>
+                    <div class="small">Cómo solicitar borrar cuenta y datos.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+            <div class="small">¿Necesitas ayuda?</div>
+            <p class="p">Escríbenos desde la página de soporte.</p>
+            <a class="btn" href="soporte.html">Ir a soporte</a>
+
+
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div>© <span id="y"></span> Metax</div>
+        <div class="links">
+            <a href="privacidad.html">Privacidad</a>
+            <a href="terminos.html">Términos</a>
+            <a href="baja.html">Eliminar cuenta</a>
+            <a href="soporte.html">Soporte</a>
+        </div>
+    </footer>
+</div>
+
+<script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
