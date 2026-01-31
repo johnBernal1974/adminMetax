@@ -4,45 +4,95 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Soporte | Metax</title>
+    <meta name="description" content="Soporte oficial de Metax. Contáctanos por correo o WhatsApp para ayuda, consultas o eliminación de cuenta." />
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+
 <div class="container page">
-    <header class="nav">
-        <a href="index.html" class="brand">
-            <img src="assets/logo_metax_landing.png"  />
-        </a>
-        <a class="btn" href="index.html">Volver</a>
+
+    <!-- Header -->
+    <header class="nav nav-hero">
+        <div class="brand">
+            <img src="assets/logo_metax_landing.png" alt="Metax" style="max-width:200px;">
+        </div>
+
+        <div class="slogan">
+            Porque cada viaje es importante
+        </div>
+
+        <div class="nav-actions">
+            <a class="btn" href="index.html">Inicio</a>
+        </div>
     </header>
 
+    <!-- Card principal -->
     <div class="card">
-        <h2>Soporte</h2>
-        <p>
-            Para soporte, preguntas o solicitudes (incluida eliminación de cuenta), contáctanos por el canal oficial:
+        <h2>Soporte Metax</h2>
+
+        <p class="p">
+            Estamos aquí para ayudarte. Si tienes dudas, problemas con un viaje, solicitudes
+            relacionadas con tu cuenta o deseas eliminarla, puedes contactarnos por nuestros
+            canales oficiales.
         </p>
 
-        <h3>Correo de soporte</h3>
+        <hr>
+
+        <h3>📧 Correo de soporte</h3>
+        <p class="p">
+            Escríbenos y te responderemos lo antes posible:
+        </p>
         <p>
-            <b>soporte@metax.com.co</b> (cámbialo si usarás otro)
+            <b>soporte@metax.com.co</b>
         </p>
 
-        <h3>Información que ayuda a resolver rápido</h3>
+        <hr>
+
+        <h3>💬 Soporte por WhatsApp</h3>
+        <p class="p">
+            Para una atención más rápida, también puedes escribirnos directamente por WhatsApp:
+        </p>
+
+        <a
+                class="btn primary"
+                href="https://wa.me/573108533636"
+                target="_blank"
+                rel="noopener"
+                style="margin-top:10px"
+        >
+            Escribir por WhatsApp
+        </a>
+
+        <hr>
+
+        <h3>Información que nos ayuda a resolver más rápido</h3>
         <ul>
-            <li>Número de teléfono registrado</li>
-            <li>Ciudad</li>
-            <li>Descripción del problema y capturas (si aplica)</li>
+            <li>Número de teléfono registrado en Metax</li>
+            <li>Ciudad donde ocurrió el inconveniente</li>
+            <li>Descripción clara del problema</li>
+            <li>Capturas de pantalla o detalles adicionales (si aplica)</li>
         </ul>
+
+        <p class="small" style="margin-top:14px">
+            ⚠️ En situaciones de emergencia, por favor contacta a las autoridades locales.
+        </p>
     </div>
 
+    <!-- Footer -->
     <footer class="footer">
         <div>© <span id="y"></span> Metax</div>
         <div class="links">
             <a href="privacidad.html">Privacidad</a>
+            <a href="terminos.html">Términos</a>
             <a href="baja.html">Eliminar cuenta</a>
         </div>
     </footer>
+
 </div>
 
-<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+<script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+</script>
+
 </body>
 </html>

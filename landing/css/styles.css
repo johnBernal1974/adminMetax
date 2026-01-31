@@ -108,6 +108,135 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
   padding-bottom: 110px; /* espacio para el footer fijo */
 }
 
+/* === Ajustes para listas en páginas legales (móvil friendly) === */
+
+.page ul {
+  padding-left: 18px;      /* reduce la sangría */
+  margin-left: 0;
+}
+
+.page li {
+  margin-bottom: 8px;      /* más aire entre puntos */
+  line-height: 1.6;
+}
+
+/* Ajuste extra SOLO para móvil */
+@media (max-width: 600px) {
+  .page ul {
+    padding-left: 14px;    /* aún menos sangría en móvil */
+  }
+
+  .page li {
+    font-size: 15px;       /* lectura más cómoda */
+  }
+}
+
+.nav-hero{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Slogan central */
+.slogan{
+    text-align: center;
+    font-size: 30px;
+    font-weight: 800;
+    color: #000;
+    font-family: 'Georgia', 'Times New Roman', serif; /* más emocional */
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+}
+
+/* Botón a la derecha */
+.nav-actions{
+    display:flex;
+    justify-content:flex-end;
+}
+
+/* === Ajustes SOLO para móvil (header / slogan) === */
+@media (max-width: 768px) {
+
+  /* Logo más pequeño */
+  .brand img{
+    width: 120px;
+    height: auto;
+  }
+
+  /* Slogan más compacto */
+  .slogan{
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0 10px;
+  }
+
+  /* Header en columna */
+  .nav-hero{
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .nav-actions{
+    justify-content: center;
+  }
+
+  .brand{
+      justify-content: center;
+      width: 100%;
+    }
+
+    .brand img{
+      margin: 0 auto;
+      display: block;
+    }
+}
+
+@media (max-width: 420px){
+  .brand img{
+    width: 100px;
+  }
+
+  .slogan{
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.support-card{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+//* Icono en card de soporte */
+ .support-icon {
+   display: flex;
+   justify-content: center;
+   margin-bottom: 14px;
+ }
+
+ .support-icon img {
+   width: 160px;
+   height: auto;
+ }
+
+ /* Móvil: aún más pequeño */
+ @media (max-width: 600px) {
+   .support-icon img {
+     width: 80px;
+   }
+ }
+
+
+
+
+
+
+
+
 
 
 
