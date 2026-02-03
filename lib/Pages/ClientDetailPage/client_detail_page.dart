@@ -49,9 +49,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     super.initState();
     selectedGenero = widget.client.the09Genero;
     selectedRol = widget.client.the20Rol;
+    selectedTipoDocumento = widget.client.the04TipoDocumento;
+
 
     _initController("01_Nombres", widget.client.the01Nombres);
     _initController("02_Apellidos", widget.client.the02Apellidos);
+    _initController("03_Numero_Documento", widget.client.the03NumeroDocumento);
+
 
     getClientRatings();
     getOperadorInfo();
@@ -162,10 +166,9 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                           const Divider(),
                           _seccionDatosGenerales(),
                           const Divider(),
-                          _seccionInfoClientEditable(),
+                          _seccionDocumentosdeIdentidad(),
                           const Divider(),
-                          _seccionComunicacionNotificaciones(),
-                          const SizedBox(height: 50,)
+                          //_seccionComunicacionNotificaciones(),
                         ],
                       ),
                     ),
@@ -441,132 +444,6 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           ],
         );
       },
-    );
-  }
-
-  Widget _seccionInfoClientEditable(){
-    return LayoutBuilder(
-        builder: (context, constraints){
-          double screenWidth = constraints.maxWidth;
-          // Define el tamaño de la letra según el ancho de la pantalla
-          double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-          // Define si es móvil o no
-          bool isMobile = screenWidth < 600;
-          return Column(
-            children: [
-              isMobile ?
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
-                            });
-                          },
-                          child: _buildSectionTitle('Más Info')),
-
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
-                          });
-                        },
-                        icon: Icon(
-                          isDocumentodeidentidadVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          size: 30,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Visibility(
-                    visible: isDocumentodeidentidadVisible,
-                    child: Column(
-                      children: [
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              children: [
-                                _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
-                                _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
-                                _dropGenero(),
-                                _dropRol(),
-                                                              ],
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ) : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
-                            });
-                          },
-                          child: _buildSectionTitle('Más info')),
-
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
-                          });
-                        },
-                        icon: Icon(
-                          isDocumentodeidentidadVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          size: 30,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Visibility(
-                    visible: isDocumentodeidentidadVisible,
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
-                                  _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20), // Espacio entre columnas
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _dropGenero(),
-                                  _dropRol(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        }
     );
   }
 
@@ -1029,6 +906,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 setState(() {
                   if (key == "01_Nombres") widget.client.the01Nombres = valueToSave;
                   if (key == "02_Apellidos") widget.client.the02Apellidos = valueToSave;
+                  if (key == "03_Numero_Documento") widget.client.the03NumeroDocumento = valueToSave;
                 });
               });
 
@@ -1453,6 +1331,708 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+  //PARA EL PANEL DE LA CEDULA
+
+
+  Widget _seccionDocumentosdeIdentidad() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        bool isMobile = screenWidth < 600;
+
+        return Column(
+          children: [
+            isMobile
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      child: _buildSectionTitle('Documento de identidad'),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isDocumentodeidentidadVisible
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isDocumentodeidentidadVisible,
+                  child: Column(
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            children: [
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  _buildDocumentPhoto(
+                                    "Cédula parte delantera",
+                                    widget.client.the16CedulaFrontalUrl,
+                                  ),
+                                  Positioned(
+                                    top: -10,
+                                    right: -10,
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: getStatusColorFotos(
+                                          widget.client.the16CedulaFrontalUsuario,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // ✅ Si quieres mostrar nombres/apellidos como en conductor (ya los tienes)
+                              _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
+                              _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                              _dropTipoDocumentoClient(),
+                              _buildTextField(widget.client.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                              const SizedBox(height: 30),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(
+                                    height: 30,
+                                    width: 30,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        _showConfirmationCedulaFrontal(
+                                          context,
+                                          "¿Aceptar la foto del documento de identidad en su parte delantera?",
+                                          "aceptada",
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      child: const Icon(Icons.check_circle,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 25),
+                                  SizedBox(
+                                    height: 30,
+                                    width: 30,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        _showConfirmationCedulaFrontal(
+                                          context,
+                                          "¿Está seguro de rechazar la foto del documento en su parte delantera?",
+                                          "rechazada",
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      child: const Icon(Icons.block,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          const Divider(),
+                          const SizedBox(height: 20),
+
+                          Column(
+                            children: [
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  _buildDocumentPhoto(
+                                    "Cédula parte trasera",
+                                    widget.client.the23CedulaReversoUrl,
+                                  ),
+                                  Positioned(
+                                    top: -10,
+                                    right: -10,
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: getStatusColorFotos(
+                                          widget.client.the23CedulaReversoUsuario,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              _buildDateField(
+                                label: 'Fecha de expedición',
+                                key: '05_Fecha_Expedicion_Documento',
+                                initialValue: widget.client.the05FechaExpedicionDocumento ?? '',
+                              ),
+
+                              _buildDateField(
+                                label: 'Fecha de nacimiento',
+                                key: '08_Fecha_Nacimiento',
+                                initialValue: widget.client.the08FechaNacimiento ?? '',
+                              ),
+
+
+                              // ✅ si quieres que admin pueda cambiar género aquí también (ya tienes drop)
+                              _dropGenero(),
+                              _dropRol(),
+
+                              const SizedBox(height: 30),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(
+                                    height: 30,
+                                    width: 30,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        _showConfirmationCedulaReverso(
+                                          context,
+                                          "¿Aceptar la foto del documento de identidad en su parte trasera?",
+                                          "aceptada",
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      child: const Icon(Icons.check_circle,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 25),
+                                  SizedBox(
+                                    height: 30,
+                                    width: 30,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        _showConfirmationCedulaReverso(
+                                          context,
+                                          "¿Está seguro de rechazar la foto del documento en su parte trasera?",
+                                          "rechazada",
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      child: const Icon(Icons.block,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 30),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      child: _buildSectionTitle('Documento de identidad'),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          isDocumentodeidentidadVisible = !isDocumentodeidentidadVisible;
+                        });
+                      },
+                      icon: Icon(
+                        isDocumentodeidentidadVisible
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: isDocumentodeidentidadVisible,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    _buildDocumentPhoto(
+                                      "Cédula parte delantera",
+                                      widget.client.the16CedulaFrontalUrl,
+                                    ),
+                                    Positioned(
+                                      top: -10,
+                                      right: -10,
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(
+                                            widget.client.the16CedulaFrontalUsuario,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _dropTipoDocumentoClient(),
+                                _buildTextField(widget.client.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                const SizedBox(height: 30),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationCedulaFrontal(
+                                            context,
+                                            "¿Aceptar la foto del documento de identidad en su parte delantera?",
+                                            "aceptada",
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        child: const Icon(Icons.check_circle,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationCedulaFrontal(
+                                            context,
+                                            "¿Está seguro de rechazar la foto del documento en su parte delantera?",
+                                            "rechazada",
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        child: const Icon(Icons.block,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    _buildDocumentPhoto(
+                                      "Cédula parte trasera",
+                                      widget.client.the23CedulaReversoUrl,
+                                    ),
+                                    Positioned(
+                                      top: -10,
+                                      right: -10,
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: getStatusColorFotos(
+                                            widget.client.the23CedulaReversoUsuario,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                _buildDateField(
+                                  label: 'Fecha de expedición',
+                                  key: '05_Fecha_Expedicion_Documento',
+                                  initialValue: widget.client.the05FechaExpedicionDocumento ?? '',
+                                ),
+
+                                _buildDateField(
+                                  label: 'Fecha de nacimiento',
+                                  key: '08_Fecha_Nacimiento',
+                                  initialValue: widget.client.the08FechaNacimiento ?? '',
+                                ),
+
+                                _dropGenero(),
+                                _dropRol(),
+                                const SizedBox(height: 30),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationCedulaReverso(
+                                            context,
+                                            "¿Aceptar la foto del documento de identidad en su parte trasera?",
+                                            "aceptada",
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        child: const Icon(Icons.check_circle,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 25),
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showConfirmationCedulaReverso(
+                                            context,
+                                            "¿Está seguro de rechazar la foto del documento en su parte trasera?",
+                                            "rechazada",
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        child: const Icon(Icons.block,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 50),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationCedulaFrontal(BuildContext context, String message, String value) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _saveField("16_Cedula_frontal_usuario", value, () {});
+              setState(() {
+                widget.client.the16CedulaFrontalUsuario = value;
+              });
+            },
+            child: const Text("Sí"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showConfirmationCedulaReverso(BuildContext context, String message, String value) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+             _saveField("23_Cedula_reverso_usuario", value, () {});
+              setState(() {
+                widget.client.the23CedulaReversoUsuario = value;
+              });
+            },
+            child: const Text("Sí"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField({
+    required String label,
+    required String key,
+    required String initialValue,
+  }) {
+    final controller = _controllers[key] ??= TextEditingController(text: initialValue);
+    final focusNode = _focusNodes[key] ??= FocusNode();
+
+    DateTime? _parse(String s) {
+      final t = s.trim();
+      if (t.isEmpty) return null;
+      try {
+        return DateFormat('dd/MM/yyyy').parseStrict(t);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    Future<void> _pickDate() async {
+      FocusScope.of(context).unfocus();
+
+      final now = DateTime.now();
+      final current = _parse(controller.text);
+
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: current ?? now,
+        firstDate: DateTime(1900),
+        lastDate: DateTime(now.year + 30),
+        helpText: label,
+        locale: const Locale('es', 'CO'),
+      );
+
+      if (picked == null) return;
+
+      final formatted = DateFormat('dd/MM/yyyy').format(picked);
+
+      controller.text = formatted;
+
+      // ✅ 2) guarda en Firestore
+      _saveField(key, formatted, () {});
+
+
+      if (mounted) setState(() {});
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        readOnly: true,
+        onTap: _pickDate,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.calendar_month),
+            onPressed: _pickDate,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildDocumentPhoto(String title, String? photoUrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Container(
+            width: 180,
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: (photoUrl != null && photoUrl.isNotEmpty)
+                  ? GestureDetector(
+                onTap: () async {
+                  final uri = Uri.parse(photoUrl);
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                child: Image.network(
+                  photoUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Text('Foto no disponible', style: TextStyle(color: Colors.grey)),
+                  ),
+                ),
+              )
+                  : const Center(
+                child: Text('Foto no disponible', style: TextStyle(color: Colors.grey)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dropTipoDocumentoClient() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tipo de documento', style: TextStyle(fontSize: 14)),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: selectedTipoDocumento,
+                items: const [
+                  DropdownMenuItem(value: "", child: Text("")),
+                  DropdownMenuItem(value: "CC", child: Text("Cédula de ciudadanía")),
+                  DropdownMenuItem(value: "CE", child: Text("Cédula de extranjería")),
+                ],
+                onChanged: (value) {
+                  setState(() => selectedTipoDocumento = value);
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: () async {
+                final valueToSave = (selectedTipoDocumento ?? "").trim();
+
+                _saveField("04_Tipo_Documento", valueToSave, () {
+                  setState(() {
+                    widget.client.the04TipoDocumento = valueToSave;
+                  });
+                });
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  //HELPERS
+
+  void _showConfirmationCedula(
+      BuildContext context,
+      String message,
+      String fieldKey,
+      String value,
+      VoidCallback onLocalUpdate,
+      ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _saveField(fieldKey, value, () {});
+              onLocalUpdate();
+            },
+            child: const Text("Sí"),
           ),
         ],
       ),

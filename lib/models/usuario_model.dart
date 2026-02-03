@@ -31,6 +31,23 @@ class Client {
   String palabraClave;
   String preuntaPalabraClave;
 
+  bool cedulaFrontalTomada;
+  String the16CedulaFrontalUsuario;
+  String the16CedulaFrontalUrl;
+
+  bool cedulaReversoTomada;
+  String the23CedulaReversoUsuario;
+  String the23CedulaReversoUrl;
+
+  String the05FechaExpedicionDocumento;
+  String the08FechaNacimiento;
+
+  String the03NumeroDocumento;
+  String the04TipoDocumento;
+
+
+
+
   Client({
     required this.id,
     required this.the01Nombres,
@@ -53,6 +70,20 @@ class Client {
     required this.fotoPerfilTomada,
     required this.palabraClave,
     required this.preuntaPalabraClave,
+
+    required this.cedulaFrontalTomada,
+    required this.the16CedulaFrontalUsuario,
+    required this.the16CedulaFrontalUrl,
+    required this.cedulaReversoTomada,
+    required this.the23CedulaReversoUsuario,
+    required this.the23CedulaReversoUrl,
+
+    required this.the05FechaExpedicionDocumento,
+    required this.the08FechaNacimiento,
+
+    required this.the03NumeroDocumento,
+    required this.the04TipoDocumento,
+
 
 
   });
@@ -79,6 +110,23 @@ class Client {
     fotoPerfilTomada: json["foto_perfil_tomada"],
     palabraClave: json["palabra_clave"] ?? "",
     preuntaPalabraClave: json["pregunta_palabra_clave"],
+
+    cedulaFrontalTomada: json["cedula_frontal_tomada"] == true,
+    the16CedulaFrontalUsuario: (json["16_Cedula_frontal_usuario"] ?? "").toString(),
+    the16CedulaFrontalUrl: (json["16_Cedula_frontal_url"] ?? "").toString(),
+
+    cedulaReversoTomada: json["cedula_reverso_tomada"] == true,
+    the23CedulaReversoUsuario: (json["23_Cedula_reverso_usuario"] ?? "").toString(),
+    the23CedulaReversoUrl: (json["23_Cedula_reverso_url"] ?? "").toString(),
+
+    the05FechaExpedicionDocumento: (json["05_Fecha_Expedicion_Documento"] ?? "").toString(),
+    the08FechaNacimiento: (json["08_Fecha_Nacimiento"] ?? "").toString(),
+
+    the03NumeroDocumento: (json["03_Numero_Documento"] ?? "").toString(),
+    the04TipoDocumento: (json["04_Tipo_Documento"] ?? "").toString(),
+
+
+
   );
 
   Map<String, dynamic> toJson() => {
@@ -103,5 +151,20 @@ class Client {
     "foto_perfil_tomada": fotoPerfilTomada,
     "palabra_clave": palabraClave,
     "pregunta_palabra_clave": preuntaPalabraClave,
+
+    "cedula_frontal_tomada": cedulaFrontalTomada,
+    "16_Cedula_frontal_usuario": the16CedulaFrontalUsuario,
+    "16_Cedula_frontal_url": the16CedulaFrontalUrl,
+
+    "cedula_reverso_tomada": cedulaReversoTomada,
+    "23_Cedula_reverso_usuario": the23CedulaReversoUsuario,
+    "23_Cedula_reverso_url": the23CedulaReversoUrl,
+
+    "05_Fecha_Expedicion_Documento": the05FechaExpedicionDocumento,
+    "08_Fecha_Nacimiento": the08FechaNacimiento,
+
+    "03_Numero_Documento": the03NumeroDocumento,
+    "04_Tipo_Documento": the04TipoDocumento,
+
   };
 }

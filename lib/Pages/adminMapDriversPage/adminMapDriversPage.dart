@@ -17,6 +17,8 @@ class AdminDriversMapPage extends StatefulWidget {
 
 class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   final Completer<GoogleMapController> _mapController = Completer();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   GoogleMapController? _gmap;
 
   BitmapDescriptor? _taxiIconNormal;
@@ -333,7 +335,8 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       ..sort((a, b) => a.placa.compareTo(b.placa));
 
     return Container(
-      width: 320,
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 320),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -522,7 +525,11 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final isMobile = w < 900; // puedes bajar a 800 si quieres
+
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: primary,
         title: const Text('Conductores trabajando', style: TextStyle(fontWeight: FontWeight.w900)),
@@ -536,13 +543,76 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
             );
           },
         ),
+        // En móvil mostramos un botón para abrir el panel
+        actions: [
+          if (isMobile)
+            IconButton(
+              tooltip: 'Emergencias',
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.warning_amber_rounded),
+                  if (_emergencies.isNotEmpty)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${_emergencies.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: () async {
+                await _unlockAudioIfNeeded();
+                _scaffoldKey.currentState?.openDrawer();
+              },
+            ),
+        ],
       ),
-      body: Row(
+
+      // ✅ En móvil el panel es Drawer
+      drawer: isMobile ? Drawer(child: SafeArea(child: _leftPanel())) : null,
+
+      body: isMobile
+          ? Stack(
         children: [
-          // ✅ panel izquierdo
+          GoogleMap(
+            initialCameraPosition: _initial,
+            onMapCreated: (c) {
+              _gmap = c;
+              if (!_mapController.isCompleted) _mapController.complete(c);
+            },
+            markers: _markers,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: true,
+            onTap: (_) async {
+              await _unlockAudioIfNeeded();
+              _closeCard();
+            },
+            onCameraMove: (_) {
+              if (_showCard) _repositionCard();
+            },
+          ),
+          _driverCard(),
+        ],
+      )
+          : Row(
+        children: [
+          // ✅ PC: panel fijo a la izquierda
           _leftPanel(),
 
-          // ✅ mapa a la derecha
           Expanded(
             child: Stack(
               children: [
@@ -563,16 +633,31 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
                     if (_showCard) _repositionCard();
                   },
                 ),
-
-                // ✅ tarjeta encima del marker
                 _driverCard(),
               ],
             ),
           ),
         ],
       ),
+
+      // ✅ (Opcional) Botón flotante en móvil para abrir panel más rápido
+      floatingActionButton: isMobile
+          ? FloatingActionButton.extended(
+        backgroundColor: Colors.red,
+        onPressed: () async {
+          await _unlockAudioIfNeeded();
+          _scaffoldKey.currentState?.openDrawer();
+        },
+        icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+        label: Text(
+          'Emergencias (${_emergencies.length})',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        ),
+      )
+          : null,
     );
   }
+
 }
 
 class _EmergencyDriver {

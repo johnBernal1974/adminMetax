@@ -74,7 +74,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
             matchesFilter = client.status == 'foto_tomada';
             break;
           case 'verificando_email':
-            matchesFilter = client.status == 'Verificanco email';
+            matchesFilter = client.status == 'Verificando email';
             break;
           case 'corregida':
             matchesFilter = client.status == 'corregida';

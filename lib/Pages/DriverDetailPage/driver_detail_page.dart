@@ -161,8 +161,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-
-
   void _initController(String key, String? value) {
     _controllers[key] = TextEditingController(text: value ?? '');
     _focusNodes[key] = FocusNode();
