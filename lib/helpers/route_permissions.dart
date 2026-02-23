@@ -5,7 +5,10 @@ class RoutePermissions {
     // acceso total (para operadorFull)
     'general_page': {'operadorFull'},
     'usuarios_page': {'operadorFull'},
-    'conductores_page': {'operadorFull'},
+
+    // ✅ AHORA también entra operadorSeguimientoMap
+    'conductores_page': {'operadorFull', 'operadorSeguimientoMap'},
+
     'historial_viajes_page': {'operadorFull'},
 
     // mapa

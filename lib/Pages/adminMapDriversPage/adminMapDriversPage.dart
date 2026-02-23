@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 
 class AdminDriversMapPage extends StatefulWidget {
@@ -536,9 +538,16 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            final role = (context.read<OperadorProvider>().rolActual ?? '').trim();
+
+            // ✅ destino según rol
+            final backRoute = (role == 'operadorSeguimientoMap')
+                ? 'conductores_page'
+                : 'general_page'; // Master / operadorFull
+
             Navigator.pushNamedAndRemoveUntil(
               context,
-              'general_page',
+              backRoute,
                   (route) => false,
             );
           },
