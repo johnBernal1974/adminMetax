@@ -3706,7 +3706,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   void _openWhatsApp(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
     String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
       await launchUrl(whatsappLink);
@@ -3718,17 +3718,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   void _openWhatsAppActivacion(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
-    String? name = widget.driver.the01Nombres;
-    String message = '''
-    ¡Hola $name! 
+    String? driverName = widget.driver.the01Nombres;
+    String message = '''Hola *$driverName*,
 
-    Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
-  
-  Si tienes alguna inquietud, no dudes en contactarnos.
+Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada.
 
-  Saludos cordiales,
-  El equipo de Metax
-  ''';
+¡Ingresa ahora mismo a tu aplicación. *¡Empieza a recibir servicios!*
+
+Si tienes alguna duda, no dudes en contactarnos.
+
+Saludos cordiales,
+El equipo de Metax''';
+
+
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
       await launchUrl(whatsappLink);
@@ -3740,8 +3742,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   void _openWhatsAppWeb(BuildContext context) async {
     String phoneNumber = widget.driver.the07Celular;
-    String? name = widget.driver.the01Nombres;
-    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
+    String? driverName = widget.driver.the01Nombres;
+    String message = 'Hola $driverName, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
 
@@ -3749,16 +3751,16 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     String phoneNumber = widget.driver.the07Celular;
     String? driverName = widget.driver.the01Nombres;
 
-    String message = '''
-  Hola $driverName,
+    String message = '''Hola *$driverName*,
 
-  Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada. 
+Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Conductor* ya está activada.
 
-  Si tienes alguna inquietud, no dudes en contactarnos.
+¡Ingresa ahora mismo a tu aplicación. *¡Empieza a recibir servicios!*
 
-  Saludos cordiales,
-  El equipo de Metax
-  ''';
+Si tienes alguna duda, no dudes en contactarnos.
+
+Saludos cordiales,
+El equipo de Metax''';
 
     // Asegurarse de que el número de teléfono tiene el código de país
     final String fullPhoneNumber = "57$phoneNumber".replaceAll(RegExp(r'\s+'), '');

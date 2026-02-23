@@ -49,6 +49,7 @@ dependencies:
   flutter_inappwebview: ^5.8.0
   google_maps_flutter: ^2.5.0
   just_audio: ^0.9.37
+  get: ^4.6.6
 
 dev_dependencies:
   flutter_test:

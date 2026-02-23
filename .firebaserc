@@ -6,9 +6,10 @@
     "apptaxi-e641d": {
       "hosting": {
         "admin": [
-          "apptaxi-e641d"
+          "metax-admin"
         ],
         "landing": [
+          "apptaxi-e641d",
           "metax-landing"
         ]
       }

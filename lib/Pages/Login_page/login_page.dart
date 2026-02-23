@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
@@ -87,17 +88,66 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16.0),
                       ElevatedButton(
-                        onPressed: () => login(emailController.text.trim(), passwordController.text.trim(), context),
+                        onPressed: () async {
+                          final ok = await login(
+                            emailController.text.trim(),
+                            passwordController.text.trim(),
+                            context,
+                          );
+
+                          if (!context.mounted) return;
+
+                          if (!ok) return;
+
+                          final operadorProvider = context.read<OperadorProvider>();
+
+                          // ✅ Carga rol/activo del operador logueado
+                          await operadorProvider.fetchOperadorActual();
+                          if (!context.mounted) return;
+
+                          final role = (operadorProvider.rolActual ?? '').trim();
+                          final active = operadorProvider.activoActual;
+
+                          // ✅ Si no está activo o no tiene rol
+                          if (!active || role.isEmpty) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              'sin_permisos_page',
+                                  (_) => false,
+                            );
+                            return;
+                          }
+
+                          // ✅ Decide a qué página llevarlo según el rol
+                          String homeRoute;
+                          if (role == 'Master' || role == 'operadorFull') {
+                            homeRoute = 'general_page';
+                          } else if (role == 'adminRecargas') {
+                            homeRoute = 'recarga_info_page';
+                          } else if (role == 'operadorSeguimientoMap') {
+                            homeRoute = 'map_drivers_admin_page';
+                          } else {
+                            homeRoute = 'sin_permisos_page';
+                          }
+
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            homeRoute,
+                                (_) => false,
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white, backgroundColor: amarilloOscuro,
+                          foregroundColor: Colors.white,
+                          backgroundColor: amarilloOscuro,
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                        child: const Text('Ingresar', style: TextStyle(
-                          color: Colors.black
-                        ),),
+                        child: const Text(
+                          'Ingresar',
+                          style: TextStyle(color: Colors.black),
+                        ),
                       ),
                       const SizedBox(height: 30),
                     ],
@@ -113,53 +163,75 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<bool> login(String email, String password, BuildContext context) async {
     try {
-      // Realiza el inicio de sesión con email y contraseña
-      bool isLoginSuccessful = await _authProvider.login(email, password, context);
-      if (isLoginSuccessful) {
-        // Obtiene el usuario operador si está disponible
-        Operador? operador = await _operadorProvider.getById(_authProvider.getUser()!.uid);
-        if (operador != null) {
-          // Verifica el estado de verificación del operador
-          String? verificationStatus = await _operadorProvider.getVerificationStatus();
-          if (verificationStatus == 'Procesando') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
-            );
-            await _authProvider.signOut();
-            return false;
-          } else if (verificationStatus == 'bloqueado') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Acceso denegado')),
-            );
-            await _authProvider.signOut();
-            return false;
-          } else if (verificationStatus == 'activado') {
-            _authProvider.checkIfUserIsLoggedLoginPage(context);
-            return true;
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Cuenta en verificación')),
-            );
-            await _authProvider.signOut();
-            return false;
-          }
-        } else {
-          // Si no es un operador válido, muestra un mensaje y cierra sesión
+      final isLoginSuccessful = await _authProvider.login(email, password, context);
+      if (!isLoginSuccessful) return false;
+
+      print("UID AUTH******************: ${FirebaseAuth.instance.currentUser?.uid}");
+
+      final uid = _authProvider.getUser()?.uid;
+      if (uid == null) return false;
+
+      final operador = await _operadorProvider.getById(uid);
+      if (operador == null) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Este usuario no es válido')),
+            const SnackBar(content: Text('Este usuario no es válido')),
           );
-          await _authProvider.signOut();
-          return false;
         }
+        await _authProvider.signOut();
+        return false;
       }
-      return false; // Devuelve falso si el inicio de sesión no fue exitoso
-    } on MyAuthProvider catch (error) {
-      // Captura y muestra cualquier error del provider de autenticación personalizado
+
+      final verificationStatus = await _operadorProvider.getVerificationStatus();
+
+      // ✅ OJO: después de await, valida context
+      if (!context.mounted) return false;
+
+      if (verificationStatus == 'Procesando') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
+        );
+        await _authProvider.signOut();
+        return false;
+      }
+
+      if (verificationStatus == 'bloqueado') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Acceso denegado')),
+        );
+        await _authProvider.signOut();
+        return false;
+      }
+
+      if (verificationStatus == 'activado') {
+        // ✅ Aquí ya NO navegamos desde provider
+        return true;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
+        const SnackBar(content: Text('Cuenta en verificación')),
       );
+      await _authProvider.signOut();
+      return false;
+
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      }
       return false;
     }
+  }
+
+  String _homeByRole(String role) {
+    if (role == 'Master') return 'general_page';
+    if (role == 'operadorFull') return 'general_page';
+    if (role == 'adminRecargas') return 'recarga_info_page';
+    if (role == 'operadorSeguimientoMap') return 'map_drivers_admin_page';
+
+    // si cae aquí, no tiene home definido
+    return 'sin_permisos_page'; // o login_page
   }
 
 }

@@ -64,56 +64,56 @@ class MyAuthProvider {
     return _firebaseAuth.currentUser;
   }
 
-  void checkIfUserIsLogged(BuildContext? context) {
-    if (context != null) {
-      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-        if (user != null) {
-          print('El operador está logueado');
+  // void checkIfUserIsLogged(BuildContext? context) {
+  //   if (context != null) {
+  //     FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+  //       if (user != null) {
+  //         print('El operador está logueado');
+  //
+  //         Operador? operador = await _operadorProvider.getById(user.uid);
+  //         if (operador != null) {
+  //           String? verificationStatus = await _operadorProvider.getVerificationStatus();
+  //           if (verificationStatus == 'Procesando') {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               const SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
+  //             );
+  //             return;
+  //           } else if (verificationStatus == 'bloqueado') {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               const SnackBar(content: Text('Acceso denegado')),
+  //             );
+  //             return;
+  //           } else if (verificationStatus == 'activado') {
+  //             Navigator.pushNamedAndRemoveUntil(context, 'general_page', (route) => false);
+  //             return;
+  //           } else {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               SnackBar(content: Text('Cuenta en verificación')),
+  //             );
+  //           }
+  //         } else {
+  //           ScaffoldMessenger.of(context).showSnackBar(
+  //             SnackBar(content: Text('Este usuario no es válido')),
+  //           );
+  //           await signOut();
+  //         }
+  //       } else {
+  //         Navigator.pushNamedAndRemoveUntil(context, "login_page", (route) => false);
+  //         print('El usuario NO está logueado');
+  //       }
+  //     });
+  //   }
+  // }
 
-          Operador? operador = await _operadorProvider.getById(user.uid);
-          if (operador != null) {
-            String? verificationStatus = await _operadorProvider.getVerificationStatus();
-            if (verificationStatus == 'Procesando') {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('En el momento no tienes acceso a esta cuenta')),
-              );
-              return;
-            } else if (verificationStatus == 'bloqueado') {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Acceso denegado')),
-              );
-              return;
-            } else if (verificationStatus == 'activado') {
-              Navigator.pushNamedAndRemoveUntil(context, 'general_page', (route) => false);
-              return;
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Cuenta en verificación')),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Este usuario no es válido')),
-            );
-            await signOut();
-          }
-        } else {
-          Navigator.pushNamedAndRemoveUntil(context, "login", (route) => false);
-          print('El usuario NO está logueado');
-        }
-      });
-    }
-  }
 
-
-  void checkIfUserIsLoggedLoginPage(BuildContext context){
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if(user != null){
-        print('El usuario esta logueado');
-        Navigator.pushNamedAndRemoveUntil(context, "general_page", (route) => false);
-      }
-    });
-  }
+  // void checkIfUserIsLoggedLoginPage(BuildContext context){
+  //   FirebaseAuth.instance.authStateChanges().listen((User? user) {
+  //     if(user != null){
+  //       print('El usuario esta logueado');
+  //       Navigator.pushNamedAndRemoveUntil(context, "general_page", (route) => false);
+  //     }
+  //   });
+  // }
 
   Future<bool> signUp(String email, String password) async {
     String? errorMessage;
@@ -128,9 +128,8 @@ class MyAuthProvider {
     return true;
   }
 
-  Future<Future<List<void>>> signOut() async {
-    return Future.wait([_firebaseAuth.signOut()]);
-
+  Future<void> signOut() async {
+    await _firebaseAuth.signOut();
   }
 
 }

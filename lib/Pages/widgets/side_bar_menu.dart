@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
+import '../../helpers/route_permissions.dart';
 
 class SideBar extends StatefulWidget {
   const SideBar({super.key});
@@ -11,184 +14,199 @@ class SideBar extends StatefulWidget {
 }
 
 class _SideBarState extends State<SideBar> {
-
   final MyAuthProvider _authProvider = MyAuthProvider();
+
+  bool _canSee(String role, String routeName) {
+    return RoutePermissions.canRoleAccess(role, routeName);
+  }
+
+  void _go(String routeName) {
+    Navigator.pop(context); // ✅ cierra drawer
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      routeName,
+          (Route<dynamic> route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final op = context.watch<OperadorProvider>();
+
+    final role = (op.rolActual ?? '').trim();
+    final active = op.activoActual;
+
+    // ✅ cuando aún no ha cargado rol o está inactivo
+    final restricted = !active || role.isEmpty;
+
     return Drawer(
       elevation: 1,
       child: Container(
         color: gris,
-        child: (
-            ListView(
-              padding: EdgeInsets.zero, // Asegura que no haya padding extra
-              children: [
-                Container(
-                    alignment: Alignment.center,
-                    child: Image.asset("assets/logo_metax_combinado.png", width: 150, height: 150,)
-                ),
-                const Divider(height: 1, color: gris),
-                
-                Container(
-                  margin : const EdgeInsets.symmetric( horizontal: 20),
-                  child: const Text('Panel de control', style:  TextStyle(
-                      fontSize: 20,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w900
-                  ),),
-                ),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Container(
+              alignment: Alignment.center,
+              child: Image.asset(
+                "assets/logo_metax_combinado.png",
+                width: 150,
+                height: 150,
+              ),
+            ),
+            const Divider(height: 1, color: gris),
 
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              child: const Text(
+                'Panel de control',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+
+            // ✅ Si no está autorizado, muestra aviso y solo logout
+            if (restricted) ...[
+              const SizedBox(height: 12),
+              const ListTile(
+                leading: Icon(Icons.lock, color: Colors.white),
+                title: Text(
+                  'Acceso restringido',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                subtitle: Text(
+                  'Inicia sesión con una cuenta habilitada.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+              const Divider(height: 10, color: Colors.white24),
+            ] else ...[
+              // =========================
+              // ITEMS FILTRADOS POR ROL
+              // =========================
+
+              if (_canSee(role, 'map_drivers_admin_page'))
                 DrawerListTitle(
                   title: "Mapa conductores",
-                  icon: Icons.info_outline, // Icono de información
-                  press: () {
-                    Navigator.pop(context); // cierra el drawer
-
-                    Navigator.pushNamed(
-                      context,
-                      'map_drivers_admin_page',
-                    );
-                  },
-
+                  icon: Icons.map_outlined,
+                  press: () => _go('map_drivers_admin_page'),
                 ),
 
+              if (_canSee(role, 'general_page'))
                 DrawerListTitle(
                   title: "General",
-                  icon: Icons.info_outline, // Icono de información
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'general_page',
-                          (Route<dynamic> route) => false,
-                    );
-                  },
+                  icon: Icons.dashboard_outlined,
+                  press: () => _go('general_page'),
                 ),
 
+              if (_canSee(role, 'conductores_page'))
                 DrawerListTitle(
                   title: "Conductores",
-                  icon: Icons.directions_car, // Icono de un carro
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'conductores_page',
-                          (Route<dynamic> route) => false,
-                    );
-
-                  },
+                  icon: Icons.directions_car,
+                  press: () => _go('conductores_page'),
                 ),
 
+              if (_canSee(role, 'usuarios_page'))
                 DrawerListTitle(
                   title: "Usuarios",
-                  icon: Icons.person, // Icono de una persona
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'usuarios_page',
-                          (Route<dynamic> route) => false,
-                    );
-
-                  },
+                  icon: Icons.person,
+                  press: () => _go('usuarios_page'),
                 ),
+
+              // ⚠️ OJO: NO tenías permisos definidos para operadores_page en AdminGuard
+              // Si quieres que Master lo vea siempre y operadorFull también, debes agregar esa ruta en AdminGuard.routePermissions.
+              // Mientras tanto: lo dejo visible solo para Master por seguridad.
+              if (role == 'Master')
                 DrawerListTitle(
-                    title: "Operadores",
-                    icon: Icons.headphones,
-                    press: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        'operadores_page',
-                            (Route<dynamic> route) => false,
-                      );
+                  title: "Operadores",
+                  icon: Icons.headphones,
+                  press: () => _go('operadores_page'),
+                ),
 
-                    },
-                  ),
-
+              if (_canSee(role, 'prices_page'))
                 DrawerListTitle(
                   title: "Configuraciones",
-                  icon: Icons.settings, // Icono de configuraciones
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'prices_page',
-                          (Route<dynamic> route) => false,
-                    );
-
-                  },
+                  icon: Icons.settings,
+                  press: () => _go('prices_page'),
                 ),
 
+              if (_canSee(role, 'recarga_info_page'))
                 DrawerListTitle(
                   title: "Info Recargas",
-                  icon: Icons.date_range_outlined, // Icono de historial
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'recarga_info_page',
-                          (Route<dynamic> route) => false,
-                    );
-                  },
+                  icon: Icons.payments_outlined,
+                  press: () => _go('recarga_info_page'),
                 ),
 
+              if (_canSee(role, 'historial_viajes_page'))
                 DrawerListTitle(
                   title: "Historial de viajes",
-                  icon: Icons.list_alt_outlined, // Icono de historial
-                  press: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      'historial_viajes_page',
-                          (Route<dynamic> route) => false,
+                  icon: Icons.list_alt_outlined,
+                  press: () => _go('historial_viajes_page'),
+                ),
+
+              // Registrar operadores (signUp) — tú lo tenías en menú
+              // Si quieres controlarlo por rol, lo mismo: define permiso o déjalo Master-only.
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Registrar Operadores",
+                  icon: Icons.app_registration,
+                  press: () => _go('signUp'),
+                ),
+            ],
+
+            const Divider(height: 10, color: Colors.white24),
+
+            DrawerListTitle(
+              title: "Cerrar sesión",
+              icon: Icons.exit_to_app,
+              press: () async {
+                // ✅ guarda el root navigator ANTES de awaits
+                final rootNav = Navigator.of(context, rootNavigator: true);
+
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  useRootNavigator: true,
+                  barrierDismissible: false,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: const Text("Confirmación"),
+                      content: const Text("¿Estás seguro de que deseas cerrar sesión?"),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text("NO"),
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                        ),
+                        TextButton(
+                          child: const Text("SI"),
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                        ),
+                      ],
                     );
                   },
-                ),
-                DrawerListTitle(
-                    title: "Registrar Operadores",
-                    icon: Icons.app_registration,
-                    press: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        'signUp',
-                            (Route<dynamic> route) => false,
-                      );
-                   },
-                ),
+                );
 
-                DrawerListTitle(
-                  title: "Cerrar sesión",
-                  icon: Icons.exit_to_app,
-                  press: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text("Confirmación"),
-                          content: const Text("¿Estás seguro de que deseas cerrar sesión?"),
-                          actions: <Widget>[
-                            TextButton(
-                              child: Text("NO"),
-                              onPressed: () {
-                                Navigator.of(context).pop(); // Cierra el cuadro de diálogo
-                              },
-                            ),
-                            TextButton(
-                              child: const Text("SI"),
-                              onPressed: () async {
-                                _authProvider.signOut();
-                                Navigator.of(context).pop(); // Cierra el cuadro de diálogo
-                                Navigator.pushNamedAndRemoveUntil(context, 'login_page', (Route<dynamic> route) => false);
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
+                if (confirm != true) return;
 
-                const Spacer(),
+                // ✅ 1) cerrar sesión (espera)
+                await _authProvider.signOut();
 
-              ],
-            )
+                // ✅ 2) limpia provider (si lo usas)
+                if (context.mounted) {
+                  context.read<OperadorProvider>().clearOperadorActual();
+                }
+
+                // ✅ 3) navega al login con root navigator
+                rootNav.pushNamedAndRemoveUntil(
+                  'login_page',
+                      (route) => false,
+                );
+              },
+            ),
+          ],
         ),
-
       ),
     );
   }
@@ -200,17 +218,17 @@ class DrawerListTitle extends StatelessWidget {
   final VoidCallback press;
 
   const DrawerListTitle({
-    Key? key,
+    super.key,
     required this.title,
     required this.icon,
     required this.press,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       onTap: press,
-      leading: Icon(icon, color: Colors.white,), // Usa el IconData para crear el Icono
+      leading: Icon(icon, color: Colors.white),
       title: Text(
         title,
         style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -218,5 +236,3 @@ class DrawerListTitle extends StatelessWidget {
     );
   }
 }
-
-

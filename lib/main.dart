@@ -13,6 +13,7 @@ import 'Pages/ConductoresPage/conductores_page.dart';
 import 'Pages/GeneralPage/general_page.dart';
 import 'Pages/OperadoresPage/operadores_page.dart';
 import 'Pages/PricesPage/prices_page.dart';
+import 'Pages/SinPermisos/sin_permisos_page.dart';
 import 'Pages/SingUp_page/View/singUp_page.dart';
 import 'Pages/Splash/splash.dart';
 import 'Pages/UsuariosPage/usuarios_page.dart';
@@ -23,7 +24,8 @@ import 'providers/driver_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-
+// ✅ IMPORTA el guard (debes crear este archivo)
+import 'helpers/admin_guard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +34,8 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   await initializeDateFormatting('es_ES', null);
+
   if (kIsWeb) {
-    // Inicialización específica para la web
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: 'AIzaSyCXELqMHM7D8lT-0kexYu4jfqehfLNoRC0',
@@ -46,51 +48,92 @@ void main() async {
       ),
     );
   } else {
-    // Inicialización para móvil
     await Firebase.initializeApp();
   }
 
   runApp(const MyApp());
 }
 
-
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  // ✅ Ruta normal (sin guard)
+  Route<dynamic> _buildRoute(Widget page, RouteSettings settings) {
+    return MaterialPageRoute(builder: (_) => page, settings: settings);
+  }
+
+  // 🔒 Ruta protegida: si no es operador permitido -> Login
+  Route<dynamic> _guardedRoute(Widget page, RouteSettings settings) {
+    final raw = settings.name ?? '';
+    final routeName = raw.startsWith('/') ? raw.substring(1) : raw;
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) {
+        return FutureBuilder<bool>(
+          future: AdminGuard.canAccess(routeName),
+          builder: (context, snap) {
+
+            if (snap.connectionState != ConnectionState.done) {
+              return const Splash();
+            }
+
+            if (snap.data != true) {
+              return const SinPermisosPage(); // 🔥 mejor UX
+            }
+
+            return page;
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => MyMenuController()),
-        ChangeNotifierProvider(create: (context) => DriverProvider()), // Agregado aquí
-        ChangeNotifierProvider(create: (context) => ClientProvider()), // Agregado aquí
-        ChangeNotifierProvider(create: (context) => OperadorProvider()), // Agregado aquí
-
+        ChangeNotifierProvider(create: (context) => DriverProvider()),
+        ChangeNotifierProvider(create: (context) => ClientProvider()),
+        ChangeNotifierProvider(create: (context) => OperadorProvider()),
       ],
       child: MaterialApp(
         title: 'Metax Administrador',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-            primaryColor: primary,
-            fontFamily: 'Poppins'
-        ),
-        // Establece la ruta inicial en la página de login
+        theme: ThemeData(primaryColor: primary, fontFamily: 'Poppins'),
+
+        // ✅ se mantiene tu inicial
         initialRoute: 'splash',
-        routes: {
-          'login_page': (context) => LoginPage(),
-          'signUp': (context) => SignUpPage(),
-          'general_page': (context) => GeneralPage(),
-          'conductores_page': (context) => ConductoresPage(),
-          'usuarios_page': (context) => const UsuariosPage(),
-          'operadores_page': (context) => const OperadoresPage(),
-          'antecedentes_page': (context) => const Paginaantecedentes(),
-          'prices_page': (context) => PricesPage(),
-          'splash': (context) => const Splash(),
-          'recarga_info_page': (context) => AdminTransaccionesPage(),
-          'historial_viajes_page': (context) => const TravelHistoryPage(),
-          'map_drivers_admin_page': (context) => const AdminDriversMapPage(),
-          // Añade aquí otras rutas necesarias
+
+        // ✅ Reemplaza routes: {} por onGenerateRoute (para poder proteger)
+        onGenerateRoute: (settings) {
+          final raw = settings.name ?? '';
+          final name = raw.startsWith('/') ? raw.substring(1) : raw;
+
+          // =========================
+          // RUTAS PÚBLICAS
+          // =========================
+          if (name == 'splash') return _buildRoute(const Splash(), settings);
+          if (name == 'login_page') return _buildRoute(LoginPage(), settings);
+          if (name == 'signUp') return _buildRoute(SignUpPage(), settings);
+
+          // =========================
+          // RUTAS PROTEGIDAS (ADMIN)
+          // =========================
+          if (name == 'general_page') return _guardedRoute(GeneralPage(), settings);
+          if (name == 'conductores_page') return _guardedRoute(ConductoresPage(), settings);
+          if (name == 'usuarios_page') return _guardedRoute(const UsuariosPage(), settings);
+          if (name == 'operadores_page') return _guardedRoute(const OperadoresPage(), settings);
+          if (name == 'antecedentes_page') return _guardedRoute(const Paginaantecedentes(), settings);
+          if (name == 'prices_page') return _guardedRoute(PricesPage(), settings);
+          if (name == 'recarga_info_page') return _guardedRoute(AdminTransaccionesPage(), settings);
+          if (name == 'historial_viajes_page') return _guardedRoute(const TravelHistoryPage(), settings);
+          if (name == 'map_drivers_admin_page') return _guardedRoute(const AdminDriversMapPage(), settings);
+
+          // =========================
+          // DEFAULT
+          // =========================
+          return _buildRoute(LoginPage(), settings);
         },
 
         localizationsDelegates: const [

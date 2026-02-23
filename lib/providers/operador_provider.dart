@@ -5,32 +5,78 @@ import '../models/operador_model.dart';
 
 class OperadorProvider with ChangeNotifier {
   late CollectionReference _ref;
+
   bool _loading = false;
-  late List<Operador> _operadores= [];
+  late List<Operador> _operadores = [];
+
+  // ✅ NUEVO: operador actual (para menú/guard)
+  String? _rolActual;
+  bool _activoActual = false;
 
   OperadorProvider() {
     _ref = FirebaseFirestore.instance.collection('Operadores');
-    fetchOperadores();
+
+    // ❌ Ya NO cargues todos los operadores aquí
+    // fetchOperadores();
   }
 
   bool get isLoading => _loading;
   List<Operador> get operadores => _operadores;
+
+  // ✅ NUEVO getters
+  String? get rolActual => _rolActual;
+  bool get activoActual => _activoActual;
 
   void setLoading(bool loading) {
     _loading = loading;
     notifyListeners();
   }
 
+  // ✅ NUEVO: SOLO el operador logueado
+  Future<void> fetchOperadorActual() async {
+    setLoading(true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _rolActual = null;
+        _activoActual = false;
+        return;
+      }
+
+      final doc = await _ref.doc(user.uid).get();
+
+      if (!doc.exists) {
+        _rolActual = null;
+        _activoActual = false;
+        return;
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      _rolActual = (data['20_Rol'] ?? '').toString().trim();
+      _activoActual = data['activo'] == true;
+
+      print('Operador actual uid=${user.uid} rol=$_rolActual activo=$_activoActual');
+    } catch (error) {
+      print('Error al obtener operador actual: $error');
+      _rolActual = null;
+      _activoActual = false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ---------------------------
+  // Lo tuyo (lo dejamos igual)
+  // ---------------------------
+
   Future<void> fetchOperadores() async {
     setLoading(true);
     try {
       QuerySnapshot querySnapshot = await _ref.get();
       _operadores = querySnapshot.docs.map((doc) {
-        // Imprimir datos de cada documento
         print('Datos del operador: ${doc.data()}');
         return Operador.fromJson(doc.data() as Map<String, dynamic>);
       }).toList();
-      // Imprimir la cantidad de usuarios obtenidos
       print('Total de operadores obtenidos: ${_operadores.length}');
     } catch (error) {
       print('Error al obtener los operadores: $error');
@@ -39,16 +85,14 @@ class OperadorProvider with ChangeNotifier {
       setLoading(false);
     }
   }
+
   Future<Operador?> getById(String id) async {
     DocumentSnapshot document = await _ref.doc(id).get();
-    if(document.exists){
-      Operador operador= Operador.fromJson(document.data() as Map<String, dynamic>);
+    if (document.exists) {
+      Operador operador = Operador.fromJson(document.data() as Map<String, dynamic>);
       return operador;
     }
-    else{
-      return null;
-    }
-
+    return null;
   }
 
   Future<void> create(Operador operador) async {
@@ -94,4 +138,12 @@ class OperadorProvider with ChangeNotifier {
       return null;
     }
   }
+
+  void clearOperadorActual() {
+    _rolActual = null;
+    _activoActual = false;
+    notifyListeners();
+  }
+
+  bool get hasRoleLoaded => _rolActual != null;
 }

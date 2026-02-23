@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../common/main_layout.dart';
 import '../../models/operador_model.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../OperadorDetailPage/operador_detail_page.dart';
@@ -21,8 +20,14 @@ class _OperadoresPageState extends State<OperadoresPage> {
   String filterStatus = "";
   int totalOperadores = 0;
   Operador? operador;
-  OperadorProvider _operadorProvider = OperadorProvider();
-  MyAuthProvider _authProvider = MyAuthProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<OperadorProvider>().fetchOperadores();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

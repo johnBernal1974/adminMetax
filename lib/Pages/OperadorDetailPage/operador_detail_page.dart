@@ -526,18 +526,16 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
                 value: selectedRol,
                 items: const [
                   DropdownMenuItem(value: "", child: Text("")),
+
+                  // 🔥 ROLES DEFINIDOS
                   DropdownMenuItem(value: "Master", child: Text("Master")),
-                  DropdownMenuItem(value: "Master2", child: Text("Master2")),
-                  DropdownMenuItem(value: "Coordinador Clientes", child: Text("Coordinador Clientes")),
-                  DropdownMenuItem(value: "Coordinador Carros", child: Text("Coordinador Carros")),
-                  DropdownMenuItem(value: "Coordinador Motos", child: Text("Coordinador Motos")),
-                  DropdownMenuItem(value: "Coordinador Full", child: Text("Coordinador Full")),
-                  DropdownMenuItem(value: "Clientes", child: Text("Clientes")),
-                  DropdownMenuItem(value: "Carros", child: Text("Carros")),
-                  DropdownMenuItem(value: "Motos", child: Text("Motos")),
-                  DropdownMenuItem(value: "Conductores Full", child: Text("Conductores Full")),
-                  DropdownMenuItem(value: "Recarga Carro", child: Text("Recarga Carro")),
-                  DropdownMenuItem(value: "Recarga Moto", child: Text("Recarga Moto")),
+                  DropdownMenuItem(value: "operadorFull", child: Text("Operador Full")),
+                  DropdownMenuItem(value: "operadorSeguimientoMap", child: Text("Operador Mapa")),
+                  DropdownMenuItem(value: "adminRecargas", child: Text("Admin Recargas")),
+
+                  // 🆕 nuevos
+                  DropdownMenuItem(value: "operador1", child: Text("Operador 1")),
+                  DropdownMenuItem(value: "operador2", child: Text("Operador 2")),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -545,7 +543,9 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),

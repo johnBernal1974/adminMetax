@@ -47,6 +47,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   @override
   void initState() {
     super.initState();
+    getOperadorInfo();
     selectedGenero = widget.client.the09Genero;
     selectedRol = widget.client.the20Rol;
     selectedTipoDocumento = widget.client.the04TipoDocumento;
@@ -58,7 +59,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
 
     getClientRatings();
-    getOperadorInfo();
+
 
   }
 
@@ -344,19 +345,19 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
   void _openWhatsAppActivacion(BuildContext context) async {
     String phoneNumber = widget.client.the07Celular;
-    String? name = widget.client.the01Nombres;
-    String message = '''
-    ¡Hola $name! 
+    String? clientName = widget.client.the01Nombres;
+    String message = '''Hola *$clientName*,
 
-    Soy $nameOperador del grupo de soporte de *Zafiro* y me complace informarte que tu cuenta de *Cliente* ya está activada. 
-  Haz clic en el siguiente enlace para ver más información:
-  https://mizafiro.com/wp-content/uploads/2024/11/Cliente-_activado.png
+Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Cliente* ya está activada.
 
-  Si tienes alguna duda, no dudes en contactarnos.
+¡Ingresa ahora mismo a tu aplicación y empieza a recorrer la ciudad!
 
-  Saludos cordiales,
-  El equipo de Zafiro
-  ''';
+Si tienes alguna duda, no dudes en contactarnos.
+
+Saludos cordiales,
+El equipo de Metax''';
+
+
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
       await launchUrl(whatsappLink);
@@ -365,27 +366,29 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     }
   }
 
+
   void _openWhatsAppWeb(BuildContext context) async {
     String phoneNumber = widget.client.the07Celular;
     String? name = widget.client.the01Nombres;
-    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Zafiro.';
+    String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
 
   void _openWhatsAppWebActivacion(BuildContext context) async {
     String phoneNumber = widget.client.the07Celular;
-    String? driverName = widget.client.the01Nombres;
+    String? clientName = widget.client.the01Nombres;
 
-    String message = '''
-  Hola $driverName,
+    String message = '''Hola *$clientName*,
 
-  Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Cliente* ya está activada.   
+Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Cliente* ya está activada.
 
-  Si tienes alguna duda, no dudes en contactarnos.
+¡Ingresa ahora mismo a tu aplicación y empieza a recorrer la ciudad!
 
-  Saludos cordiales,
-  El equipo de Metax
-  ''';
+Si tienes alguna duda, no dudes en contactarnos.
+
+Saludos cordiales,
+El equipo de Metax''';
+
 
     // Asegurarse de que el número de teléfono tiene el código de país
     final String fullPhoneNumber = "57$phoneNumber".replaceAll(RegExp(r'\s+'), '');
