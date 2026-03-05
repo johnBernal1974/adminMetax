@@ -1,12 +1,10 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../common/main_layout.dart';
-import '../../models/prices_model.dart';
 import '../../providers/prices_provider.dart';
 
 class PricesPage extends StatefulWidget {
-  PricesPage({Key? key}) : super(key: key);
+  const PricesPage({Key? key}) : super(key: key);
 
   @override
   State<PricesPage> createState() => _PricesPageState();
@@ -14,606 +12,360 @@ class PricesPage extends StatefulWidget {
 
 class _PricesPageState extends State<PricesPage> {
   final PricesProvider _pricesProvider = PricesProvider();
-  Price? _priceData; // Objeto para almacenar los datos de precio
-  TextEditingController _dinamicaController = TextEditingController();
 
+  // Controllers persistentes
+  final Map<String, TextEditingController> _controllers = {};
+
+  // dropdowns / switches
   String? selectedMantenimientoConductores;
   String? selectedMantenimientoUsuarios;
   double? selectedDinamica;
+  bool? selectedCedula;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPriceData();
+  DocumentReference<Map<String, dynamic>> get _doc =>
+      FirebaseFirestore.instance.collection('Prices').doc('info');
 
+  TextEditingController _c(String key, String initial) {
+    return _controllers.putIfAbsent(key, () => TextEditingController(text: initial));
   }
 
-  Future<void> _loadPriceData() async {
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save(String key, dynamic value) async {
     try {
-      Price price = await _pricesProvider.getAll(); // Obtener todos los precios
-      setState(() {
-        _priceData = price;
-        selectedMantenimientoConductores = _priceData!?.theMantenimientoConductores;
-        selectedMantenimientoUsuarios = _priceData!?.theMantenimientoUsuarios;
-        selectedDinamica = _priceData!?.theDinamica;
-      });
+      await _pricesProvider.updatePrice(key, value);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Guardado: $key")),
+      );
     } catch (e) {
-      print('Error al cargar los datos de precio: $e');
-      // Manejar el error según sea necesario
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error guardando $key: $e")),
+      );
     }
   }
 
-  // Método para convertir booleanos en "SI" o "NO"
-  String boolToYesNo(bool value) {
-    return value ? 'SI' : 'NO';
+  Future<void> _saveInt(String key, TextEditingController controller) async {
+    final v = int.tryParse(controller.text.trim());
+    if (v == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Por favor, escribe un número válido")),
+      );
+      return;
+    }
+    await _save(key, v);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_priceData == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-    return MainLayout(
-      pageTitle: "Configuraciones",
-      content: Column(
-        children: [
-          SizedBox(height: MediaQuery.of(context).padding.top),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(7),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 100),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _encabezadoSeccion(),
-                          const Divider(),
-                          _seccionConfiguracion(),
-                          const Divider(),
-                          const SizedBox(height: 50),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _doc.snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final data = snap.data!.data() ?? {};
+
+        // Sync dropdowns/switch desde Firestore
+        selectedMantenimientoConductores = (data["mantenimiento_conductores"] ?? "").toString();
+        selectedMantenimientoUsuarios = (data["mantenimiento_usuarios"] ?? "").toString();
+
+        final dyn = data["dinamica"];
+        selectedDinamica = dyn is num ? dyn.toDouble() : 1.0;
+
+        selectedCedula = (data["cedula"] is bool) ? data["cedula"] as bool : false;
+
+        final isMobile = MediaQuery.of(context).size.width < 900;
+        final cardWidth = isMobile ? double.infinity : 520.0;
+
+        return MainLayout(
+          pageTitle: "Configuraciones",
+          content: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(width: cardWidth, child: _cardContacto(data)),
+                SizedBox(width: cardWidth, child: _cardTarifas(data)),
+                SizedBox(width: cardWidth, child: _cardKm(data)),
+                SizedBox(width: cardWidth, child: _cardMin(data)),
+                SizedBox(width: cardWidth, child: _cardCancelaciones(data)),
+                SizedBox(width: cardWidth, child: _cardBusquedaEspera(data)),
+                SizedBox(width: cardWidth, child: _cardRecargas(data)),
+                SizedBox(width: cardWidth, child: _cardCedula(data)),
+                SizedBox(width: cardWidth, child: _cardMantenimiento()),
+                SizedBox(width: cardWidth, child: _cardDinamica()),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-  /////// widgets interfaz/////////////////////////////////////////
-
-  Widget _encabezadoSeccion() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
-        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
-        // Define si es móvil o no
-        bool isMobile = screenWidth < 600;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Configuraciones",
-              style: TextStyle(fontSize: fontSize),
-            ),
-          ],
         );
       },
     );
   }
 
-  Widget _seccionConfiguracion(){
-    return LayoutBuilder(
-        builder: (context, constraints){
-          double screenWidth = constraints.maxWidth;
-          // Define el tamaño de la letra según el ancho de la pantalla
-          double fontSize = screenWidth < 600 ? 12.0 : 16.0;
+  // ===================== CARDS =====================
 
-          // Define si es móvil o no
-          bool isMobile = screenWidth < 600;
-          return Column(
-            children: [
-              isMobile ?
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                      children: [
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              children: [
-                                const Text("Info de contacto", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextField(_priceData!.theCelularAtencionConductores.toString(), 'Celular para Conductores', "celular_atencion_conductores"),
-                                _buildTextField(_priceData!.theCelularAtencionUsuarios.toString(), 'Celular para Clientes', "celular_atencion_usuarios"),
-                                _buildTextField(_priceData!.theLinkCancelarCuenta.toString(), 'Link cancelación cuenta', "link_cancelar_cuenta"),
-                                _buildTextField(_priceData!.theLinkPoliticasPrivacidad.toString(), 'Link Políticas de privacidad', "link_politicas_privacidad"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Tarifas", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theTarifaAeropuerto.toString(),"Aeropuerto", "tarifa_aeropuerto"),
-                                _buildTextFieldEnteros(_priceData!.theTarifaMinimaRegular.toString(), 'Mínima regular', "tarifa_minima_regular"),
-                                _buildTextFieldEnteros(_priceData!.theDistanciaTarifaMinima.toString(), 'Distancia tarifa mínima', "distancia_tarifa_minima"),
-                                _buildTextFieldEnteros(_priceData!.theComision.toString(), 'Comisión %', "comision"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Valores kilometro", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theValorKmRegular.toString(), '\$Km Regular', "valor_km_regular"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Valores Minuto", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theValorMinRegular.toString(), '\$Min Regular', "valor_min_regular"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Valores cancelaciones", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theNumeroCancelacionesConductor.toString(), 'Max cancelaciones conductor', "numero_cancelaciones_conductor"),
-                                _buildTextFieldEnteros(_priceData!.theNumeroCancelacionesUsuario.toString(), 'Max cancelaciones usuario', "numero_cancelaciones_usuario"),
-                                _buildTextFieldEnteros(_priceData!.theTiempoDeBloqueo.toString(), 'Tiempo de bloqueo', "tiempo_de_bloqueo"),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Mantenimiento", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _dropMantenimientoConductores(),
-                                _dropMantenimientoUsuarios()
-
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),// Espacio entre columnas
-                            const SizedBox(height: 20),
-                            Column(
-                              children: [
-                                const Text("Varios", style: TextStyle(fontWeight: FontWeight.bold),),
-                                _buildTextFieldEnteros(_priceData!.theRadioDeBusqueda.toString(), 'Radio de búsqueda', "radio_de_busqueda"),
-                                _buildTextFieldEnteros(_priceData!.theTiempoDeEspera.toString(), 'Tiempo de espera', "tiempo_de_espera"),
-                                _buildTextFieldEnteros(_priceData!.theRecargaInicial.toString(), 'Recarga inicial', "recarga_Inicial"),
-                              ],
-                            ),
-
-                          ],
-                        ),
-
-                      ],
-                    ),
-
-                ],
-              ) : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                      children: [
-                        const SizedBox(height: 50),// Espacio entre columnas
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Info de contacto", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextField(_priceData!.theCelularAtencionConductores.toString(), 'Celular para Conductores', "celular_atencion_conductores"),
-                                  _buildTextField(_priceData!.theCelularAtencionUsuarios.toString(), 'Celular para Clientes', "celular_atencion_usuarios"),
-                                  _buildTextField(_priceData!.theLinkCancelarCuenta.toString(), 'Link cancelación cuenta', "link_cancelar_cuenta"),
-                                  _buildTextField(_priceData!.theLinkPoliticasPrivacidad.toString(), 'Link Políticas de privacidad', "link_politicas_privacidad"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Tarifas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theTarifaAeropuerto.toString(),"Aeropuerto", "tarifa_aeropuerto"),
-                                  _buildTextFieldEnteros(_priceData!.theTarifaMinimaRegular.toString(), 'Mínima regular', "tarifa_minima_regular"),
-                                  _buildTextFieldEnteros(_priceData!.theDistanciaTarifaMinima.toString(), 'Distancia tarifa mínima', "distancia_tarifa_minima"),
-                                  _buildTextFieldEnteros(_priceData!.theComision.toString(), 'Comisión %', "comision"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),// Espacio entre columnas
-
-                          ],
-                        ),
-                        const SizedBox(height: 50),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Valores kilómetro", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theValorKmRegular.toString(), '\$Km Regular', "valor_km_regular"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Valores Minuto", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theValorMinRegular.toString(), '\$Min Regular', "valor_min_regular"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),// Espacio entre columnas
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Adicionales", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _dropDinamica(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 50),// Espacio entre columnas
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Valores cancelaciones", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theNumeroCancelacionesConductor.toString(), 'Max cancelaciones conductor', "numero_cancelaciones_conductor"),
-                                  _buildTextFieldEnteros(_priceData!.theNumeroCancelacionesUsuario.toString(), 'Max cancelaciones usuario', "numero_cancelaciones_usuario"),
-                                  _buildTextFieldEnteros(_priceData!.theTiempoDeBloqueo.toString(), 'Tiempo de bloqueo', "tiempo_de_bloqueo"),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Mantenimiento", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _dropMantenimientoConductores(),
-                                  _dropMantenimientoUsuarios()
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),// Espacio entre columnas
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text("Varios", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),),
-                                  _buildTextFieldEnteros(_priceData!.theRadioDeBusqueda.toString(), 'Radio de búsqueda', "radio_de_busqueda"),
-                                  _buildTextFieldEnteros(_priceData!.theTiempoDeEspera.toString(), 'Tiempo de espera', "tiempo_de_espera"),
-                                  _buildTextFieldEnteros(_priceData!.theRecargaInicial.toString(), 'Recarga inicial', "recarga_Inicial"),
-                                  const SizedBox(height: 50),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                ],
-              ),
-            ],
-          );
-        }
-    );
-  }
-
-  Widget _dropMantenimientoConductores() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Mantenimiento Conductores', style: TextStyle(fontSize: 14)),
-        Row(
+  Widget _cardBase(String title, IconData icon, List<Widget> children) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: selectedMantenimientoConductores,
-                items: const [
-                  DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Si", child: Text("Si")),
-                  DropdownMenuItem(value: "No", child: Text("No")),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedMantenimientoConductores = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
+            Row(
+              children: [
+                Icon(icon),
+                const SizedBox(width: 10),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: () {
-                if (selectedMantenimientoConductores != null && selectedMantenimientoConductores!.isNotEmpty) {
-                  _saveField("mantenimiento_conductores", selectedMantenimientoConductores!, () {
-                    setState(() {
-                      // Actualizar el estado si es necesario
-                    });
-                  });
-                } else {
-                  _showSnackBar(context, 'Por favor seleccione una opción');
-                }
-              },
-            ),
+            const SizedBox(height: 12),
+            ...children,
           ],
         ),
-        const SizedBox(height: 10),
-      ],
+      ),
     );
   }
 
-  Widget _dropMantenimientoUsuarios() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Mantenimiento Usuarios', style: TextStyle(fontSize: 14)),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: selectedMantenimientoUsuarios,
-                items: const [
-                  DropdownMenuItem(value: "", child: Text("")),
-                  DropdownMenuItem(value: "Si", child: Text("Si")),
-                  DropdownMenuItem(value: "No", child: Text("No")),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedMantenimientoUsuarios = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: () {
-                if (selectedMantenimientoUsuarios != null && selectedMantenimientoUsuarios!.isNotEmpty) {
-                  _saveField("mantenimiento_usuarios", selectedMantenimientoUsuarios!, () {
-                    setState(() {
-                      // Actualizar el estado si es necesario
-                    });
-                  });
-                } else {
-                  _showSnackBar(context, 'Por favor seleccione una opción');
-                }
+  Widget _cardContacto(Map<String, dynamic> d) {
+    return _cardBase("Info de contacto", Icons.support_agent, [
+      _fieldText("celular_atencion_conductores", "Celular conductores", d),
+      _fieldText("celular_atencion_usuarios", "Celular usuarios", d),
+
+      // ✅ NUEVOS
+      _fieldText("correo_conductores", "Correo conductores", d),
+      _fieldText("correo_usuarios", "Correo usuarios", d),
+      _fieldText("link_descarga_driver", "Link descarga driver", d),
+      _fieldText("link_descarga_client", "Link descarga client", d),
+
+      _fieldText("link_cancelar_cuenta", "Link cancelación cuenta", d),
+      _fieldText("link_politicas_privacidad", "Link políticas privacidad", d),
+    ]);
+  }
+
+  Widget _cardTarifas(Map<String, dynamic> d) {
+    return _cardBase("Tarifas", Icons.payments, [
+      _fieldInt("tarifa_aeropuerto", "Tarifa aeropuerto", d),
+      _fieldInt("tarifa_minima_regular", "Tarifa mínima regular", d),
+
+      // ✅ NUEVOS
+      _fieldInt("tarifa_minima_hotel", "Tarifa mínima hotel", d),
+      _fieldInt("tarifa_minima_turismo", "Tarifa mínima turismo", d),
+
+      _fieldInt("distancia_tarifa_minima", "Distancia tarifa mínima", d),
+      _fieldInt("comision", "Comisión %", d),
+    ]);
+  }
+
+  Widget _cardKm(Map<String, dynamic> d) {
+    return _cardBase("Valores por km", Icons.route, [
+      _fieldInt("valor_km_regular", "Valor km regular", d),
+
+      // ✅ NUEVOS
+      _fieldInt("valor_km_hotel", "Valor km hotel", d),
+      _fieldInt("valor_km_turismo", "Valor km turismo", d),
+    ]);
+  }
+
+  Widget _cardMin(Map<String, dynamic> d) {
+    return _cardBase("Valores por minuto", Icons.timer, [
+      _fieldInt("valor_min_regular", "Valor min regular", d),
+
+      // ✅ NUEVOS
+      _fieldInt("valor_min_hotel", "Valor min hotel", d),
+      _fieldInt("valor_min_turismo", "Valor min turismo", d),
+    ]);
+  }
+
+  Widget _cardCancelaciones(Map<String, dynamic> d) {
+    return _cardBase("Cancelaciones", Icons.block, [
+      _fieldInt("numero_cancelaciones_conductor", "Max cancelaciones conductor", d),
+      _fieldInt("numero_cancelaciones_usuario", "Max cancelaciones usuario", d),
+      _fieldInt("tiempo_de_bloqueo", "Tiempo de bloqueo", d),
+    ]);
+  }
+
+  Widget _cardBusquedaEspera(Map<String, dynamic> d) {
+    return _cardBase("Búsqueda y espera", Icons.radar, [
+      _fieldInt("radio_de_busqueda", "Radio de búsqueda", d),
+
+      // ✅ NUEVO
+      _fieldInt("tiempo_busqueda", "Tiempo de búsqueda", d),
+
+      _fieldInt("tiempo_de_espera", "Tiempo de espera", d),
+    ]);
+  }
+
+  Widget _cardRecargas(Map<String, dynamic> d) {
+    return _cardBase("Recargas", Icons.account_balance_wallet, [
+      // ✅ FIX KEY: recarga_inicial (NO recarga_Inicial)
+      _fieldInt("recarga_inicial", "Recarga inicial", d),
+
+      // ✅ NUEVO
+      _fieldText("numero_cuenta_recargas", "Número cuenta recargas", d),
+    ]);
+  }
+
+  Widget _cardCedula(Map<String, dynamic> d) {
+    return _cardBase("Cédula", Icons.badge, [
+      Row(
+        children: [
+          Expanded(
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text("Pedir cédula"),
+              value: selectedCedula ?? false,
+              onChanged: (v) async {
+                setState(() => selectedCedula = v);
+                await _save("cedula", v);
               },
             ),
-          ],
-        ),
-        const SizedBox(height: 10),
-      ],
-    );
+          ),
+        ],
+      ),
+
+      // ✅ NUEVO
+      _fieldInt("cedula_despues_de_viajes", "Cédula después de viajes", d),
+    ]);
   }
 
-  Widget _dropDinamica() {
-    List<double> dinamicaOptions = [
-      1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 3
+  Widget _cardMantenimiento() {
+    return _cardBase("Mantenimiento", Icons.build, [
+      _dropString(
+        title: "Conductores",
+        value: selectedMantenimientoConductores ?? "",
+        onChanged: (v) => setState(() => selectedMantenimientoConductores = v),
+        onSave: () => _save("mantenimiento_conductores", selectedMantenimientoConductores ?? ""),
+      ),
+      const SizedBox(height: 8),
+      _dropString(
+        title: "Usuarios",
+        value: selectedMantenimientoUsuarios ?? "",
+        onChanged: (v) => setState(() => selectedMantenimientoUsuarios = v),
+        onSave: () => _save("mantenimiento_usuarios", selectedMantenimientoUsuarios ?? ""),
+      ),
+    ]);
+  }
+
+  Widget _cardDinamica() {
+    const List<double> options = [
+      1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9,
+      2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 3.0
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Dinamica', style: TextStyle(fontSize: 14)),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _dinamicaController,
-                readOnly: true,
-                decoration: InputDecoration(
-                  suffixIcon: DropdownButtonHideUnderline(
-                    child: DropdownButton<double>(
-                      value: selectedDinamica,
-                      items: dinamicaOptions.map((double value) {
-                        return DropdownMenuItem<double>(
-                          value: value,
-                          child: Text(value.toString()),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) async {
-                        setState(() {
-                          selectedDinamica = newValue;
-                          _dinamicaController.text = newValue.toString();
-                        });
-                        // try {
-                        //   await _pricesProvider.updatePrice('dinamica', newValue);
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(content: Text('Campo guardado exitosamente con key: dinamica y valor: $newValue'))
-                        //   );
-                        // } catch (error) {
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //       SnackBar(content: Text('Error al guardar campo con key: dinamica y valor: $newValue'))
-                        //   );
-                        // }
-                      },
-                    ),
-                  ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+    return _cardBase("Dinámica", Icons.trending_up, [
+      Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<double>(
+              value: selectedDinamica ?? 1.0,
+              items: options
+                  .map((double v) =>
+                  DropdownMenuItem<double>(value: v, child: Text(v.toString())))
+                  .toList(),
+              onChanged: (double? v) => setState(() => selectedDinamica = v),
+              decoration: InputDecoration(
+                labelText: "Dinámica",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () async {
-                try {
-                  await _pricesProvider.updatePrice('dinamica', selectedDinamica);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Campo guardado exitosamente con key: dinamica y valor: $selectedDinamica'))
-                  );
-                } catch (error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error al guardar campo con key: dinamica y valor: $selectedDinamica'))
-                  );
-                }
-              },
-            ),
-          ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () => _save("dinamica", selectedDinamica ?? 1.0),
+          )
+        ],
+      ),
+    ]);
+  }
+
+  // ===================== FIELDS =====================
+
+  Widget _fieldText(String key, String label, Map<String, dynamic> d) {
+    final initial = (d[key] ?? "").toString();
+    final controller = _c(key, initial);
+
+    // si Firestore cambia, actualiza el controller sin romper el cursor (solo si no está editando)
+    if (!controller.value.isComposingRangeValid && controller.text != initial) {
+      controller.text = initial;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () => _save(key, controller.text.trim()),
+          ),
         ),
-        SizedBox(height: 10)
+      ),
+    );
+  }
+
+  Widget _fieldInt(String key, String label, Map<String, dynamic> d) {
+    final initial = (d[key] ?? 0).toString();
+    final controller = _c(key, initial);
+
+    if (!controller.value.isComposingRangeValid && controller.text != initial) {
+      controller.text = initial;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () => _saveInt(key, controller),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dropString({
+    required String title,
+    required String value,
+    required void Function(String?) onChanged,
+    required VoidCallback onSave,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: value.isEmpty ? "" : value,
+            items: const [
+              DropdownMenuItem(value: "", child: Text("")),
+              DropdownMenuItem(value: "Si", child: Text("Si")),
+              DropdownMenuItem(value: "No", child: Text("No")),
+            ],
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              labelText: title,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        IconButton(icon: const Icon(Icons.save), onPressed: onSave),
       ],
     );
   }
-
-  //// widget para textedit strings////////
-  Widget _buildTextField(String initialValue, String label, String key) {
-    TextEditingController controller = TextEditingController(text: initialValue);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () {
-              _saveField(key, controller.text, () {
-              });
-            },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextFieldEnteros(String initialValue, String label, String key) {
-    TextEditingController controller = TextEditingController(text: initialValue);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number, // Asegura que el teclado sea numérico
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () async {
-              int? value = int.tryParse(controller.text); // Intentar convertir el texto a int
-              if (value != null) {
-                try {
-                  await _saveFieldEnteros(key, controller.text); // Llama a tu método de actualización de precio
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Campo guardado exitosamente con key: $key y valor: $value')),
-                  );
-                } catch (error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al guardar campo con key: $key y valor: $value')),
-                  );
-                }
-              } else {
-                // Manejar el error de conversión
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Por favor, introduce un número válido')),
-                );
-              }
-            },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveFieldEnteros(String key, String value) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('Prices')
-          .doc("info")
-          .update({key: int.parse(value)});
-      print('Campo guardado exitosamente con key: $key y valor: $value');
-    } catch (error) {
-      print('Error al guardar campo con key: $key y valor: $value. Error: $error');
-      throw error;
-    }
-  }
-
-  void _saveField(String key, dynamic value, Function updateStateCallback) async {
-    print("Guardando campo con key '$key' y valor '$value'");
-
-    try {
-      await _pricesProvider.updatePrice(key, value);
-      _showSnackBar(context, 'Actualización exitosa');
-
-      // Llamar al callback de actualización del estado
-      updateStateCallback();
-    } catch (error) {
-      _showSnackBar(context, 'Error al actualizar el cliente: $error');
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      duration: Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-
 }

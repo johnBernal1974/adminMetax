@@ -155,6 +155,19 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.app_registration,
                   press: () => _go('signUp'),
                 ),
+
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Registrar Porterías",
+                  icon: Icons.apartment,
+                  press: () => _go('registro_porteria_page'),
+                ),
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Porterías",
+                  icon: Icons.apartment,
+                  press: () => _go('porterias_page'),
+                ),
             ],
 
             const Divider(height: 10, color: Colors.white24),

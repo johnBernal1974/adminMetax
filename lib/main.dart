@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,8 @@ import 'Pages/Splash/splash.dart';
 import 'Pages/UsuariosPage/usuarios_page.dart';
 import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
+import 'Pages/porterias/porterias_page.dart';
+import 'Pages/porterias/registro_porterias_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -39,13 +42,18 @@ void main() async {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: 'AIzaSyCXELqMHM7D8lT-0kexYu4jfqehfLNoRC0',
-        appId: '1:632604677797:web:1fb92982ee10663c3d1f4c',
+        appId: '1:632604677797:web:5424d065b508865c3d1f4c',
         messagingSenderId: '632604677797',
         projectId: 'apptaxi-e641d',
         authDomain: 'apptaxi-e641d.firebaseapp.com',
         storageBucket: 'apptaxi-e641d.firebasestorage.app',
         measurementId: 'G-VBGVGQZ8KG',
       ),
+    );
+
+    // ✅ App Check WEB (usa la CLAVE DE SITIO, NO la secreta)
+    await FirebaseAppCheck.instance.activate(
+      webProvider: ReCaptchaV3Provider('6Letqn0sAAAAAFE8dTR-yCqgarDPhQRjNcPLsEvn'),
     );
   } else {
     await Firebase.initializeApp();
@@ -120,15 +128,17 @@ class MyApp extends StatelessWidget {
           // =========================
           // RUTAS PROTEGIDAS (ADMIN)
           // =========================
-          if (name == 'general_page') return _guardedRoute(GeneralPage(), settings);
+          if (name == 'general_page') return _guardedRoute(const GeneralPage(), settings);
           if (name == 'conductores_page') return _guardedRoute(ConductoresPage(), settings);
           if (name == 'usuarios_page') return _guardedRoute(const UsuariosPage(), settings);
           if (name == 'operadores_page') return _guardedRoute(const OperadoresPage(), settings);
           if (name == 'antecedentes_page') return _guardedRoute(const Paginaantecedentes(), settings);
-          if (name == 'prices_page') return _guardedRoute(PricesPage(), settings);
-          if (name == 'recarga_info_page') return _guardedRoute(AdminTransaccionesPage(), settings);
+          if (name == 'prices_page') return _guardedRoute(const PricesPage(), settings);
+          if (name == 'recarga_info_page') return _guardedRoute(const AdminTransaccionesPage(), settings);
           if (name == 'historial_viajes_page') return _guardedRoute(const TravelHistoryPage(), settings);
           if (name == 'map_drivers_admin_page') return _guardedRoute(const AdminDriversMapPage(), settings);
+          if (name == 'registro_porteria_page') return _guardedRoute(const RegistroPorteriaPage(), settings);
+          if (name == 'porterias_page') return _guardedRoute(const PorteriasPage(), settings);
 
           // =========================
           // DEFAULT

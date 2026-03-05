@@ -18,9 +18,15 @@ class _SplashState extends State<Splash> {
   void initState() {
     super.initState();
     _authProvider = MyAuthProvider();
-    var d = const Duration(seconds: 4);
-    Future.delayed(d, (){
-      Navigator.pushNamedAndRemoveUntil(context, "login_page", (route) => false);
+
+    const d = Duration(seconds: 4);
+    Future.delayed(d, () {
+      if (!mounted) return; // ✅ evita usar context si Splash ya se cerró
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        "login_page",
+            (route) => false,
+      );
     });
   }
 

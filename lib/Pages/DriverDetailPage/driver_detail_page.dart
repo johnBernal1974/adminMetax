@@ -1551,7 +1551,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                        const url = 'https://portalpublico.runt.gov.co/#/consulta-ciudadano-documento/consulta/consulta-ciudadano-documento';
                         if (await canLaunch(url)) {
                           await launch(url);
                         }
@@ -1615,7 +1615,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                       height: 50,
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaPersona';
+                          const url = 'https://portalpublico.runt.gov.co/#/consulta-ciudadano-documento/consulta/consulta-ciudadano-documento';
                           if (await canLaunch(url)) {
                             await launch(url);
                           }
@@ -3881,7 +3881,7 @@ El equipo de Metax''';
       children: [
         InAppWebView(
           initialUrlRequest: URLRequest(
-            url: Uri.parse('https://www.runt.com.co/consultaCiudadana/#/consultaPersona'),
+            url: Uri.parse('https://portalpublico.runt.gov.co/#/consulta-ciudadano-documento/consulta/consulta-ciudadano-documento'),
           ),
           onWebViewCreated: (InAppWebViewController controller) {
             inAppWebViewController = controller;
