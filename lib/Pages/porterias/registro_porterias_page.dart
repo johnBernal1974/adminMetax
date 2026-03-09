@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -28,12 +26,6 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
   final _ciudad = TextEditingController();
   final _barrio = TextEditingController();
 
-  final _buscar = TextEditingController();
-
-  Timer? _debounce;
-
-  List sugerencias = [];
-
   GoogleMapController? mapController;
 
   LatLng? ubicacion;
@@ -42,90 +34,10 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
 
   String tipoPorteria = "unica";
 
-  bool mapaListo = false;
-
   Set<Marker> markers = {};
 
   /// =========================
-  /// AUTOCOMPLETE
-  /// =========================
-
-  void onBuscar(String value) {
-
-    if (_debounce?.isActive ?? false) {
-      _debounce!.cancel();
-    }
-
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      buscarDireccion(value);
-    });
-
-  }
-
-  Future<void> buscarDireccion(String input) async {
-
-    if (input.isEmpty) {
-      setState(() => sugerencias = []);
-      return;
-    }
-
-    final url =
-        "https://maps.googleapis.com/maps/api/place/autocomplete/json"
-        "?input=$input"
-        "&key=$googleApiKey"
-        "&components=country:co";
-
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-
-      final data = jsonDecode(response.body);
-
-      setState(() {
-        sugerencias = data["predictions"];
-      });
-
-    }
-
-  }
-
-  /// =========================
-  /// PLACE DETAILS
-  /// =========================
-
-  Future<void> seleccionarLugar(String placeId) async {
-
-    final url =
-        "https://maps.googleapis.com/maps/api/place/details/json"
-        "?place_id=$placeId"
-        "&key=$googleApiKey";
-
-    final response = await http.get(Uri.parse(url));
-
-    final data = jsonDecode(response.body);
-
-    final location = data["result"]["geometry"]["location"];
-
-    final lat = location["lat"];
-    final lng = location["lng"];
-
-    final posicion = LatLng(lat, lng);
-
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(posicion, 17),
-    );
-
-    _seleccionarUbicacion(posicion);
-
-    setState(() {
-      sugerencias = [];
-      _buscar.clear();
-    });
-
-  }
-
-  /// =========================
-  /// GEOCODING
+  /// GEOCODING (obtener direccion)
   /// =========================
 
   Future<void> obtenerDireccion(LatLng posicion) async {
@@ -174,7 +86,7 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
   /// MAPA
   /// =========================
 
-  void _seleccionarUbicacion(LatLng posicion) {
+  void seleccionarUbicacion(LatLng posicion) {
 
     ubicacion = posicion;
 
@@ -184,7 +96,7 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
         position: posicion,
         draggable: true,
         onDragEnd: (nueva) {
-          _seleccionarUbicacion(nueva);
+          seleccionarUbicacion(nueva);
         },
       )
     };
@@ -269,7 +181,7 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(20),
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: const BoxConstraints(maxWidth: 1400),
             child: formulario(),
           ),
         ),
@@ -332,62 +244,21 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
           decoration: deco("Teléfono"),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 25),
 
-        TextField(
-          controller: _buscar,
-          onChanged: onBuscar,
-          decoration: deco("Buscar dirección o conjunto"),
-        ),
-
-        if (sugerencias.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: sugerencias.length,
-              itemBuilder: (context, index) {
-
-                final item = sugerencias[index];
-
-                return ListTile(
-                  title: Text(item["description"]),
-                  onTap: () {
-                    seleccionarLugar(item["place_id"]);
-                  },
-                );
-
-              },
-            ),
-          ),
-
-        const SizedBox(height: 20),
-
+        /// MAPA MÁS GRANDE
         SizedBox(
-          height: 350,
+          height: 500,
           child: GoogleMap(
             initialCameraPosition: const CameraPosition(
               target: LatLng(4.142, -73.6266),
               zoom: 14,
             ),
             markers: markers,
-            onTap: _seleccionarUbicacion,
+            zoomControlsEnabled: true,
+            onTap: seleccionarUbicacion,
             onMapCreated: (controller) {
-
               mapController = controller;
-
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (mounted) {
-                  setState(() {
-                    mapaListo = true;
-                  });
-                }
-              });
-
             },
           ),
         ),
@@ -401,16 +272,27 @@ class _RegistroPorteriaPageState extends State<RegistroPorteriaPage> {
 
         const SizedBox(height: 20),
 
-        TextField(
-          controller: _ciudad,
-          decoration: deco("Ciudad"),
-        ),
+        /// CIUDAD Y BARRIO EN UN ROW
+        Row(
+          children: [
 
-        const SizedBox(height: 20),
+            Expanded(
+              child: TextField(
+                controller: _ciudad,
+                decoration: deco("Ciudad"),
+              ),
+            ),
 
-        TextField(
-          controller: _barrio,
-          decoration: deco("Barrio"),
+            const SizedBox(width: 15),
+
+            Expanded(
+              child: TextField(
+                controller: _barrio,
+                decoration: deco("Barrio"),
+              ),
+            ),
+
+          ],
         ),
 
         const SizedBox(height: 20),
