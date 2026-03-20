@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../src/color.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -19,15 +20,29 @@ class _SplashState extends State<Splash> {
     super.initState();
     _authProvider = MyAuthProvider();
 
-    const d = Duration(seconds: 4);
-    Future.delayed(d, () {
-      if (!mounted) return; // ✅ evita usar context si Splash ya se cerró
+    _checkLogin();
+  }
+
+  Future<void> _checkLogin() async {
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        "general_page",
+            (route) => false,
+      );
+    } else {
       Navigator.pushNamedAndRemoveUntil(
         context,
         "login_page",
             (route) => false,
       );
-    });
+    }
   }
 
   @override

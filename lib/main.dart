@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:metax_administrador/providers/client_provider.dart';
 import 'package:metax_administrador/providers/operador_provider.dart';
+import 'package:metax_administrador/vehiculos_admin_page/detalle_vehiculo.dart';
+import 'package:metax_administrador/vehiculos_admin_page/vehiculos_admin_page.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:metax_administrador/Pages/HistorialViajesPage/historia_viajes_page.dart';
@@ -139,6 +141,8 @@ class MyApp extends StatelessWidget {
           if (name == 'map_drivers_admin_page') return _guardedRoute(const AdminDriversMapPage(), settings);
           if (name == 'registro_porteria_page') return _guardedRoute(const RegistroPorteriaPage(), settings);
           if (name == 'porterias_page') return _guardedRoute(const PorteriasPage(), settings);
+          if (name == 'vehiculos_page') return _guardedRoute(const VehiculosAdminPage(), settings);
+          if (name == 'detalle_vehiculo_page') return _guardedRoute(const VehiculoDetailAdminPage(), settings);
 
           // =========================
           // DEFAULT

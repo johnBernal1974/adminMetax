@@ -1,0 +1,1055 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../common/main_layout.dart';
+import '../src/color.dart';
+
+class VehiculoDetailAdminPage extends StatefulWidget {
+  const VehiculoDetailAdminPage({super.key});
+
+  @override
+  State<VehiculoDetailAdminPage> createState() => _VehiculoDetailAdminPageState();
+}
+
+class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
+
+  Map<String, dynamic> data = {};
+  Map<String, List<String>> errores = {};
+
+  final Map<String, String> nombresCampos = {
+    "foto_tarjeta_propiedad_delantera": "Tarjeta de propiedad (frontal)",
+    "foto_tarjeta_propiedad_trasera": "Tarjeta de propiedad (trasera)",
+  };
+
+
+  final Map<String, List<String>> opcionesErrores = {
+    "foto_tarjeta_propiedad_delantera": [
+      "Foto borrosa",
+      "Foto recortada",
+      "No corresponde al vehículo",
+    ],
+    "foto_tarjeta_propiedad_trasera": [
+      "Foto borrosa",
+      "Foto recortada",
+      "No corresponde al vehículo",
+    ],
+  };
+
+  bool _hayErroresSeleccionados() {
+    return errores.values.any((lista) {
+      return lista.isNotEmpty;
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    data = args;
+
+    final rawErrores = data["errores"];
+
+    if (rawErrores != null && rawErrores is Map) {
+      errores = rawErrores.map<String, List<String>>((key, value) {
+        return MapEntry(
+          key.toString(),
+          List<String>.from(value ?? []),
+        );
+      });
+    } else {
+      errores = {};
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    String placa = (data["18_Placa"] ?? data["id"] ?? "").toString();
+    String driverId = data["driverId"];
+
+    return MainLayout(
+      pageTitle: "Detalle vehículo",
+      content: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  /// 🚗 PLACA
+                  Text(
+                    "Placa No. $placa",
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  /// 📊 ESTADO
+                  Row(
+                    children: [
+                      const Text(
+                        "Estado: ",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 8),
+                      _estadoWidget(data["estado_documentos"]),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  /// =========================
+                  /// 🚗 DATOS VEHÍCULO
+                  /// =========================
+                  _seccion("Datos del vehículo"),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+
+                      if (isMobile) {
+                        /// 📱 MÓVIL → en columna
+                        return Column(
+                          children: [
+                            _dropdown(
+                              "Marca",
+                              "15_Marca",
+                              [
+                                "Hyundai Atos",
+                                "Hyundai Grand I10",
+                                "Kia Picanto Ekotaxi",
+                                "Kia Picanto Ekotaxi LX",
+                                "Kia Morning",
+                                "Kia Sephia",
+                                "Kia Super VIP",
+                                "Suzuki New Alto K10",
+                                "FAW R7 SUV",
+                                "FAW taxi V5",
+                                "Hyundai Accent",
+                                "Renault Logan",
+                                "Renault Clio Express",
+                                "Chevrolet Chevy Taxi",
+                                "Otro",
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _input("Modelo", "17_Modelo"),
+                          ],
+                        );
+                      } else {
+                        /// 💻 WEB / TABLET → en fila
+                        return Row(
+                          children: [
+                            Expanded(
+                              flex: 2, // 🔥 Marca más grande
+                              child: _dropdown(
+                                "Marca",
+                                "15_Marca",
+                                [
+                                  "Hyundai Atos",
+                                  "Hyundai Grand I10",
+                                  "Kia Picanto Ekotaxi",
+                                  "Kia Picanto Ekotaxi LX",
+                                  "Kia Morning",
+                                  "Kia Sephia",
+                                  "Kia Super VIP",
+                                  "Suzuki New Alto K10",
+                                  "FAW R7 SUV",
+                                  "FAW taxi V5",
+                                  "Hyundai Accent",
+                                  "Renault Logan",
+                                  "Renault Clio Express",
+                                  "Chevrolet Chevy Taxi",
+                                  "Otro",
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            Expanded(
+                              flex: 1, // 🔥 Modelo más pequeño
+                              child: _input("Modelo", "17_Modelo"),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+
+                      if (isMobile) {
+                        /// 📱 MÓVIL → en columna
+                        return Column(
+                          children: [
+                            _dropdown(
+                              "Color",
+                              "16_Color",
+                              ["Amarillo", "Blanco"],
+                            ),
+                            const SizedBox(height: 10),
+                            _dropdown(
+                              "Tipo vehículo",
+                              "14_Tipo_Vehiculo",
+                              ["Tipo automovil", "Tipo camioneta"],
+                            ),
+                          ],
+                        );
+                      } else {
+                        /// 💻 WEB / TABLET → en fila
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _dropdown(
+                                "Color",
+                                "16_Color",
+                                ["Amarillo", "Blanco"],
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            Expanded(
+                              child: _dropdown(
+                                "Tipo vehículo",
+                                "14_Tipo_Vehiculo",
+                                ["Tipo automovil", "Tipo camioneta"],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+
+                      if (isMobile) {
+                        /// 📱 MÓVIL → en columna
+                        return Column(
+                          children: [
+                            _dropdown(
+                              "Tipo servicio",
+                              "19_Tipo_Servicio",
+                              ["Público", "Operación Nacional"],
+                            ),
+                            const SizedBox(height: 10),
+                            _input(
+                              "Licencia de tránsito",
+                              "24_Numero_Tarjeta_Propiedad",
+                            ),
+                          ],
+                        );
+                      } else {
+                        /// 💻 WEB / TABLET → en fila
+                        return Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: _dropdown(
+                                "Tipo servicio",
+                                "19_Tipo_Servicio",
+                                ["Público", "Operación Nacional"],
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            Expanded(
+                              flex: 2, // 🔥 más espacio al input
+                              child: _input(
+                                "Licencia de tránsito",
+                                "24_Numero_Tarjeta_Propiedad",
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+                 /// =========================
+                  /// 📸 FOTOS
+                  /// =========================
+                  _seccion("Fotos"),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 700;
+
+                      if (isMobile) {
+                        /// 📱 MÓVIL → en columna
+                        return Column(
+                          children: [
+                            _foto(
+                              "Tarjeta propiedad delantera",
+                              data["foto_tarjeta_propiedad_delantera"],
+                            ),
+                            const SizedBox(height: 15),
+                            _foto(
+                              "Tarjeta propiedad trasera",
+                              data["foto_tarjeta_propiedad_trasera"],
+                            ),
+                          ],
+                        );
+                      } else {
+                        /// 💻 WEB → en fila
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _foto(
+                                "Tarjeta propiedad delantera",
+                                data["foto_tarjeta_propiedad_delantera"],
+                              ),
+                            ),
+
+                            const SizedBox(width: 15),
+
+                            Expanded(
+                              child: _foto(
+                                "Tarjeta propiedad trasera",
+                                data["foto_tarjeta_propiedad_trasera"],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  /// =========================
+                  /// ❌ ERRORES
+                  /// =========================
+                  if (errores.isNotEmpty) ...[
+                    _seccion("Errores"),
+                    ...errores.entries.map((e) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: e.value.map((err) {
+                          return Text("• $err", style: const TextStyle(color: Colors.red));
+                        }).toList(),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                  ],
+                  const SizedBox(height: 10),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+
+                      if (isMobile) {
+                        return Column(
+                          children: [
+                            _inputError("foto_tarjeta_propiedad_delantera"),
+                            _inputError("foto_tarjeta_propiedad_trasera"),
+                          ],
+                        );
+                      } else {
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _inputError("foto_tarjeta_propiedad_delantera"),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: _inputError("foto_tarjeta_propiedad_trasera"),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () => rechazar(driverId, placa),
+                    child: const Text("Rechazar", style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, color: Colors.grey),
+                  const SizedBox(height: 20),
+
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: _seccionSOAT(),
+                  ),
+                  const SizedBox(height: 25),
+
+                  const SizedBox(height: 25),
+
+
+                  /// =========================
+                  /// 🔥 BOTONES
+                  /// =========================
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+
+                      /// 💾 GUARDAR
+                      ElevatedButton.icon(
+                        onPressed: () => guardarCambios(driverId, placa),
+                        icon: const Icon(Icons.save, color: Colors.white),
+                        label: const Text(
+                          "Guardar Cambios",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      /// ✅ APROBAR
+                      ElevatedButton.icon(
+                        onPressed: _hayErroresSeleccionados()
+                            ? null // 🔥 DESHABILITA
+                            : () => aprobar(driverId, placa),
+                        icon: const Icon(Icons.check_circle, color: Colors.white),
+                        label: const Text(
+                          "Aprobar vehículo",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> guardarCambios(String driverId, String placa) async {
+    try {
+
+      /// 🔥 1. LIMPIAR CAMPOS QUE NO VAN A FIRESTORE
+      data.remove("id");
+      data.remove("driverId");
+
+      /// 🔥 2. ASEGURAR TIPO CORRECTO
+      Map<String, dynamic> dataSeguro = Map<String, dynamic>.from(data);
+
+      /// 🔥 3. GUARDAR
+      await FirebaseFirestore.instance
+          .collection("Drivers")
+          .doc(driverId)
+          .collection("vehiculos")
+          .doc(placa)
+          .update(dataSeguro);
+
+      /// 🔥 4. FEEDBACK
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cambios guardados correctamente")),
+      );
+
+    } catch (e) {
+      print("Error guardando: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al guardar")),
+      );
+    }
+  }
+
+  Widget _estadoWidget(String? estado) {
+    String texto;
+    IconData icono;
+    Color color;
+
+    switch (estado) {
+      case "aprobado":
+        texto = "Aprobado";
+        icono = Icons.check_circle;
+        color = Colors.green;
+        break;
+
+      case "rechazado":
+        texto = "Rechazado";
+        icono = Icons.cancel;
+        color = Colors.red;
+        break;
+
+      default:
+        texto = "procesando";
+        icono = Icons.access_time;
+        color = Colors.orange;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, color: color, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            texto,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _seccion(String titulo) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(
+        titulo,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _input(String label, String key) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        initialValue: (data[key] ?? "").toString(),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        onChanged: (v) {
+          data[key] = v;
+        },
+      ),
+    );
+  }
+
+  Widget _dropdown(String label, String key, List<String> items) {
+
+    final rawValue = data[key];
+
+    String? currentValue;
+
+    if (rawValue is String && items.contains(rawValue)) {
+      currentValue = rawValue;
+    } else {
+      currentValue = null;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DropdownButtonFormField<String>(
+        value: currentValue,
+        items: items.map((e) {
+          return DropdownMenuItem(value: e, child: Text(e));
+        }).toList(),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        onChanged: (v) {
+          setState(() {
+            data[key] = v;
+          });
+        },
+      ),
+    );
+  }
+
+  /// 📸 FOTO
+  Widget _foto(String titulo, String? url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(titulo),
+        const SizedBox(height: 5),
+
+        url != null && url.isNotEmpty
+            ? GestureDetector(
+          onTap: () => _verImagenGrande(url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              height: 220, // 🔥 controlas altura (clave)
+              width: 350, // ocupa ancho disponible sin romper
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        )
+            : const Text("Sin imagen"),
+
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  void _verImagenGrande(String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          children: [
+
+            /// 📸 IMAGEN GRANDE
+            InteractiveViewer(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+              ),
+            ),
+
+            /// ❌ BOTÓN CERRAR
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _seccionSOAT() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// 🔹 TÍTULO
+            _seccion("SOAT y Tecnomecánica"),
+
+            const SizedBox(height: 10),
+
+            isMobile
+                ? Column(
+              children: _contenidoSoatTecno(),
+            )
+                : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: _contenidoSoatTecno(),
+                  ),
+                ),
+                const SizedBox(width: 40),
+                Expanded(
+                  child: _botonRunt(),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _contenidoSoatTecno() {
+    return [
+
+      _input("Número SOAT", "20_Numero_Soat"),
+
+      _dateWithBadge(
+        label: "Vigencia SOAT",
+        key: "21_Vigencia_Soat",
+        value: data["21_Vigencia_Soat"],
+      ),
+      const SizedBox(height: 10),
+
+      _input("Número Tecnomecánica", "22_Numero_Tecno"),
+
+      _dateWithBadge(
+        label: "Vigencia Tecnomecánica",
+        key: "23_Vigencia_Tecno",
+        value: data["23_Vigencia_Tecno"],
+      ),
+
+    ];
+  }
+
+  Widget _botonRunt() {
+    return SizedBox(
+      height: 50,
+      child: Container(
+        margin: const EdgeInsets.only(top: 10),
+        height: 50,
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            const url = 'https://www.runt.com.co/consultaCiudadana/#/consultaVehiculo';
+            if (await canLaunch(url)) {
+              await launch(url);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            backgroundColor: primary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+          label: const Text('Abrir pagina RUNT', style: TextStyle(color: blanco)),
+        ),
+      ),
+    );
+  }
+
+  Widget _dateWithBadge({
+    required String label,
+    required String key,
+    required String? value,
+  }) {
+    final controller = TextEditingController(
+      text: data[key] ?? "",
+    );
+
+    Future<void> pickDate() async {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100),
+        locale: const Locale('es', 'CO'),
+      );
+
+      if (picked != null) {
+        final formatted = DateFormat('dd/MM/yyyy').format(picked);
+
+        setState(() {
+          data[key] = formatted;
+        });
+
+        await FirebaseFirestore.instance
+            .collection("Drivers")
+            .doc(data["driverId"])
+            .collection("vehiculos")
+            .doc(data["id"])
+            .update({key: formatted});
+      }
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            onTap: pickDate,
+            decoration: InputDecoration(
+              labelText: label,
+              suffixIcon: const Icon(Icons.calendar_month),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        badgeVigencia(fechaBd: value),
+      ],
+    );
+  }
+
+  Future<void> _seleccionarFecha(String key) async {
+
+    DateTime initialDate = DateTime.now();
+
+    if (data[key] != null && data[key].toString().isNotEmpty) {
+      try {
+        initialDate = DateTime.parse(data[key]);
+      } catch (_) {}
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        data[key] = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
+
+  /// ✏️ INPUT ERROR
+  Widget _inputError(String campo) {
+    final labelBonito = nombresCampos[campo] ?? campo;
+    final opciones = opcionesErrores[campo] ?? [];
+
+    /// 🔥 BLINDA EL MAP (evita null y tipos raros)
+    if (errores[campo] == null || errores[campo] is! List<String>) {
+      errores[campo] = [];
+    }
+
+    final lista = errores[campo]!;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        surfaceTintColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// 🔴 TÍTULO
+              Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      labelBonito,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              /// ✅ OPCIONES
+              ...opciones.map((opcion) {
+                final seleccionado = lista.contains(opcion);
+
+                return CheckboxListTile(
+                  value: seleccionado,
+                  title: Text(opcion),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true, // 🔥 más compacto
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        if (!lista.contains(opcion)) {
+                          lista.add(opcion);
+                        }
+                      } else {
+                        lista.remove(opcion);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ❌ RECHAZAR
+  Future<void> rechazar(String driverId, String placa) async {
+
+    await FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(driverId)
+        .collection("vehiculos")
+        .doc(placa)
+        .update({
+      "estado_documentos": "rechazado",
+      "errores": errores,
+    });
+
+    Navigator.pop(context);
+  }
+
+  /// ✅ APROBAR
+  Future<void> aprobar(String driverId, String placa) async {
+
+    await FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(driverId)
+        .collection("vehiculos")
+        .doc(placa)
+        .update({
+      "estado_documentos": "aprobado",
+      "errores": {},
+    });
+
+    Navigator.pop(context);
+  }
+
+  DateTime? _parseFecha(String? s) {
+    if (s == null || s.isEmpty) return null;
+
+    try {
+      return DateFormat('dd/MM/yyyy').parseStrict(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+
+
+  Color _colorEstado(String estado) {
+    switch (estado) {
+      case "vencido":
+        return Colors.red;
+      case "porVencer":
+        return Colors.orange;
+      case "vigente":
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget badgeVigencia({
+    required String? fechaBd,
+  }) {
+    final fechaVence = vencimientoDiaAntesDesdeBD(fechaBd);
+    final info = calcularEstadoVigencia(fechaVence);
+
+    final color = _colorEstadoVigencia(info.estado);
+
+    final fechaStr = fechaVence == null
+        ? ""
+        : DateFormat('dd/MM/yyyy').format(fechaVence);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color, width: 1.5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        fechaStr.isEmpty
+            ? textoEstado(info)
+            : "${textoEstado(info)} · $fechaStr",
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+
+}
+
+enum VigenciaEstado { sinFecha, vencido, porVencer, vigente }
+
+class VigenciaInfo {
+  final VigenciaEstado estado;
+  final int? diasRestantes;
+  final DateTime? fechaVence;
+
+  VigenciaInfo(this.estado, this.diasRestantes, this.fechaVence);
+}
+
+DateTime? parseFechaCO(String? s) {
+  if (s == null) return null;
+  final t = s.trim();
+  if (t.isEmpty) return null;
+  try {
+    return DateFormat('dd/MM/yyyy').parseStrict(t);
+  } catch (_) {
+    return null;
+  }
+}
+
+DateTime? vencimientoDiaAntesDesdeBD(String? fechaBd) {
+  final f = parseFechaCO(fechaBd);
+  if (f == null) return null;
+  return DateTime(f.year, f.month, f.day).subtract(const Duration(days: 1));
+}
+
+VigenciaInfo calcularEstadoVigencia(DateTime? fechaVence, {int diasAlerta = 30}) {
+  if (fechaVence == null) return VigenciaInfo(VigenciaEstado.sinFecha, null, null);
+
+  final now = DateTime.now();
+  final hoy = DateTime(now.year, now.month, now.day);
+  final vence = DateTime(fechaVence.year, fechaVence.month, fechaVence.day);
+
+  final diff = vence.difference(hoy).inDays;
+
+  if (diff < 0) return VigenciaInfo(VigenciaEstado.vencido, diff, fechaVence);
+  if (diff <= diasAlerta) return VigenciaInfo(VigenciaEstado.porVencer, diff, fechaVence);
+  return VigenciaInfo(VigenciaEstado.vigente, diff, fechaVence);
+}
+
+String textoEstado(VigenciaInfo info) {
+  switch (info.estado) {
+    case VigenciaEstado.sinFecha:
+      return "Sin fecha";
+    case VigenciaEstado.vencido:
+      return "Vencido (${info.diasRestantes!.abs()} días)";
+    case VigenciaEstado.porVencer:
+      return "Por vencer (${info.diasRestantes} días)";
+    case VigenciaEstado.vigente:
+      return "Vigente";
+  }
+}
+
+Color _colorEstadoVigencia(VigenciaEstado e) {
+  switch (e) {
+    case VigenciaEstado.vencido:
+      return Colors.red;
+    case VigenciaEstado.porVencer:
+      return Colors.orange;
+    case VigenciaEstado.vigente:
+      return Colors.green;
+    case VigenciaEstado.sinFecha:
+      return Colors.grey;
+  }
+}

@@ -105,15 +105,21 @@ class _SideBarState extends State<SideBar> {
               if (_canSee(role, 'conductores_page'))
                 DrawerListTitle(
                   title: "Conductores",
-                  icon: Icons.directions_car,
+                  icon: Icons.person,
                   press: () => _go('conductores_page'),
                 ),
 
               if (_canSee(role, 'usuarios_page'))
                 DrawerListTitle(
                   title: "Usuarios",
-                  icon: Icons.person,
+                  icon: Icons.emoji_people,
                   press: () => _go('usuarios_page'),
+                ),
+              if (_canSee(role, 'usuarios_page'))
+                DrawerListTitle(
+                  title: "Vehículos",
+                  icon: Icons.directions_car,
+                  press: () => _go('vehiculos_page'),
                 ),
 
               // ⚠️ OJO: NO tenías permisos definidos para operadores_page en AdminGuard
