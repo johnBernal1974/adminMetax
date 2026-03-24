@@ -32,13 +32,19 @@ class DriverProvider with ChangeNotifier {
     setLoading(true);
     try {
       QuerySnapshot querySnapshot = await _ref.get();
-      for (var doc in querySnapshot.docs) {
-        //print('Datos crudos del documento: ${doc.data()}'); // Imprime los datos crudos
-      }
+
+      print("Docs en Firestore: ${querySnapshot.docs.length}");
+
       _drivers = querySnapshot.docs.map((doc) {
-        return Driver.fromJson(doc.data() as Map<String, dynamic>);
+        final data = doc.data() as Map<String, dynamic>;
+
+        data["id"] = doc.id; // 🔥 SOLUCIÓN
+
+        return Driver.fromJson(data);
       }).toList();
-      print('Total de conductores obtenidos: ${_drivers.length}');
+
+      print("Drivers parseados: ${_drivers.length}");
+
       notifyListeners();
     } catch (error) {
       print('Error al obtener los conductores: $error');
@@ -54,15 +60,11 @@ class DriverProvider with ChangeNotifier {
 
   // Función para obtener conductores por rol y estado de trabajo
   List<Driver> getDriversByRoleAndWorkingStatus(String role, bool isWorking) {
-    return _drivers
-        .where((driver) => driver.rol == role && driver.the00_is_working == isWorking)
-        .toList();
+    return _drivers.where((driver) => driver.rol == role).toList();
   }
 
   List<Driver> getDriversByRoleAndActiveStatus(String role, bool isActive) {
-    return _drivers
-        .where((driver) => driver.rol == role && driver.the00_is_active == isActive)
-        .toList();
+    return _drivers.where((driver) => driver.rol == role).toList();
   }
 
   // List<Driver> getDriversByIsWorking(bool isWorking) {

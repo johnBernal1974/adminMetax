@@ -50,11 +50,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
         return Colors.blueGrey;
       } else if (driver?.verificacionStatus == "foto_tomada") {
         return Colors.amber;
-      } else if ((driver?.the29FotoPerfil == 'corregida' || driver?.the28TarjetaPropiedadTraseraFoto == 'corregida'
-          || driver?.the27TarjetaPropiedadDelanteraFoto == 'corregida' || driver?.the26CedulaTraseraFoto == 'corregida'
-          || driver?.the25CedulaDelanteraFoto == 'corregida') && driver?.verificacionStatus == 'Procesando') {
+      } else if (driver?.the29FotoPerfil == 'corregida' &&
+          driver?.verificacionStatus == 'Procesando') {
         return Colors.purple;
-      }else if (driver?.verificacionStatus == 'Procesando') {
+      } else if (driver?.verificacionStatus == 'Procesando') {
         return Colors.blueAccent;
       } else if (driver?.verificacionStatus == 'activado') {
         return Colors.green;
@@ -62,12 +61,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
         return Colors.red.shade900;
       } else if (driver?.verificacionStatus == 'bloqueo_AJ') {
         return Colors.deepOrange;
-      }else if (driver?.verificacionStatus == 'rechazada') {
+      } else if (driver?.verificacionStatus == 'rechazada') {
         return Colors.brown.shade900;
       } else if (driver?.verificacionStatus == 'suspendido') {
         return Colors.black;
-      }
-      else {
+      } else {
         return Colors.grey;
       }
     }
@@ -122,8 +120,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
               driver.the03NumeroDocumento.toLowerCase().contains(
                   searchQuery.toLowerCase()) ||
               driver.the06Email.toLowerCase().contains(
-                  searchQuery.toLowerCase()) ||
-              driver.the18Placa.toLowerCase().contains(
                   searchQuery.toLowerCase()) ||
               driver.the07Celular.toLowerCase().contains(
                   searchQuery.toLowerCase()));
@@ -720,12 +716,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Placa',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+
             DataColumn(
               label: Text(
                 'Celular',
@@ -784,7 +775,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
                 DataCell(Text(driver.the03NumeroDocumento ?? "Documento no disponible")),
                 DataCell(Text(driver.the06Email ?? "Email no disponible")),
-                DataCell(Text(driver.the18Placa ?? "Placa no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
                 DataCell(
                   Center(
@@ -883,22 +873,18 @@ String _tooltipVig(_VigEstado e) {
 }
 
 _VigEstado _vigenciaGlobalDriver(driver) {
-  final soat = _estadoVig(_venceDiaAntes(driver.the21VigenciaSoat));
-  final tecno = _estadoVig(_venceDiaAntes(driver.the23VigenciaTecno));
-  final lic = _estadoVig(_venceDiaAntes(driver.licenciaVigencia));
-  return _peorEstado([soat, tecno, lic]);
+  return _VigEstado.sinFecha;
 }
 
 Widget vigenciaCell(driver) {
-  final estado = _vigenciaGlobalDriver(driver);
   return Tooltip(
-    message: _tooltipVig(estado),
+    message: "Pendiente migración",
     child: Center(
       child: Container(
         width: 16,
         height: 16,
         decoration: BoxDecoration(
-          color: _colorVig(estado),
+          color: Colors.grey,
           shape: BoxShape.circle,
         ),
       ),
