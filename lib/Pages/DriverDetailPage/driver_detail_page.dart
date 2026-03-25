@@ -430,10 +430,14 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   );
                 },
                 child: Card(
-                  color: isActivo ? Colors.green.withOpacity(0.08) : null,
+                  color: Colors.white,
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: colorEstado,
+                      width: 2,
+                    ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2130,30 +2134,43 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
   Future<void> activarConductorEnFirestore() async {
-    final data = {
-      "Verificacion_Status": "activado",
-      "38_Esta_bloqueado": false,
-
-      /// 🔥 AUDITORÍA (EXCELENTE QUE YA LO TIENES)
-      "13_Nombre_Activador":
-      "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
-
-      "12_Fecha_Activacion":
-      DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
-          .format(DateTime.now()),
-    };
-
     try {
+      final vehiculosSnapshot = await FirebaseFirestore.instance
+          .collection("Drivers")
+          .doc(widget.driver.id)
+          .collection("vehiculos")
+          .where("estado_documentos", isEqualTo: "aprobado")
+          .limit(1)
+          .get();
+
+      if (vehiculosSnapshot.docs.isEmpty) {
+        throw Exception("No hay vehículos aprobados");
+      }
+
+      final vehiculoDoc = vehiculosSnapshot.docs.first;
+      final vehiculoData = vehiculoDoc.data();
+
+      final data = {
+        "Verificacion_Status": "activado",
+        "38_Esta_bloqueado": false,
+        "vehiculoActivoId": vehiculoDoc.id,
+        "placaActiva": vehiculoData["18_Placa"],
+
+        "13_Nombre_Activador":
+        "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
+
+        "12_Fecha_Activacion":
+        DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
+            .format(DateTime.now()),
+      };
+
       await _driverProvider.update(data, widget.driver.id);
 
       if (!context.mounted) return;
-
       _showSnackBar(context, 'Conductor activado correctamente');
     } catch (e) {
       if (!context.mounted) return;
-
-      _showSnackBar(context, 'Error al activar conductor');
-      rethrow;
+      _showSnackBar(context, 'Error: ${e.toString()}');
     }
   }
 
