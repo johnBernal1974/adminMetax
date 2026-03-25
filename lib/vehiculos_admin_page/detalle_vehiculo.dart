@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../common/main_layout.dart';
+import '../Pages/DriverDetailPage/driver_detail_page.dart';
+import '../models/conductor_model.dart';
 import '../src/color.dart';
 
 class VehiculoDetailAdminPage extends StatefulWidget {
@@ -16,6 +18,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
 
   Map<String, dynamic> data = {};
   Map<String, List<String>> errores = {};
+
+
 
   final Map<String, String> nombresCampos = {
     "foto_tarjeta_propiedad_delantera": "Tarjeta de propiedad (frontal)",
@@ -46,10 +50,16 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    data = args;
+    final args = ModalRoute.of(context)!.settings.arguments as VehiculoDetailArgs;
 
-    final rawErrores = data["errores"];
+    final vehiculo = args.vehiculo;
+    final driverId = args.driverId;
+
+    /// 🔥 SI QUIERES USARLO EN TODA LA CLASE
+    data = vehiculo;
+
+    /// 🔥 PROCESAR ERRORES CORRECTAMENTE
+    final rawErrores = vehiculo["errores"];
 
     if (rawErrores != null && rawErrores is Map) {
       errores = rawErrores.map<String, List<String>>((key, value) {
@@ -67,7 +77,10 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   Widget build(BuildContext context) {
 
     String placa = (data["18_Placa"] ?? data["id"] ?? "").toString();
-    String driverId = data["driverId"];
+    String? driverId = data["driverId"];
+    if (driverId == null || driverId.isEmpty) {
+      return const Center(child: Text("driverId no disponible"));
+    }
 
     return MainLayout(
       pageTitle: "Detalle vehículo",
@@ -452,6 +465,65 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
   }
 
+  List<String> validarCamposVehiculo() {
+    List<String> faltantes = [];
+
+    if ((data["15_Marca"] ?? "").toString().isEmpty) {
+      faltantes.add("Marca");
+    }
+
+    if ((data["17_Modelo"] ?? "").toString().isEmpty) {
+      faltantes.add("Modelo");
+    }
+
+    if ((data["16_Color"] ?? "").toString().isEmpty) {
+      faltantes.add("Color");
+    }
+
+    if ((data["14_Tipo_Vehiculo"] ?? "").toString().isEmpty) {
+      faltantes.add("Tipo vehículo");
+    }
+
+    if ((data["19_Tipo_Servicio"] ?? "").toString().isEmpty) {
+      faltantes.add("Tipo servicio");
+    }
+
+    if ((data["24_Numero_Tarjeta_Propiedad"] ?? "").toString().isEmpty) {
+      faltantes.add("Licencia de tránsito");
+    }
+
+    /// 🔥 NUEVO
+    if ((data["20_Numero_Soat"] ?? "").toString().isEmpty) {
+      faltantes.add("Número SOAT");
+    }
+
+    if ((data["21_Vigencia_Soat"] ?? "").toString().isEmpty) {
+      faltantes.add("Vigencia SOAT");
+    }
+
+    if ((data["22_Numero_Tecno"] ?? "").toString().isEmpty) {
+      faltantes.add("Número Tecnomecánica");
+    }
+
+    if ((data["23_Vigencia_Tecno"] ?? "").toString().isEmpty) {
+      faltantes.add("Vigencia Tecnomecánica");
+    }
+
+    if ((data["foto_tarjeta_propiedad_delantera"] ?? "").toString().isEmpty) {
+      faltantes.add("Foto tarjeta delantera");
+    }
+
+    if ((data["foto_tarjeta_propiedad_trasera"] ?? "").toString().isEmpty) {
+      faltantes.add("Foto tarjeta trasera");
+    }
+
+    return faltantes;
+  }
+
+  bool campoVacio(String key) {
+    return (data[key] ?? "").toString().trim().isEmpty;
+  }
+
   Future<void> guardarCambios(String driverId, String placa) async {
     try {
 
@@ -545,24 +617,43 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   }
 
   Widget _input(String label, String key) {
+    final isError = campoVacio(key);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         initialValue: (data[key] ?? "").toString(),
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          labelStyle: TextStyle(
+            color: isError ? Colors.red : null,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : primary,
+              width: 2,
+            ),
+          ),
         ),
         onChanged: (v) {
-          data[key] = v;
+          setState(() {
+            data[key] = v;
+          });
         },
       ),
     );
   }
 
   Widget _dropdown(String label, String key, List<String> items) {
-
     final rawValue = data[key];
+    final isError = campoVacio(key);
 
     String? currentValue;
 
@@ -581,7 +672,22 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         }).toList(),
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          labelStyle: TextStyle(
+            color: isError ? Colors.red : null,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : primary,
+              width: 2,
+            ),
+          ),
         ),
         onChanged: (v) {
           setState(() {
@@ -750,6 +856,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
       text: data[key] ?? "",
     );
 
+    final isError = campoVacio(key);
+
     Future<void> pickDate() async {
       final picked = await showDatePicker(
         context: context,
@@ -784,9 +892,17 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
             onTap: pickDate,
             decoration: InputDecoration(
               labelText: label,
+              labelStyle: TextStyle(
+                color: isError ? Colors.red : null,
+              ),
               suffixIcon: const Icon(Icons.calendar_month),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: isError ? Colors.red : Colors.grey,
+                ),
               ),
             ),
           ),
@@ -914,6 +1030,29 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   /// ✅ APROBAR
   Future<void> aprobar(String driverId, String placa) async {
 
+    final faltantes = validarCamposVehiculo();
+
+    if (faltantes.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Faltan campos: ${faltantes.join(", ")}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_hayErroresSeleccionados()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Debes quitar los errores antes de aprobar"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    /// ✅ APRUEBA SOLO SI TODO ESTÁ BIEN
     await FirebaseFirestore.instance
         .collection("Drivers")
         .doc(driverId)
@@ -924,7 +1063,35 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
       "errores": {},
     });
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("✅ Vehículo aprobado correctamente"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
     Navigator.pop(context);
+  }
+
+  Future<bool> puedeActivarseConductor(Driver driver, List vehiculos) async {
+
+    /// 🔥 1. validar datos personales
+    bool datosOk =
+        driver.the29FotoPerfil == "aceptada" &&
+            driver.the25CedulaDelanteraFoto == "aceptada" &&
+            driver.the26CedulaTraseraFoto == "aceptada" &&
+            driver.the05FechaExpedicionDocumento.isNotEmpty &&
+            driver.the08FechaNacimiento.isNotEmpty &&
+            driver.the09Genero.isNotEmpty &&
+            driver.licenciaCategoria.isNotEmpty &&
+            driver.licenciaVigencia.isNotEmpty;
+
+    /// 🔥 2. validar vehículos
+    bool tieneVehiculoAprobado = vehiculos.any((v) {
+      return v["estado_documentos"] == "aprobado";
+    });
+
+    return datosOk && tieneVehiculoAprobado;
   }
 
   DateTime? _parseFecha(String? s) {
@@ -982,6 +1149,28 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         ),
       ),
     );
+  }
+
+  Future<void> validarEstadoConductor(String driverId) async {
+    final vehiculosSnapshot = await FirebaseFirestore.instance
+        .collection('Drivers')
+        .doc(driverId)
+        .collection('vehiculos')
+        .get();
+
+    bool tieneAprobado = vehiculosSnapshot.docs.any((doc) {
+      final data = doc.data();
+      return data["estado_documentos"] == "aprobado";
+    });
+
+    await FirebaseFirestore.instance
+        .collection('Drivers')
+        .doc(driverId)
+        .update({
+      "the00_is_active": tieneAprobado,
+    });
+
+    print("🔄 Conductor actualizado: activo = $tieneAprobado");
   }
 
 

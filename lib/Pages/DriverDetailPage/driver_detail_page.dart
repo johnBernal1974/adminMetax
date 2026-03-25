@@ -88,6 +88,36 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     super.dispose();
   }
 
+  List<String> faltantesVehiculo(Map vehiculo) {
+    List<String> faltantes = [];
+
+    if ((vehiculo["20_Numero_Soat"] ?? "").toString().isEmpty) {
+      faltantes.add("SOAT");
+    }
+
+    if ((vehiculo["21_Vigencia_Soat"] ?? "").toString().isEmpty) {
+      faltantes.add("Vigencia SOAT");
+    }
+
+    if ((vehiculo["22_Numero_Tecno"] ?? "").toString().isEmpty) {
+      faltantes.add("Tecnomecánica");
+    }
+
+    if ((vehiculo["23_Vigencia_Tecno"] ?? "").toString().isEmpty) {
+      faltantes.add("Vigencia Tecno");
+    }
+
+    if ((vehiculo["foto_tarjeta_propiedad_delantera"] ?? "").toString().isEmpty) {
+      faltantes.add("Foto delantera");
+    }
+
+    if ((vehiculo["foto_tarjeta_propiedad_trasera"] ?? "").toString().isEmpty) {
+      faltantes.add("Foto trasera");
+    }
+
+    return faltantes;
+  }
+
   //selector de fecha reutilizable
 
   Widget _buildDateField({
@@ -187,9 +217,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     _initController("03_Numero_Documento", widget.driver.the03NumeroDocumento);
     _initController("05_Fecha_Expedicion_Documento", widget.driver.the05FechaExpedicionDocumento);
     _initController("08_Fecha_Nacimiento", widget.driver.the08FechaNacimiento);
-
-
-
     _initController("licencia_vigencia", widget.driver.licenciaVigencia);
 
     // Enteros
@@ -249,223 +276,373 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MainLayout(
-      pageTitle:  obtenerRolParaTitulo(),
-      content: SingleChildScrollView(
-        padding: const EdgeInsets.all(7),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 100),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.5),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 3),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("Drivers")
+          .doc(widget.driver.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final doc = snapshot.data!;
+        final data = doc.data() as Map<String, dynamic>;
+
+        final driver = Driver.fromJson(data);
+        driver.id = doc.id;
+
+        return MainLayout(
+          pageTitle: obtenerRolParaTitulo(),
+          content: SingleChildScrollView(
+            padding: const EdgeInsets.all(7),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 100),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        /// 🔥 IMPORTANTE: PASAR DRIVER ACTUALIZADO
+                        _encabezadoSeccion(driver),
+
+                        const Divider(),
+
+                        _seccionDatosGenerales(driver),
+
+                        const Divider(),
+
+                        _seccionDocumentosdeIdentidad(driver),
+
+                        const Divider(),
+
+                        _seccionLicencia(driver),
+
+                        const Divider(),
+
+                        _seccionVehiculos(driver),
+
+                        const SizedBox(height: 50),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _encabezadoSeccion(),
-                    const Divider(),
-                    _seccionDatosGenerales(),
-                    const Divider(),
-                    _seccionDocumentosdeIdentidad(),
-                    const Divider(),
-                    _seccionLicencia(),
-                    const Divider(),
-                    _seccionVehiculos(),
-                    const SizedBox(height: 50,)
-                  ],
+        );
+      },
+    );
+  }
+
+  Widget _seccionVehiculos(Driver driver) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(driver.id)
+          .collection('vehiculos')
+          .snapshots(),
+      builder: (context, snapshot) {
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final vehiculos = snapshot.data!.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data["id"] = doc.id;
+          return data;
+        }).toList();
+
+        return _buildVehiculosUI(vehiculos, driver);
+      },
+    );
+  }
+
+  Widget _buildVehiculosUI(List vehiculos, Driver driver) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle("Vehículos del conductor"),
+            const SizedBox(height: 10),
+
+            if (vehiculos.isEmpty)
+              const Text("Este conductor no tiene vehículos registrados"),
+
+            ...vehiculos.map((vehiculo) {
+
+              final isActivo = vehiculo["id"] == driver.vehiculoActivoId;
+
+              /// 🔥 ESTADO
+              String estado = vehiculo["estado_documentos"] ?? "procesando";
+              Color colorEstado;
+              IconData iconoEstado;
+
+              switch (estado) {
+                case "aprobado":
+                  colorEstado = Colors.green;
+                  iconoEstado = Icons.check_circle;
+                  break;
+                case "rechazado":
+                  colorEstado = Colors.red;
+                  iconoEstado = Icons.cancel;
+                  break;
+                default:
+                  colorEstado = Colors.orange;
+                  iconoEstado = Icons.access_time;
+              }
+
+              /// 🔥 FALTANTES
+              final faltantes = faltantesVehiculo(vehiculo);
+              final incompleto = faltantes.isNotEmpty;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    "detalle_vehiculo_page",
+                    arguments: VehiculoDetailArgs(
+                      vehiculo: vehiculo,
+                      driverId: widget.driver.id,
+                    ),
+                  );
+                },
+                child: Card(
+                  color: isActivo ? Colors.green.withOpacity(0.08) : null,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+
+                        /// INFO
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+
+                              Row(
+                                children: [
+                                  Text(
+                                    "Placa: ${vehiculo["18_Placa"] ?? ""}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  if (isActivo)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        "ACTIVO",
+                                        style: TextStyle(color: Colors.white, fontSize: 10),
+                                      ),
+                                    ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              Text("Marca: ${vehiculo["15_Marca"] ?? ""}"),
+                              Text("Modelo: ${vehiculo["17_Modelo"] ?? ""}"),
+
+                              /// 🔥 FALTANTES
+                              if (incompleto) ...[
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: faltantes.map((f) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.red),
+                                      ),
+                                      child: Text(
+                                        "Falta $f",
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        /// ESTADO
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: colorEstado.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(iconoEstado, color: colorEstado, size: 18),
+                              const SizedBox(width: 5),
+                              Text(
+                                estado.toUpperCase(),
+                                style: TextStyle(
+                                  color: colorEstado,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              );
+            }).toList(),
+          ],
         ),
       ),
     );
   }
 
-  Widget _seccionVehiculos() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle("Vehículos del conductor"),
-        const SizedBox(height: 10),
 
-        if (vehiculos.isEmpty)
-          const Text("Este conductor no tiene vehículos registrados"),
+  List<String> validarDriver(Driver driver) {
+    List<String> faltantes = [];
 
-        ...vehiculos.map((vehiculo) {
-          final isActivo = vehiculo["id"] == widget.driver.vehiculoActivoId;
-
-          Color colorEstado;
-          switch (vehiculo["estado_documentos"]) {
-            case "aprobado":
-              colorEstado = Colors.green;
-              break;
-            case "rechazado":
-              colorEstado = Colors.red;
-              break;
-            default:
-              colorEstado = Colors.orange;
-          }
-
-          return Card(
-            color: isActivo ? Colors.green.withOpacity(0.08) : null,
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-
-              title: Row(
-                children: [
-                  Text(
-                    "Placa: ${vehiculo["18_Placa"] ?? ""}",
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(width: 10),
-
-                  if (isActivo)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        "ACTIVO",
-                        style: TextStyle(color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                ],
-              ),
-
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 5),
-                  Text("Marca: ${vehiculo["15_Marca"] ?? ""}"),
-                  Text("Modelo: ${vehiculo["17_Modelo"] ?? ""}"),
-                ],
-              ),
-
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-
-                    /// 🔍 VER DETALLE
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        minimumSize: const Size(0, 30),
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          "detalle_vehiculo_page",
-                          arguments: {
-                            ...vehiculo,
-                            "driverId": widget.driver.id, // 🔥 IMPORTANTE
-                          },
-                        );
-                      },
-                      child: const Text("Ver", style: TextStyle(fontSize: 12)),
-                    ),
-
-                    const SizedBox(height: 6),
-                  ],
-                )
-            ),
-          );
-        }).toList(),
-      ],
-    );
-  }
-
-  Future<void> _activarVehiculo(String vehiculoId, String placa) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('Drivers')
-          .doc(widget.driver.id)
-          .update({
-        "vehiculoActivoId": vehiculoId,
-        "placaActiva": placa,
-      });
-
-      // 🔥 Actualizamos en memoria para refrescar UI
-      setState(() {
-        widget.driver.vehiculoActivoId = vehiculoId;
-        widget.driver.placaActiva = placa;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vehículo activado correctamente"),
-        ),
-      );
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error al activar vehículo: $e"),
-        ),
-      );
+    if (driver.the29FotoPerfil != "aceptada") {
+      faltantes.add("Foto de perfil");
     }
+
+    if (driver.the25CedulaDelanteraFoto != "aceptada") {
+      faltantes.add("Cédula delantera");
+    }
+
+    if (driver.the26CedulaTraseraFoto != "aceptada") {
+      faltantes.add("Cédula trasera");
+    }
+
+    if ((driver.the05FechaExpedicionDocumento ?? "").isEmpty) {
+      faltantes.add("Fecha expedición documento");
+    }
+
+    if ((driver.the08FechaNacimiento ?? "").isEmpty) {
+      faltantes.add("Fecha nacimiento");
+    }
+
+    if ((driver.the09Genero ?? "").isEmpty) {
+      faltantes.add("Género");
+    }
+
+    if ((driver.licenciaCategoria ?? "").isEmpty) {
+      faltantes.add("Categoría licencia");
+    }
+
+    if ((driver.licenciaVigencia ?? "").isEmpty) {
+      faltantes.add("Vigencia licencia");
+    }
+
+    return faltantes;
   }
 
-  Widget _encabezadoSeccion() {
+
+  Widget _encabezadoSeccion(Driver driver) {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
         double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
-        // Define si es móvil o no
         bool isMobile = screenWidth < 600;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.driver.id,
+              driver.id, // ✅
               style: TextStyle(fontSize: fontSize),
             ),
+
             isMobile
                 ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   children: [
-                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: const TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
-                    Text('Conductor desde: ${widget.driver.the10FechaRegistro}',
+                    Text(
+                      '${driver.the01Nombres} ${driver.the02Apellidos}', // ✅
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Conductor desde: ${driver.the10FechaRegistro}', // ✅
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],
                 ),
 
                 Divider(),
-                _buildInfoEstadoConductor('Conectado:', widget.driver.the39EstaConectado ?? false, fontSize),
-                _buildInfoEstadoConductor('Trabajando:', widget.driver.the00_is_working ?? false, fontSize),
-                _buildInfoRowHorizontal('Saldo Recarga', _formatearNumero(widget.driver.the32SaldoRecarga)),
+
+                _buildInfoEstadoConductor(
+                  'Conectado:',
+                  driver.the00_is_active ?? false, // ✅
+                  fontSize,
+                ),
+
+                _buildInfoEstadoConductor(
+                  'Trabajando:',
+                  driver.the00_is_working ?? false, // ✅
+                  fontSize,
+                ),
+
+                _buildInfoRowHorizontal(
+                  'Saldo Recarga',
+                  _formatearNumero(driver.the32SaldoRecarga), // ✅
+                ),
+
                 const SizedBox(height: 20),
+
                 Container(
                   alignment: Alignment.center,
-                    width: 200,
-                    child: _buildVerificationStatus(fontSize)),
-
+                  width: 200,
+                  child: _buildVerificationStatus(fontSize),
+                ),
               ],
             )
                 : Row(
@@ -474,8 +651,15 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}', style: const TextStyle( fontSize: 24, fontWeight: FontWeight.bold)),
-                    Text('Conductor desde: ${widget.driver.the10FechaRegistro}',
+                    Text(
+                      '${driver.the01Nombres} ${driver.the02Apellidos}', // ✅
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Conductor desde: ${driver.the10FechaRegistro}', // ✅
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],
@@ -483,11 +667,24 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
                 Column(
                   children: [
-                    _buildInfoEstadoConductor('Conectado:', widget.driver.the39EstaConectado ?? false, fontSize),
-                    _buildInfoEstadoConductor('Trabajando:', widget.driver.the00_is_working ?? false, fontSize),
+                    _buildInfoEstadoConductor(
+                      'Conectado:',
+                      driver.the00_is_active ?? false, // ✅
+                      fontSize,
+                    ),
+                    _buildInfoEstadoConductor(
+                      'Trabajando:',
+                      driver.the00_is_working ?? false, // ✅
+                      fontSize,
+                    ),
                   ],
                 ),
-                _buildInfoRow('Saldo Recarga', _formatearNumero(widget.driver.the32SaldoRecarga)),
+
+                _buildInfoRow(
+                  'Saldo Recarga',
+                  _formatearNumero(driver.the32SaldoRecarga), // ✅
+                ),
+
                 _buildVerificationStatus(fontSize),
               ],
             ),
@@ -497,13 +694,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-  Widget _seccionDatosGenerales() {
+  Widget _seccionDatosGenerales(Driver driver) {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
         double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-        // Define si es móvil o no
         bool isMobile = screenWidth < 600;
 
         return Column(
@@ -513,8 +708,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSectionTitle('Datos Generales'),
-                botonesComunicacion(context)
-
+                botonesComunicacion(context),
               ],
             ),
 
@@ -522,13 +716,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoColumns(),
+                _buildInfoColumns(driver), // ✅
+
                 const SizedBox(height: 25),
-                _buildActionButtonRow(context),
+
+                _buildActionButtonRow(context), // (no usa driver directamente)
+
                 const SizedBox(height: 25),
+
                 Row(
                   children: [
-                    _buildPhotoStack(),
+                    _buildPhotoStack(driver), // ✅
                     const SizedBox(width: 25),
                     _buildButtonRowAceptarRechazarFotoPerfil(context),
                   ],
@@ -541,17 +739,22 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               children: [
                 Column(
                   children: [
-                    _buildPhotoStack(),
+                    _buildPhotoStack(driver), // ✅
                     const SizedBox(height: 30),
                     _buildButtonRowAceptarRechazarFotoPerfil(context),
                   ],
                 ),
+
                 const SizedBox(width: 50),
-                _buildInfoColumns(),
+
+                _buildInfoColumns(driver), // ✅
+
                 const SizedBox(width: 150),
+
                 _buildActionButtonColumn(context),
               ],
             ),
+
             const SizedBox(height: 20),
           ],
         );
@@ -559,7 +762,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-  Widget _seccionDocumentosdeIdentidad(){
+  Widget _seccionDocumentosdeIdentidad(Driver driver){
     return LayoutBuilder(
       builder: (context, constraints){
         double screenWidth = constraints.maxWidth;
@@ -611,7 +814,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 Stack(
                                   clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
                                   children: [
-                                    _buildDocumentPhoto("Cédula parte delantera", widget.driver.fotoCedulaDelantera),
+                                    _buildDocumentPhoto("Cédula parte delantera", driver.fotoCedulaDelantera),
                                     Positioned(
                                       top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
                                       right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
@@ -619,17 +822,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                         width: 20,
                                         height: 20,
                                         decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.driver.the25CedulaDelanteraFoto),
+                                          color: getStatusColorFotos(driver.the25CedulaDelanteraFoto),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                _buildTextField(widget.driver.the01Nombres, 'Nombres', "01_Nombres"),
-                                _buildTextField(widget.driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _buildTextField(driver.the01Nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
                                 _dropTipoDocumento (),
-                                _buildTextField(widget.driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                _buildTextField(driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -732,7 +935,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 Stack(
                                   clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
                                   children: [
-                                    _buildDocumentPhoto("Cédula parte trasera", widget.driver.fotoCedulaTrasera),
+                                    _buildDocumentPhoto("Cédula parte trasera", driver.fotoCedulaTrasera),
                                     Positioned(
                                       top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
                                       right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
@@ -740,7 +943,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                         width: 20,
                                         height: 20,
                                         decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.driver.the26CedulaTraseraFoto),
+                                          color: getStatusColorFotos(driver.the26CedulaTraseraFoto),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -751,12 +954,12 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 _buildDateField(
                                   label: 'Fecha de expedición',
                                   key: '05_Fecha_Expedicion_Documento',
-                                  initialValue: widget.driver.the05FechaExpedicionDocumento,
+                                  initialValue: driver.the05FechaExpedicionDocumento,
                                 ),
                                 _buildDateField(
                                   label: 'Fecha de nacimiento',
                                   key: '08_Fecha_Nacimiento',
-                                  initialValue: widget.driver.the08FechaNacimiento,
+                                  initialValue: driver.the08FechaNacimiento,
                                 ),
                                 _dropGenero(),
                                 const SizedBox(height: 30),
@@ -857,7 +1060,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 Stack(
                                   clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
                                   children: [
-                                    _buildDocumentPhoto("Cédula parte delantera", widget.driver.fotoCedulaDelantera),
+                                    _buildDocumentPhoto("Cédula parte delantera", driver.fotoCedulaDelantera),
                                     Positioned(
                                       top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
                                       right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
@@ -865,17 +1068,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                         width: 20,
                                         height: 20,
                                         decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.driver.the25CedulaDelanteraFoto),
+                                          color: getStatusColorFotos(driver.the25CedulaDelanteraFoto),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                _buildTextField(widget.driver.the01Nombres, 'Nombres', "01_Nombres"),
-                                _buildTextField(widget.driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _buildTextField(driver.the01Nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(driver.the02Apellidos, 'Apellidos', "02_Apellidos"),
                                 _dropTipoDocumento (),
-                                _buildTextField(widget.driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                _buildTextField(driver.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
@@ -932,7 +1135,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 Stack(
                                   clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
                                   children: [
-                                    _buildDocumentPhoto("Cédula parte trasera", widget.driver.fotoCedulaTrasera),
+                                    _buildDocumentPhoto("Cédula parte trasera", driver.fotoCedulaTrasera),
                                     Positioned(
                                       top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
                                       right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
@@ -940,7 +1143,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                         width: 20,
                                         height: 20,
                                         decoration: BoxDecoration(
-                                          color: getStatusColorFotos(widget.driver.the26CedulaTraseraFoto),
+                                          color: getStatusColorFotos(driver.the26CedulaTraseraFoto),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -951,12 +1154,12 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                 _buildDateField(
                                   label: 'Fecha de expedición',
                                   key: '05_Fecha_Expedicion_Documento',
-                                  initialValue: widget.driver.the05FechaExpedicionDocumento,
+                                  initialValue: driver.the05FechaExpedicionDocumento,
                                 ),
                                 _buildDateField(
                                   label: 'Fecha de nacimiento',
                                   key: '08_Fecha_Nacimiento',
-                                  initialValue: widget.driver.the08FechaNacimiento,
+                                  initialValue: driver.the08FechaNacimiento,
                                 ),
 
                                 _dropGenero(),
@@ -1073,10 +1276,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
-
-
-
-  Widget _seccionLicencia() {
+  Widget _seccionLicencia(Driver driver) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
@@ -1110,19 +1310,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 children: [
                   _dropCategoriaLicencia(),
 
-                  // ✅ FECHA + BADGE
+                  /// ✅ FECHA + BADGE
                   Row(
                     children: [
                       Expanded(
                         child: _buildDateField(
                           label: 'Vigencia Licencia (fecha BD)',
                           key: 'licencia_vigencia',
-                          initialValue: widget.driver.licenciaVigencia,
+                          initialValue: driver.licenciaVigencia, // ✅
                         ),
                       ),
                       const SizedBox(width: 10),
                       badgeVigencia(
-                        fechaBd: widget.driver.licenciaVigencia,
+                        fechaBd: driver.licenciaVigencia, // ✅
                         calcularVence: vencimientoDiaAntesDesdeBD,
                         diasAlerta: 30,
                       ),
@@ -1144,7 +1344,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         backgroundColor: primary,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        textStyle: const TextStyle(fontSize: 16),
                       ),
                       icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
                       label: const Text('Abrir página RUNT Conductores', style: TextStyle(color: blanco)),
@@ -1157,7 +1356,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ Columna izquierda (campos)
+                  /// IZQUIERDA
                   Expanded(
                     flex: 2,
                     child: Column(
@@ -1165,19 +1364,18 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                       children: [
                         _dropCategoriaLicencia(),
 
-                        // ✅ FECHA + BADGE (en escritorio también)
                         Row(
                           children: [
                             Expanded(
                               child: _buildDateField(
                                 label: 'Vigencia Licencia (fecha BD)',
                                 key: 'licencia_vigencia',
-                                initialValue: widget.driver.licenciaVigencia,
+                                initialValue: driver.licenciaVigencia, // ✅
                               ),
                             ),
                             const SizedBox(width: 10),
                             badgeVigencia(
-                              fechaBd: widget.driver.licenciaVigencia,
+                              fechaBd: driver.licenciaVigencia, // ✅
                               calcularVence: vencimientoDiaAntesDesdeBD,
                               diasAlerta: 30,
                             ),
@@ -1191,7 +1389,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
                   const SizedBox(width: 60),
 
-                  // ✅ Botón derecha
+                  /// DERECHA
                   Expanded(
                     flex: 1,
                     child: Container(
@@ -1208,7 +1406,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           backgroundColor: primary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          textStyle: const TextStyle(fontSize: 16),
                         ),
                         icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
                         label: const Text('Abrir página RUNT Conductores', style: TextStyle(color: blanco)),
@@ -1371,7 +1568,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         }
       }
     }
-    print('Datos del operador ***************************************** $rol');
+    print('Datos del operador ***************************************** $rol, $nameOperador , $apellidosOperador');
   }
 
   Widget botonesComunicacion (context){
@@ -1457,19 +1654,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-  Widget _buildPhotoStack() {
+  Widget _buildPhotoStack(Driver driver) {
     return Stack(
-      clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
+      clipBehavior: Clip.none,
       children: [
-        _buildPerfilPhoto(widget.driver.image),
+        _buildPerfilPhoto(driver.image),
         Positioned(
-          top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
-          right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
+          top: -10,
+          right: -10,
           child: Container(
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: getStatusColorFotos(widget.driver.the29FotoPerfil),
+              color: getStatusColorFotos(driver.the29FotoPerfil),
               shape: BoxShape.circle,
             ),
           ),
@@ -1479,17 +1676,17 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
-  Widget _buildInfoColumns() {
+  Widget _buildInfoColumns(Driver driver) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRowHorizontal('Fecha activación:   ', widget.driver.the12FechaActivacion),
-        _buildInfoRowHorizontal('Activador:   ', widget.driver.the13NombreActivador),
-        _buildInfoRowHorizontal('Email:   ', widget.driver.the06Email),
-        _buildInfoRowHorizontal('Celular:   ', widget.driver.the07Celular),
-        _buildInfoRowHorizontalBold('Viajes:   ', widget.driver.the30NumeroViajes.toString()),
-        _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
-        _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', widget.driver.the40NumeroCancelaciones.toString()),
+        _buildInfoRowHorizontal('Fecha activación:', driver.the12FechaActivacion),
+        _buildInfoRowHorizontal('Activador:', driver.the13NombreActivador),
+        _buildInfoRowHorizontal('Email:', driver.the06Email),
+        _buildInfoRowHorizontal('Celular:', driver.the07Celular),
+        _buildInfoRowHorizontalBold('Viajes:', driver.the30NumeroViajes.toString()),
+        _buildInfoRowHorizontalIconoEstrella('Calificación:', averageRating.toStringAsFixed(1)),
+        _buildInfoRowHorizontalIconocancel('Cancelaciones:', driver.the40NumeroCancelaciones.toString()),
       ],
     );
   }
@@ -1555,7 +1752,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           height: 40, // Altura del botón
           child: ElevatedButton.icon(
             onPressed: () {
-              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+              validarAntesDeActivar(context);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1570,6 +1767,41 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void validarAntesDeActivar(BuildContext context) {
+
+    /// 🔥 1. VALIDAR SI YA ESTÁ ACTIVADO
+    if (widget.driver.verificacionStatus == "activado") {
+      _showSnackBar(context, 'El conductor ya está activado');
+      return;
+    }
+
+    /// 🔥 2. VALIDAR DRIVER
+    final faltantesDriver = validarDriver(widget.driver);
+
+    if (faltantesDriver.isNotEmpty) {
+      _showSnackBar(
+        context,
+        "Faltan datos del conductor: ${faltantesDriver.join(", ")}",
+      );
+      return;
+    }
+
+    /// 🔥 3. VALIDAR VEHÍCULOS
+    final tieneVehiculo = tieneVehiculoAprobado(vehiculos);
+
+    if (!tieneVehiculo) {
+      _showSnackBar(context, "Debe tener al menos un vehículo aprobado");
+      return;
+    }
+
+    /// ✅ TODO OK → MOSTRAR CONFIRMACIÓN
+    _showConfirmationDialogActivarusuario(
+      context,
+      "¿Está seguro de activar este conductor?",
+      false,
     );
   }
 
@@ -1600,7 +1832,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           height: 40, // Altura del botón
           child: ElevatedButton.icon(
             onPressed: () {
-              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+              validarAntesDeActivar(context);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1899,11 +2131,13 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
   Future<void> activarConductorEnFirestore() async {
     final data = {
-      "11_Esta_activado": true,
-      "38_Esta_bloqueado": false,
       "Verificacion_Status": "activado",
+      "38_Esta_bloqueado": false,
+
+      /// 🔥 AUDITORÍA (EXCELENTE QUE YA LO TIENES)
       "13_Nombre_Activador":
       "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
+
       "12_Fecha_Activacion":
       DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
           .format(DateTime.now()),
@@ -1913,97 +2147,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       await _driverProvider.update(data, widget.driver.id);
 
       if (!context.mounted) return;
+
       _showSnackBar(context, 'Conductor activado correctamente');
     } catch (e) {
       if (!context.mounted) return;
+
       _showSnackBar(context, 'Error al activar conductor');
       rethrow;
     }
   }
 
 
-  void activarUsuario(BuildContext context) {
-    String message;
-    bool canActivate = false; // Variable para determinar si se puede activar el usuario
-
-    // Verificar si el conductor tiene el status "bloqueo_AJ"
-    if (widget.driver.verificacionStatus == "bloqueo_AJ") {
-      message = 'Este conductor no se puede activar debido a un bloqueo administrativo';
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Activar Conductor'),
-            content: Text(message),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Cerrar el diálogo
-                },
-              ),
-            ],
-          );
-        },
-      );
-      return; // Salir de la función si el conductor está bloqueado
-    }
-
-    // Verificar si el conductor ya está activado
-    if (widget.driver.the11EstaActivado == true) {
-      message = 'El conductor ya se encuentra activado';
-    } else {
-      // Condiciones para determinar si se puede activar el usuario
-      if (widget.driver.the29FotoPerfil == "aceptada" &&
-          widget.driver.the25CedulaDelanteraFoto == "aceptada" &&
-          widget.driver.the05FechaExpedicionDocumento.isNotEmpty &&
-          widget.driver.the08FechaNacimiento.isNotEmpty &&
-          widget.driver.the09Genero.isNotEmpty &&
-          widget.driver.licenciaCategoria.isNotEmpty &&
-          widget.driver.licenciaVigencia.isNotEmpty) {
-        message = 'El conductor ya puede ser activado';
-        canActivate = true;
-      } else {
-        message = 'Hay alguna verificación que no se ha hecho y evita activar al conductor';
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Activar Conductor'),
-          content: Text(message),
-          actions: <Widget>[
-            if (canActivate)
-              TextButton(
-                child: const Text('Activar'),
-                onPressed: () async {
-                  Navigator.of(context).pop(); // cerrar diálogo primero
-
-                  try {
-                    await activarConductorEnFirestore();
-
-                    setState(() {
-                      widget.driver.the11EstaActivado = true;
-                      widget.driver.the38EstaBloqueado = false;
-                      widget.driver.verificacionStatus = "activado";
-                    });
-
-                    if (!kIsWeb) {
-                      _openWhatsAppActivacion(context);
-                    } else {
-                      _openWhatsAppWebActivacion(context);
-                    }
-                  } catch (_) {
-                    // El error ya se muestra en el SnackBar
-                  }
-                },
-              ),
-          ],
-        );
-      },
-    );
+  bool tieneVehiculoAprobado(List vehiculos) {
+    return vehiculos.any((v) => v["estado_documentos"] == "aprobado");
   }
 
 
@@ -2071,7 +2227,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 _saveField("Verificacion_Status", "bloqueado"); // Actualizar el estado
 
                 setState(() {
-                  widget.driver.the11EstaActivado = false;
                   widget.driver.the38EstaBloqueado = true;
                   widget.driver.verificacionStatus = "bloqueado";
                 });
@@ -2135,7 +2290,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 await activarConductorEnFirestore();
 
                 setState(() {
-                  widget.driver.the11EstaActivado = true;
                   widget.driver.the38EstaBloqueado = false;
                   widget.driver.verificacionStatus = "activado";
                 });
@@ -3056,6 +3210,15 @@ String textoEstado(VigenciaInfo info) {
     case VigenciaEstado.vigente:
       return "Vigente";
   }
+}
+class VehiculoDetailArgs {
+  final Map<String, dynamic> vehiculo;
+  final String driverId;
+
+  VehiculoDetailArgs({
+    required this.vehiculo,
+    required this.driverId,
+  });
 }
 
 
