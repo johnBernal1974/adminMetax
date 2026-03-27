@@ -399,18 +399,37 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               Color colorEstado;
               IconData iconoEstado;
 
-              switch (estado) {
-                case "aprobado":
-                  colorEstado = Colors.green;
-                  iconoEstado = Icons.check_circle;
-                  break;
-                case "rechazado":
-                  colorEstado = Colors.red;
-                  iconoEstado = Icons.cancel;
-                  break;
-                default:
-                  colorEstado = Colors.orange;
-                  iconoEstado = Icons.access_time;
+              /// 🔥 estados de fotos
+              String estadoDelantera =
+              (vehiculo["27_Tarjeta_Propiedad_Delantera_foto"] ?? "").toString();
+
+              String estadoTrasera =
+              (vehiculo["28_Tarjeta_Propiedad_Trasera_foto"] ?? "").toString();
+
+              bool hayCorregida =
+                  estadoDelantera == "corregida" || estadoTrasera == "corregida";
+
+
+              if (hayCorregida) {
+                colorEstado = Colors.purple;
+                iconoEstado = Icons.refresh;
+                estado = "corregida";
+              } else {
+                switch (estado) {
+                  case "aprobado":
+                    colorEstado = Colors.green;
+                    iconoEstado = Icons.check_circle;
+                    break;
+
+                  case "rechazado":
+                    colorEstado = Colors.red;
+                    iconoEstado = Icons.cancel;
+                    break;
+
+                  default:
+                    colorEstado = Colors.orange;
+                    iconoEstado = Icons.access_time;
+                }
               }
 
               /// 🔥 FALTANTES
@@ -645,7 +664,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 Container(
                   alignment: Alignment.center,
                   width: 200,
-                  child: _buildVerificationStatus(fontSize),
+                  child: _buildVerificationStatus(driver, fontSize),
                 ),
               ],
             )
@@ -689,7 +708,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   _formatearNumero(driver.the32SaldoRecarga), // ✅
                 ),
 
-                _buildVerificationStatus(fontSize),
+                _buildVerificationStatus(driver, fontSize),
               ],
             ),
           ],
@@ -865,9 +884,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                       width: 30,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada");
-
+                                          _showConfirmationFotoCedulaDelantera(
+                                            context,
+                                            "¿Está seguro de rechazar la foto del documento en su parte delantera?",
+                                            "rechazada",
+                                          );
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.red,
@@ -995,9 +1016,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                       width: 30,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada");
-
+                                          _showConfirmationFotoCedulaTrasera(
+                                            context,
+                                            "¿Está seguro de rechazar la foto del documento en su parte trasera?",
+                                            "rechazada",
+                                          );
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.red,
@@ -1111,8 +1134,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                       width: 30,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          _showConfirmationFotoCedulaDelantera(context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada");
+                                          _showConfirmationFotoCedulaDelantera(
+                                              context, "¿Está seguro de rechazar la foto del documento en su parte delantera?", "rechazada");
 
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -1196,9 +1219,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                                       width: 30,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          _showConfirmationFotoCedulaTrasera(context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
-                                          _saveField("Verificacion_Status", "rechazada");
-
+                                          _showConfirmationFotoCedulaTrasera(
+                                              context, "¿Está seguro de rechazar la foto del documento en su parte trasera?", "rechazada");
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.red,
@@ -1638,9 +1660,11 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           width: 30,
           child: ElevatedButton(
             onPressed: () {
-              _showConfirmationFotoPerfil(context, "¿Está seguro de rechazar la foto de perfil?", "rechazada");
-              _saveField("Verificacion_Status", "rechazada");
-
+              _showConfirmationFotoPerfil(
+                context,
+                "¿Está seguro de rechazar la foto de perfil?",
+                "rechazada",
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -1954,8 +1978,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
-
-
   Widget _dropCategoriaLicencia() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2008,52 +2030,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-
-  //// widget para textedit strings////////
-  // Widget _buildTextField(String initialValue, String label, String key) {
-  //   TextEditingController controller = TextEditingController(text: initialValue);
-  //   FocusNode focusNode = FocusNode();
-  //   ValueNotifier<Color> borderColorNotifier = ValueNotifier<Color>(Colors.grey);
-  //
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 8.0),
-  //     child: ValueListenableBuilder<Color>(
-  //       valueListenable: borderColorNotifier,
-  //       builder: (context, borderColor, child) {
-  //         return TextField(
-  //           controller: controller,
-  //           focusNode: focusNode,
-  //           decoration: InputDecoration(
-  //             labelText: label,
-  //             suffixIcon: IconButton(
-  //               icon: Icon(Icons.save),
-  //               onPressed: () {
-  //                 _saveField(key, controller.text);
-  //                 borderColorNotifier.value = Colors.grey; // Retornar al color inicial
-  //                 focusNode.unfocus(); // Quitar el foco del TextField
-  //               },
-  //             ),
-  //             border: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(color: borderColor),
-  //             ),
-  //             focusedBorder: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(color: borderColor),
-  //             ),
-  //             enabledBorder: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(color: borderColor),
-  //             ),
-  //           ),
-  //           onChanged: (text) {
-  //             borderColorNotifier.value = Colors.red; // Cambiar a color rojo al modificar
-  //           },
-  //         );
-  //       },
-  //     ),
-  //   );
-  // } comentado emjora para no recrear los textfield
 
   Widget _buildTextField(String initialValue, String label, String key) {
     final controller = _controllers[key] ??= TextEditingController(text: initialValue);
@@ -2110,29 +2086,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     });
   }
 
-
-
-  Widget _buildTextFieldEnteros(int initialValue, String label, String key) {
-    TextEditingController controller = TextEditingController(text: initialValue.toString());
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: IconButton(
-            icon: Icon(Icons.save),
-            onPressed: () {
-              _saveFieldEnteros(key, controller.text);
-            },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
   Future<void> activarConductorEnFirestore() async {
     try {
       final vehiculosSnapshot = await FirebaseFirestore.instance
@@ -2267,24 +2220,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     return '\$ ${format.format(valor)}';
   }
 
-  Future<int> _obtenerNuevaRecargaDesdeBaseDeDatos() async {
-    try {
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('Drivers')
-          .doc(widget.driver.id)
-          .get();
-
-      if (snapshot.exists && snapshot.data() != null) {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-        return data['34_Nueva_Recarga'] ?? 0; // Si el valor es nulo, devolver 0 por defecto
-      } else {
-        throw Exception("No se pudo obtener el valor de la recarga.");
-      }
-    } catch (error) {
-      print('Error al obtener nueva recarga desde la base de datos: $error');
-      throw error;
-    }
-  }
 
   void _showConfirmationDialogActivarusuario(BuildContext context, String message, bool isBloquear) {
     showDialog(
@@ -2462,56 +2397,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     }
   }
 
-
-  void _saveFieldBool(String key, dynamic value) async {
-    print("Guardando campo con key '$key' y valor '$value'");
-
-    bool boolValue = false;
-    if (value is String) {
-      boolValue = bool.fromEnvironment(value.toLowerCase());
-    } else if (value is bool) {
-      boolValue = value;
-    } else {
-      print("Error: El valor '$value' no puede ser convertido a bool.");
-      return;
-    }
-
-    Map<String, dynamic> data = {
-      key: boolValue,
-    };
-
-    try {
-      await _driverProvider.update(data, widget.driver.id);
-      if(context.mounted){
-        _showSnackBar(context, 'Actualizacion exitosa');
-      }
-
-    } catch (error) {
-      if(context.mounted){
-        _showSnackBar(context, 'Error al actualizar el conductor: $error');
-      }
-    }
-  }
-
-
-  //// metodo para guardar los editfield strings/////
-  // void _saveField(String key, dynamic value) async {
-  //   print("Guardando campo con key '$key' y valor '$value'");
-  //
-  //   Map<String, String> data = {key: value,
-  //   };
-  //   try {
-  //     await _driverProvider.update(data, widget.driver.id);
-  //     if(context.mounted){
-  //       _showSnackBar(context, 'Actualización exitosa');
-  //     }
-  //   } catch (error) {
-  //     if(context.mounted){
-  //       _showSnackBar(context, 'Error al actualizar el conductor: $error');
-  //     }
-  //   }
-  // } comentado mejora
-
   Future<void> _saveField(String key, dynamic value) async {
     try {
       await FirebaseFirestore.instance
@@ -2525,29 +2410,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     } catch (error) {
       if (context.mounted) {
         _showSnackBar(context, 'Error al actualizar: $error');
-      }
-    }
-  }
-
-
-  void _saveFieldFecha(String key, DateTime date) async {
-    // Formatear la fecha como cadena
-    String formattedDate = DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES').format(date);
-
-    print("Guardando campo con key '$key' y valor '$formattedDate'");
-
-    Map<String, String> data = {
-      key: formattedDate,
-    };
-
-    try {
-      await _driverProvider.update(data, widget.driver.id);
-      if (context.mounted) {
-        _showSnackBar(context, 'Actualización exitosa');
-      }
-    } catch (error) {
-      if (context.mounted) {
-        _showSnackBar(context, 'Error al actualizar el conductor: $error');
       }
     }
   }
@@ -2571,47 +2433,27 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
 
-  Widget _buildTextFieldRecarga(int initialValue, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: TextEditingController(text: initialValue.toString()),
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: IconButton(
-            icon: Icon(Icons.save),
-            onPressed: () {
-              // Implementar lógica de guardado aquí
-            },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildVerificationStatus(double fontSize) {
+  Widget _buildVerificationStatus(Driver driver, double fontSize) {
     Color statusColor = getStatusColor();
     String statusText = '';
 
-    if (widget.driver.verificacionStatus == "registrado") {
+    if (driver.verificacionStatus == "registrado") {
       statusText = 'Registrado';
-    } else if (widget.driver.verificacionStatus == "foto_tomada") {
+    } else if (driver.verificacionStatus == "foto_tomada") {
       statusText = 'Fotos faltantes';
-    } else if (widget.driver.verificacionStatus == 'Procesando') {
+    } else if (driver.verificacionStatus == 'Procesando') {
       statusText = 'Procesando';
     }
-    else if (widget.driver.verificacionStatus == 'corregida') {
+    else if (driver.verificacionStatus == 'corregida') {
       statusText = 'Corregida';
     }
-    else if (widget.driver.verificacionStatus == 'activado') {
+    else if (driver.verificacionStatus == 'activado') {
       statusText = 'Activado';
     }
-    else if (widget.driver.verificacionStatus == 'bloqueado') {
+    else if (driver.verificacionStatus == 'bloqueado') {
       statusText = 'Bloqueado';
-    }else if (widget.driver.verificacionStatus == 'bloqueo_AJ') {
+    }else if (driver.verificacionStatus == 'bloqueo_AJ') {
       statusText = 'BloqueoAJ';
     }
 

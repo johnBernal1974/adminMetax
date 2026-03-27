@@ -19,6 +19,12 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   Map<String, dynamic> data = {};
   Map<String, List<String>> errores = {};
 
+  late String placaGlobal;
+  late String driverIdGlobal;
+
+  Map<String, List<String>> erroresFirestore = {};
+  Map<String, List<String>> erroresSeleccionados = {};
+
 
 
   final Map<String, String> nombresCampos = {
@@ -62,15 +68,17 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     final rawErrores = vehiculo["errores"];
 
     if (rawErrores != null && rawErrores is Map) {
-      errores = rawErrores.map<String, List<String>>((key, value) {
+      erroresFirestore = rawErrores.map<String, List<String>>((key, value) {
         return MapEntry(
           key.toString(),
           List<String>.from(value ?? []),
         );
       });
     } else {
-      errores = {};
+      erroresFirestore = {};
     }
+    /// 🔥 sincronizar selección con Firestore
+    erroresSeleccionados = Map.from(erroresFirestore);
   }
 
   @override
@@ -82,45 +90,85 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
       return const Center(child: Text("driverId no disponible"));
     }
 
-    return MainLayout(
-      pageTitle: "Detalle vehículo",
-      content: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    placaGlobal = placa;
+    driverIdGlobal = driverId;
 
-                  /// 🚗 PLACA
-                  Text(
-                    "Placa No. $placa",
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+    return StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection("Drivers")
+            .doc(driverId)
+            .collection("vehiculos")
+            .doc(placa)
+            .snapshots(),
+        builder: (context, snapshot) {
 
-                  const SizedBox(height: 10),
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                  /// 📊 ESTADO
-                  Row(
-                    children: [
-                      const Text(
-                        "Estado: ",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 8),
-                      _estadoWidget(data["estado_documentos"]),
-                    ],
-                  ),
+          final docData = snapshot.data!.data() as Map<String, dynamic>;
 
-                  const SizedBox(height: 20),
+          /// 🔥 ACTUALIZA DATA EN TIEMPO REAL
+          data = docData;
 
-                  /// =========================
-                  /// 🚗 DATOS VEHÍCULO
-                  /// =========================
-                  _seccion("Datos del vehículo"),
+          /// 🔥 PROCESAR ERRORES EN TIEMPO REAL
+          final rawErrores = docData["errores"];
+
+          /// 🔥 SOLO cargar errores UNA VEZ (no pisar selección del usuario)
+          if (errores.isEmpty) {
+            if (rawErrores != null && rawErrores is Map) {
+              errores = rawErrores.map<String, List<String>>((key, value) {
+                return MapEntry(
+                  key.toString(),
+                  List<String>.from(value ?? []),
+                );
+              });
+            } else {
+              errores = {};
+            }
+          }
+
+          return MainLayout(
+            pageTitle: "Detalle vehículo",
+            content: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Padding(
+                    padding: const EdgeInsets.all(15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        /// 🚗 PLACA
+                        Text(
+                          "Placa No. $placa",
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        /// 📊 ESTADO
+                        Row(
+                          children: [
+                            const Text(
+                              "Estado: ",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(width: 8),
+                            _estadoWidget(data["estado_documentos"]),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        /// =========================
+                        /// 🚗 DATOS VEHÍCULO
+                        /// =========================
+                        _seccion("Datos del vehículo"),
+
+                        // 👇 TODO TU CONTENIDO SE QUEDA IGUAL
 
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -308,11 +356,15 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                             _foto(
                               "Tarjeta propiedad delantera",
                               data["foto_tarjeta_propiedad_delantera"],
+                              data["27_Tarjeta_Propiedad_Delantera_foto"],
+                              "foto_tarjeta_propiedad_delantera",
                             ),
                             const SizedBox(height: 15),
                             _foto(
                               "Tarjeta propiedad trasera",
                               data["foto_tarjeta_propiedad_trasera"],
+                              data["28_Tarjeta_Propiedad_Trasera_foto"],
+                              "foto_tarjeta_propiedad_trasera",
                             ),
                           ],
                         );
@@ -321,9 +373,11 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                         return Row(
                           children: [
                             Expanded(
-                              child: _foto(
+                              child:_foto(
                                 "Tarjeta propiedad delantera",
                                 data["foto_tarjeta_propiedad_delantera"],
+                                data["27_Tarjeta_Propiedad_Delantera_foto"],
+                                "foto_tarjeta_propiedad_delantera",
                               ),
                             ),
 
@@ -333,6 +387,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                               child: _foto(
                                 "Tarjeta propiedad trasera",
                                 data["foto_tarjeta_propiedad_trasera"],
+                                data["28_Tarjeta_Propiedad_Trasera_foto"],
+                                "foto_tarjeta_propiedad_trasera",
                               ),
                             ),
                           ],
@@ -459,9 +515,12 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                 ],
               ),
             ),
+           ),
           ),
-        ),
-      ),
+         ),
+        );
+       },
+
     );
   }
 
@@ -699,11 +758,23 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   }
 
   /// 📸 FOTO
-  Widget _foto(String titulo, String? url) {
+  Widget _foto(String titulo, String? url, String? estado, String campoFoto) {
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(titulo),
+
+        /// 🔥 TITULO + BADGE
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(titulo),
+
+            if (estado != null) _badgeEstadoFoto(estado),
+          ],
+        ),
+
         const SizedBox(height: 5),
 
         url != null && url.isNotEmpty
@@ -712,8 +783,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: SizedBox(
-              height: 220, // 🔥 controlas altura (clave)
-              width: 350, // ocupa ancho disponible sin romper
+              height: 220,
+              width: 350,
               child: Image.network(
                 url,
                 fit: BoxFit.cover,
@@ -723,8 +794,85 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         )
             : const Text("Sin imagen"),
 
+        if (estado != "aprobada") ...[
+          const SizedBox(height: 8),
+
+          ElevatedButton.icon(
+            onPressed: () => aprobarFoto(driverIdGlobal, placaGlobal, campoFoto),
+            icon: const Icon(Icons.check, color: Colors.white),
+            label: const Text(
+              "Aprobar",
+              style: TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 10),
       ],
+    );
+  }
+
+  Widget _badgeEstadoFoto(String estado) {
+    Color color;
+    String texto;
+    IconData icono;
+
+    switch (estado) {
+      case "corregida":
+        color = Colors.purple;
+        texto = "Corregida";
+        icono = Icons.refresh;
+        break;
+
+      case "tomada":
+        color = Colors.grey;
+        texto = "Tomada";
+        icono = Icons.image;
+        break;
+
+      case "rechazada":
+        color = Colors.red;
+        texto = "Rechazada";
+        icono = Icons.image;
+        break;
+
+      case "aprobada":
+        color = Colors.green;
+        texto = "Aprobada";
+        icono = Icons.image;
+        break;  
+
+      default:
+        color = Colors.grey;
+        texto = "Sin estado";
+        icono = Icons.help;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        children: [
+          Icon(icono, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            texto,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1014,15 +1162,32 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
   /// ❌ RECHAZAR
   Future<void> rechazar(String driverId, String placa) async {
 
+    /// 🔥 BASE
+    Map<String, dynamic> updates = {
+      "estado_documentos": "rechazado",
+      "errores": errores,
+    };
+
+    /// 🔥 SI TIENE ERROR DELANTERA → marcar solo esa
+    if (errores.containsKey("foto_tarjeta_propiedad_delantera") &&
+        (errores["foto_tarjeta_propiedad_delantera"] as List).isNotEmpty) {
+
+      updates["27_Tarjeta_Propiedad_Delantera_foto"] = "rechazada";
+    }
+
+    /// 🔥 SI TIENE ERROR TRASERA → marcar solo esa
+    if (errores.containsKey("foto_tarjeta_propiedad_trasera") &&
+        (errores["foto_tarjeta_propiedad_trasera"] as List).isNotEmpty) {
+
+      updates["28_Tarjeta_Propiedad_Trasera_foto"] = "rechazada";
+    }
+
     await FirebaseFirestore.instance
         .collection("Drivers")
         .doc(driverId)
         .collection("vehiculos")
         .doc(placa)
-        .update({
-      "estado_documentos": "rechazado",
-      "errores": errores,
-    });
+        .update(updates);
 
     Navigator.pop(context);
   }
@@ -1059,8 +1224,13 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         .collection("vehiculos")
         .doc(placa)
         .update({
+
       "estado_documentos": "aprobado",
       "errores": {},
+
+      /// 🔥 NUEVO: APROBAR CADA FOTO
+      "27_Tarjeta_Propiedad_Delantera_foto": "aprobada",
+      "28_Tarjeta_Propiedad_Trasera_foto": "aprobada",
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1071,6 +1241,39 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
 
     Navigator.pop(context);
+  }
+
+  Future<void> aprobarFoto(String driverId, String placa, String campoFoto) async {
+
+    String campoEstado = "";
+
+    if (campoFoto == "foto_tarjeta_propiedad_delantera") {
+      campoEstado = "27_Tarjeta_Propiedad_Delantera_foto";
+    } else if (campoFoto == "foto_tarjeta_propiedad_trasera") {
+      campoEstado = "28_Tarjeta_Propiedad_Trasera_foto";
+    }
+
+    await FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(driverId)
+        .collection("vehiculos")
+        .doc(placa)
+        .update({
+
+      /// 🔥 aprobar SOLO esa foto
+      campoEstado: "aprobada",
+
+      /// 🔥 eliminar error solo de esa foto
+      "errores.$campoFoto": FieldValue.delete(),
+
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Foto aprobada correctamente"),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Future<bool> puedeActivarseConductor(Driver driver, List vehiculos) async {
