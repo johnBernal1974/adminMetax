@@ -2105,6 +2105,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
       final data = {
         "Verificacion_Status": "activado",
+
+        /// 🔥 ESTA ES LA CLAVE (TE FALTABA)
+        "11_Esta_activado": true,
+
         "38_Esta_bloqueado": false,
         "vehiculoActivoId": vehiculoDoc.id,
         "placaActiva": vehiculoData["18_Placa"],
@@ -2121,6 +2125,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
       if (!context.mounted) return;
       _showSnackBar(context, 'Conductor activado correctamente');
+
     } catch (e) {
       if (!context.mounted) return;
       _showSnackBar(context, 'Error: ${e.toString()}');
