@@ -109,7 +109,14 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
           final docData = snapshot.data!.data() as Map<String, dynamic>;
 
           /// 🔥 ACTUALIZA DATA EN TIEMPO REAL
-          data = docData;
+          data = {
+            ...docData,
+
+            /// 🔥 SOLO conservar inputs que el admin está escribiendo
+            "20_Numero_Soat": data["20_Numero_Soat"],
+            "22_Numero_Tecno": data["22_Numero_Tecno"],
+            "24_Numero_Tarjeta_Propiedad": data["24_Numero_Tarjeta_Propiedad"],
+          };
 
           /// 🔥 PROCESAR ERRORES EN TIEMPO REAL
           final rawErrores = docData["errores"];
@@ -127,6 +134,10 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
               errores = {};
             }
           }
+
+          final fotosAprobadas =
+              data["27_Tarjeta_Propiedad_Delantera_foto"] == "aprobada" &&
+                  data["28_Tarjeta_Propiedad_Trasera_foto"] == "aprobada";
 
           return MainLayout(
             pageTitle: "Detalle vehículo",
@@ -442,11 +453,38 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    onPressed: () => rechazar(driverId, placa),
-                    child: const Text("Rechazar", style: TextStyle(color: Colors.white)),
-                  ),
+                        Row(
+                          children: [
+
+                            /// 🔴 DELANTERA
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () => rechazarDocumento(
+                                  driverId,
+                                  placa,
+                                  "foto_tarjeta_propiedad_delantera",
+                                ),
+                                child: const Text("Rechazar delantera", style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            /// 🔴 TRASERA
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () => rechazarDocumento(
+                                  driverId,
+                                  placa,
+                                  "foto_tarjeta_propiedad_trasera",
+                                ),
+                                child: const Text("Rechazar trasera", style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
                   const SizedBox(height: 10),
                   const Divider(height: 1, color: Colors.grey),
                   const SizedBox(height: 20),
@@ -466,17 +504,14 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                     child: _seccionSOAT(),
                   ),
                   const SizedBox(height: 25),
-
-                  const SizedBox(height: 25),
-
-
                   /// =========================
                   /// 🔥 BOTONES
                   /// =========================
+
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-
                       /// 💾 GUARDAR
                       ElevatedButton.icon(
                         onPressed: () => guardarCambios(driverId, placa),
@@ -493,10 +528,12 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
 
                       const SizedBox(width: 10),
 
+
+
                       /// ✅ APROBAR
                       ElevatedButton.icon(
-                        onPressed: _hayErroresSeleccionados()
-                            ? null // 🔥 DESHABILITA
+                        onPressed: (_hayErroresSeleccionados() || !fotosAprobadas)
+                            ? null
                             : () => aprobar(driverId, placa),
                         icon: const Icon(Icons.check_circle, color: Colors.white),
                         label: const Text(
@@ -510,7 +547,6 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 30),
                 ],
               ),
@@ -520,7 +556,6 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
          ),
         );
        },
-
     );
   }
 
@@ -1159,41 +1194,65 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
   }
 
-  /// ❌ RECHAZAR
-  Future<void> rechazar(String driverId, String placa) async {
+  Future<void> rechazarDocumento(
+      String driverId,
+      String placa,
+      String campoFoto,
+      ) async {
 
-    /// 🔥 BASE
-    Map<String, dynamic> updates = {
-      "estado_documentos": "rechazado",
-      "errores": errores,
-    };
+    /// 🔥 MAPEO DE CAMPOS
+    final campoEstado = campoFoto == "foto_tarjeta_propiedad_delantera"
+        ? "27_Tarjeta_Propiedad_Delantera_foto"
+        : "28_Tarjeta_Propiedad_Trasera_foto";
 
-    /// 🔥 SI TIENE ERROR DELANTERA → marcar solo esa
-    if (errores.containsKey("foto_tarjeta_propiedad_delantera") &&
-        (errores["foto_tarjeta_propiedad_delantera"] as List).isNotEmpty) {
+    /// 🔥 ERRORES SOLO DE ESTE CAMPO
+    final erroresCampo = errores[campoFoto] ?? [];
 
-      updates["27_Tarjeta_Propiedad_Delantera_foto"] = "rechazada";
+    if (erroresCampo.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Debes seleccionar al menos un error")),
+      );
+      return;
     }
 
-    /// 🔥 SI TIENE ERROR TRASERA → marcar solo esa
-    if (errores.containsKey("foto_tarjeta_propiedad_trasera") &&
-        (errores["foto_tarjeta_propiedad_trasera"] as List).isNotEmpty) {
-
-      updates["28_Tarjeta_Propiedad_Trasera_foto"] = "rechazada";
-    }
-
+    /// 🔥 UPDATE LIMPIO
     await FirebaseFirestore.instance
         .collection("Drivers")
         .doc(driverId)
         .collection("vehiculos")
         .doc(placa)
-        .update(updates);
+        .update({
+
+      /// 🔴 SOLO ESTE DOCUMENTO
+      campoEstado: "rechazada",
+
+      /// 🔴 SOLO ESTE ERROR
+      "errores.$campoFoto": erroresCampo,
+
+      /// 🔴 ESTADO GENERAL
+      "estado_documentos": "rechazado",
+    });
 
     Navigator.pop(context);
   }
 
+
   /// ✅ APROBAR
   Future<void> aprobar(String driverId, String placa) async {
+
+    // 🔥 VALIDAR FOTOS APROBADAS
+    final fotoDelantera = data["27_Tarjeta_Propiedad_Delantera_foto"];
+    final fotoTrasera = data["28_Tarjeta_Propiedad_Trasera_foto"];
+
+    if (fotoDelantera != "aprobada" || fotoTrasera != "aprobada") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Debes aprobar ambas fotos antes de aprobar el vehículo"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final faltantes = validarCamposVehiculo();
 
@@ -1266,6 +1325,9 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
       /// 🔥 eliminar error solo de esa foto
       "errores.$campoFoto": FieldValue.delete(),
 
+    });
+    setState(() {
+      errores.remove(campoFoto);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(

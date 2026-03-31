@@ -1798,7 +1798,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     );
   }
 
-  void validarAntesDeActivar(BuildContext context) {
+  Future<void> validarAntesDeActivar(BuildContext context) async {
 
     /// 🔥 1. VALIDAR SI YA ESTÁ ACTIVADO
     if (widget.driver.verificacionStatus == "activado") {
@@ -1817,20 +1817,31 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       return;
     }
 
-    /// 🔥 3. VALIDAR VEHÍCULOS
-    final tieneVehiculo = tieneVehiculoAprobado(vehiculos);
+    /// 🔥 3. VALIDAR VEHÍCULOS (REALTIME 🔥)
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(widget.driver.id)
+        .collection("vehiculos")
+        .where("estado_documentos", isEqualTo: "aprobado")
+        .limit(1)
+        .get();
+
+    final tieneVehiculo = snapshot.docs.isNotEmpty;
 
     if (!tieneVehiculo) {
-      _showSnackBar(context, "Debe tener al menos un vehículo aprobado");
-      return;
+      if(context.mounted){
+        _showSnackBar(context, "Debe tener al menos un vehículo aprobado");
+        return;
+      }
     }
 
-    /// ✅ TODO OK → MOSTRAR CONFIRMACIÓN
-    _showConfirmationDialogActivarusuario(
-      context,
-      "¿Está seguro de activar este conductor?",
-      false,
-    );
+   if(context.mounted){
+     _showConfirmationDialogActivarusuario(
+       context,
+       "¿Está seguro de activar este conductor?",
+       false,
+     );
+   }
   }
 
   Widget _buildActionButtonRow(BuildContext context) {
@@ -2528,7 +2539,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
           ),
           const SizedBox(height: 3),
-          Text(value, style: const TextStyle(fontSize: 10)),
+          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
         ],
       );
   }
