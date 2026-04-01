@@ -23,6 +23,8 @@ class DriverProvider with ChangeNotifier {
   List<Driver> get drivers => _drivers;
   int get travelHistoryCount => _travelHistoryCount; // Getter para obtener el valor de travelHistoryCount
 
+
+
   void setLoading(bool loading) {
     _loading = loading;
     notifyListeners();
@@ -136,5 +138,88 @@ class DriverProvider with ChangeNotifier {
       travelHistoryMotoCount = 0;
       travelHistoryCarroCount = 0;
     }
+  }
+
+  Future<void> fetchDriversInicial() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .where("Verificacion_Status", whereIn: ["registrado", "procesando"])
+        .get();
+
+    drivers.clear();
+
+    drivers.addAll(
+      snapshot.docs.map((doc) => Driver.fromJson(doc.data())).toList(),
+    );
+    notifyListeners();
+  }
+
+
+  Future<void> buscarDriver(String query) async {
+    print("🔍 BUSCANDO: $query");
+    if (query.isEmpty) {
+      await fetchDriversInicial();
+      return;
+    }
+
+    /// 🔍 1. Buscar por documento
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .where("03_Numero_Documento", isEqualTo: query)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      drivers.clear();
+      drivers.addAll(
+        snapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
+      );
+      notifyListeners();
+      return;
+    }
+
+    /// 🔍 2. Buscar por celular
+    final snapshotCel = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .where("07_Celular", isEqualTo: query)
+        .get();
+
+    if (snapshotCel.docs.isNotEmpty) {
+      drivers.clear();
+      drivers.addAll(
+        snapshotCel.docs.map((e) => Driver.fromJson(e.data())).toList(),
+      );
+      notifyListeners();
+      return;
+    }
+
+    /// 🔍 3. Buscar por placa
+    final queryFormatted = query.trim().toUpperCase();
+
+    final vehiculosSnapshot = await FirebaseFirestore.instance
+        .collectionGroup("vehiculos")
+        .where("18_Placa", isEqualTo: queryFormatted)
+        .get();
+
+    List<String> driverIds = vehiculosSnapshot.docs
+        .map((doc) => doc["driverId"] as String)
+        .toSet() // evita duplicados
+        .toList();
+
+    if (driverIds.isNotEmpty) {
+      final driversSnapshot = await FirebaseFirestore.instance
+          .collection("Drivers")
+          .where(FieldPath.documentId, whereIn: driverIds)
+          .get();
+
+      drivers.clear();
+      drivers.addAll(
+        driversSnapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
+      );
+    } else {
+      /// 🔥 IMPORTANTE: si no encuentra nada → vuelve a lista inicial
+      await fetchDriversInicial();
+    }
+
+    notifyListeners();
   }
 }

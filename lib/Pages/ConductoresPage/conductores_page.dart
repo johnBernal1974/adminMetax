@@ -22,7 +22,6 @@ class ConductoresPage extends StatefulWidget {
 class _ConductoresPageState extends State<ConductoresPage> {
   TextEditingController searchController = TextEditingController();
   String searchQuery = "";
-  String filterStatus = "";
   int totalDrivers = 0;
   Operador? operador;
   Driver? driver;
@@ -33,7 +32,15 @@ class _ConductoresPageState extends State<ConductoresPage> {
   String filterVigencia = ""; // "", "vencido", "porVencer", "sinFecha", "vigente"
 
 
+  @override
+  void initState() {
+    super.initState();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DriverProvider>(context, listen: false)
+          .fetchDriversInicial();
+    });
+  }
 
 
   @override
@@ -71,116 +78,20 @@ class _ConductoresPageState extends State<ConductoresPage> {
     }
 
     List filteredConductores = conductores.where((driver) {
-      bool matchesFilter = true;
-      if (filterStatus.isNotEmpty) {
-        switch (filterStatus) {
-          case 'registrado':
-            matchesFilter = driver.verificacionStatus == 'registrado';
-            break;
-          case 'foto_tomada':
-            matchesFilter = driver.verificacionStatus == 'foto_tomada';
-            break;
-          case 'Procesando':
-            matchesFilter = driver.verificacionStatus == 'Procesando';
-            break;
-          case 'corregida':
-            matchesFilter = driver.verificacionStatus == 'corregida';
-            break;
-          case 'rechazada':
-            matchesFilter = driver.verificacionStatus == 'rechazada';
-            break;
-          case 'activado':
-            matchesFilter = driver.verificacionStatus == 'activado';
-            break;
-          case 'bloqueado':
-            matchesFilter = driver.verificacionStatus == "bloqueado";
-            break;
-          case 'bloqueo_AJ':
-            matchesFilter = driver.verificacionStatus == "bloqueo_AJ";
-            break;
-
-          case 'suspendido':
-            matchesFilter = driver.the41SuspendidoPorCancelaciones == true;
-            break;
-        }
-      }
-
-      if (filterVigencia.isNotEmpty) {
-        matchesFilter = matchesFilter && (vigenciaEstadoTexto(driver) == filterVigencia);
-      }
-
       if (driver.rol.isNotEmpty) {
-        matchesFilter = matchesFilter && driver.rol == "carro";
+        return driver.rol == "carro";
       }
-      return matchesFilter &&
-          (driver.the01Nombres.toLowerCase().contains(
-              searchQuery.toLowerCase()) ||
-              driver.the02Apellidos.toLowerCase().contains(
-                  searchQuery.toLowerCase()) ||
-              driver.the03NumeroDocumento.toLowerCase().contains(
-                  searchQuery.toLowerCase()) ||
-              driver.the06Email.toLowerCase().contains(
-                  searchQuery.toLowerCase()) ||
-              driver.the07Celular.toLowerCase().contains(
-                  searchQuery.toLowerCase()));
+      return true;
     }).toList();
     totalDrivers = filteredConductores.length;
 
 
-
-    int countByStatus(String status) {
-      return conductores.where((driver) {
-        bool matchesStatus = false;
-        switch (status) {
-          case 'registrado':
-            matchesStatus = driver.verificacionStatus == 'registrado';
-            break;
-          case 'foto_tomada':
-            matchesStatus = driver.verificacionStatus == 'foto_tomada';
-            break;
-          case 'Procesando':
-            matchesStatus = driver.verificacionStatus == 'Procesando';
-            break;
-
-          case 'corregida':
-            matchesStatus = driver.verificacionStatus == 'corregida';
-            break;
-          case 'rechazada':
-            matchesStatus = driver.verificacionStatus == 'rechazada';
-            break;
-          case 'activado':
-            matchesStatus = driver.verificacionStatus == 'activado';
-            break;
-          case 'bloqueado':
-            matchesStatus = driver.verificacionStatus == 'bloqueado';
-            break;
-          case 'bloqueo_AJ':
-            matchesStatus = driver.verificacionStatus == 'bloqueo_AJ';
-            break;
-
-          case 'Suspendido':
-            matchesStatus = driver.the41SuspendidoPorCancelaciones == true;
-            break;
-        }
-
-        bool matchesRole = true;
-        if (status.isNotEmpty) {
-          if (driver.rol.isNotEmpty) {
-            matchesRole = driver.rol == "carro";
-          }
-        }
-
-        return matchesStatus && matchesRole;
-      }).length;
-    }
-
     return MainLayout(
       content: Column(
         children: [
-          SizedBox(height: MediaQuery
-              .of(context)
-              .padding
-              .top), // Espacio para la barra de estado en la parte superior
+          SizedBox(
+            height: MediaQuery.of(context).padding.top,
+          ),
           Expanded(
             child: SingleChildScrollView(
               child: Container(
@@ -194,12 +105,18 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   builder: (context, constraints) {
                     if (constraints.maxWidth <= 600) {
                       return _buildMobileLayout(
-                          context, driverProvider, filteredConductores,
-                          countByStatus, getStatusColor as Color Function(dynamic p1));
+                        context,
+                        driverProvider,
+                        filteredConductores,
+                        getStatusColor,
+                      );
                     } else {
                       return _buildDesktopLayout(
-                          context, driverProvider, filteredConductores,
-                          countByStatus, getStatusColor as Color Function(dynamic p1));
+                        context,
+                        driverProvider,
+                        filteredConductores,
+                        getStatusColor,
+                      );
                     }
                   },
                 ),
@@ -212,121 +129,16 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  Widget _buildFilterVigenciaButtons(List conductores) {
-    bool isSelected(String v) => filterVigencia == v;
-
-    ButtonStyle style(Color c, bool selected) {
-      return ElevatedButton.styleFrom(
-        backgroundColor: selected ? c : c,
-        elevation: selected ? 6 : 1,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      );
-    }
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        ElevatedButton(
-          onPressed: () => setState(() => filterVigencia = "vencido"),
-          style: style(Colors.red, isSelected("vencido")),
-          child: Text("Vencidos (${countByVigenciaFiltrada(conductores, "vencido")})", style: const TextStyle(color: Colors.white)),
-
-        ),
-        ElevatedButton(
-          onPressed: () => setState(() => filterVigencia = "porVencer"),
-          style: style(Colors.orange, isSelected("porVencer")),
-          child: Text("Por vencer (${countByVigenciaFiltrada(conductores, "porVencer")})", style: const TextStyle(color: Colors.white)),
-
-        ),
-        ElevatedButton(
-          onPressed: () => setState(() => filterVigencia = "vigente"),
-          style: style(Colors.green, isSelected("vigente")),
-          child: Text("Vigentes (${countByVigenciaFiltrada(conductores, "vigente")})", style: const TextStyle(color: Colors.white)),
-        ),
-        ElevatedButton(
-          onPressed: () => setState(() => filterVigencia = "sinFecha"),
-          style: style(Colors.grey, isSelected("sinFecha")),
-          child: Text("Sin fecha (${countByVigenciaFiltrada(conductores, "sinFecha")})", style: const TextStyle(color: Colors.white)),
-        ),
-        IconButton(
-          tooltip: "Reset vigencia",
-          onPressed: () => setState(() => filterVigencia = ""),
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    );
-  }
-
-  int countByVigenciaFiltrada(List conductores, String vig) {
-    return conductores.where((driver) {
-      bool matches = true;
-
-      // ✅ status
-      if (filterStatus.isNotEmpty) {
-        switch (filterStatus) {
-          case 'registrado':
-            matches = driver.verificacionStatus == 'registrado';
-            break;
-          case 'foto_tomada':
-            matches = driver.verificacionStatus == 'foto_tomada';
-            break;
-          case 'Procesando':
-            matches = driver.verificacionStatus == 'Procesando';
-            break;
-          case 'corregida':
-            matches = driver.verificacionStatus == 'corregida';
-            break;
-          case 'rechazada':
-            matches = driver.verificacionStatus == 'rechazada';
-            break;
-          case 'activado':
-            matches = driver.verificacionStatus == 'activado';
-            break;
-          case 'bloqueado':
-            matches = driver.verificacionStatus == 'bloqueado';
-            break;
-          case 'bloqueo_AJ':
-            matches = driver.verificacionStatus == 'bloqueo_AJ';
-            break;
-          case 'suspendido':
-            matches = driver.the41SuspendidoPorCancelaciones == true;
-            break;
-        }
-      }
-
-      // ✅ rol carro
-      if (driver.rol.isNotEmpty) {
-        matches = matches && driver.rol == "carro";
-      }
-
-      // ✅ búsqueda
-      final q = searchQuery.toLowerCase();
-      if (q.isNotEmpty) {
-        matches = matches &&
-            (driver.the01Nombres.toLowerCase().contains(q) ||
-                driver.the02Apellidos.toLowerCase().contains(q) ||
-                driver.the03NumeroDocumento.toLowerCase().contains(q) ||
-                driver.the06Email.toLowerCase().contains(q) ||
-                driver.the18Placa.toLowerCase().contains(q) ||
-                driver.the07Celular.toLowerCase().contains(q));
-      }
-
-      // ✅ vigencia
-      matches = matches && (vigenciaEstadoTexto(driver) == vig);
-
-      return matches;
-    }).length;
-  }
 
 
 
 
-
-  Widget _buildMobileLayout(BuildContext context, DriverProvider driverProvider,
-      List filteredConductores, int Function(String) countByStatus,
-      Color Function(dynamic) getStatusColor) {
+  Widget _buildMobileLayout(
+      BuildContext context,
+      DriverProvider driverProvider,
+      List filteredConductores,
+      Color Function(dynamic) getStatusColor
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -351,13 +163,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const Divider(color: Colors.grey, height: 20, thickness: 2),
         _buildSearchField(),
         const SizedBox(height: 30),
-        _buildFilterButtons(true, countByStatus),
         const SizedBox(height: 10),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
         const Text("Filtrado vigencia documentos", style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        _buildFilterVigenciaButtons(driverProvider.drivers),
         const SizedBox(height: 10),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
@@ -367,10 +176,12 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
 
-  Widget _buildDesktopLayout(BuildContext context,
-      DriverProvider driverProvider, List filteredConductores,
-      int Function(String) countByStatus,
-      Color Function(dynamic) getStatusColor) {
+  Widget _buildDesktopLayout(
+      BuildContext context,
+      DriverProvider driverProvider,
+      List filteredConductores,
+      Color Function(dynamic) getStatusColor
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,16 +209,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const Divider(color: Colors.grey, height: 20, thickness: 2),
         _buildSearchField(),
         const SizedBox(height: 30),
-        const Text("filtrado principal", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        const SizedBox(height: 10),
-        _buildFilterButtons(false, countByStatus),
-        const SizedBox(height: 10),
-        const Divider(height: 1, color: grisMedio),
-        const SizedBox(height: 10),
-        const Text("filtrado vigencia de documentos", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        const SizedBox(height: 10),
-        _buildFilterVigenciaButtons(driverProvider.drivers),
-        const SizedBox(height: 10),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
 
@@ -423,251 +224,25 @@ class _ConductoresPageState extends State<ConductoresPage> {
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
-          labelText: 'Buscar conductor',
+          labelText: 'Buscar por cédula o placa',
           suffixIcon: IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              setState(() {
-                searchQuery = searchController.text.trim();
-              });
+              final query = searchController.text.trim();
+
+              Provider.of<DriverProvider>(context, listen: false)
+                  .buscarDriver(query);
             },
           ),
         ),
-        onChanged: (value) {
-          setState(() {
-            searchQuery = value.trim();
-          });
+
+        /// 🔥 SOLO ENTER
+        onSubmitted: (value) {
+          Provider.of<DriverProvider>(context, listen: false)
+              .buscarDriver(value.trim());
         },
       ),
     );
-  }
-
-  Widget _buildFilterButtons(bool isMobile,
-      int Function(String) countByStatus) {
-    return Wrap(
-      spacing: 10.0,
-      runSpacing: 10.0,
-      children: [
-        if (isMobile)
-          ..._buildMobileFilterButtons(countByStatus)
-        else
-          ..._buildDesktopFilterButtons(countByStatus),
-      ],
-    );
-  }
-
-  List<Widget> _buildMobileFilterButtons(int Function(String) countByStatus) {
-    return [
-      IconButton(
-        icon: Icon(Icons.account_circle, color: Colors.blueGrey),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'registrado';
-          });
-        },
-        tooltip: 'Registrado (${countByStatus('registrado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.photo_camera, color: Colors.amber),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'foto_tomada';
-          });
-        },
-        tooltip: 'Doc. Faltantes (${countByStatus('foto_tomada')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.pending, color: Colors.blueAccent),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'Procesando';
-          });
-        },
-        tooltip: 'Procesando (${countByStatus('Procesando')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.check_circle, color: Colors.purple),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'corregida';
-          });
-        },
-        tooltip: 'Corregida (${countByStatus('corregida')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.watch_later, color: Colors.brown.shade900),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'rechazada';
-          });
-        },
-        tooltip: 'En espera (${countByStatus('rechazada')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.verified, color: Colors.green),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'activado';
-          });
-        },
-        tooltip: 'Activado (${countByStatus('activado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.block, color: Colors.red.shade900),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueado';
-          });
-        },
-        tooltip: 'Bloqueado (${countByStatus('bloqueado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.back_hand_rounded, color: Colors.deepOrange),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueo_AJ';
-          });
-        },
-        tooltip: 'BloqueoAJ (${countByStatus('bloqueo_AJ')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.pause_circle_filled, color: Colors.black),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'suspendido';
-          });
-        },
-        tooltip: 'Suspendido (${countByStatus('suspendido')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.refresh),
-        onPressed: () {
-          setState(() {
-            filterStatus = '';
-            searchQuery = '';
-          });
-        },
-        tooltip: 'Reset',
-      ),
-    ];
-  }
-
-  List<Widget> _buildDesktopFilterButtons(int Function(String) countByStatus) {
-    return [
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.black, backgroundColor: Colors.blueGrey,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'registrado';
-          });
-        },
-        child: Text('Registrado (${countByStatus('registrado')})',
-            style: TextStyle(color: blanco)),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.amber,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'foto_tomada';
-          });
-        },
-        child: Text('Doc. Faltantes (${countByStatus('foto_tomada')})',
-            style: TextStyle(color: negro)),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.blueAccent,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'Procesando';
-          });
-        },
-        child: Text('Procesando (${countByStatus('Procesando')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.purple,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'corregida';
-          });
-        },
-        child: Text('Corregida (${countByStatus('corregida')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.brown.shade900,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'rechazada';
-          });
-        },
-        child: Text('En espera (${countByStatus('rechazada')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.green,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'activado';
-          });
-        },
-        child: Text('Activado (${countByStatus('activado')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.red.shade900,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueado';
-          });
-        },
-        child: Text('Bloqueado (${countByStatus('bloqueado')})'),
-      ),
-
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.deepOrange,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueo_AJ';
-          });
-        },
-        child: Text('Bloqueo_AJ (${countByStatus('bloqueo_AJ')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          primary: Colors.black,
-          onPrimary: Colors.white,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'suspendido';
-          });
-        },
-        child: Text('Suspendido (${countByStatus('suspendido')})'),
-      ),
-      IconButton(
-        icon: const Icon(Icons.refresh),
-        onPressed: () {
-          setState(() {
-            filterStatus = '';
-            searchQuery = '';
-          });
-        },
-        tooltip: 'Reset',
-      ),
-    ];
   }
 
   Widget _buildDriverTable(List filteredConductores, Color Function(dynamic) getStatusColor) {
