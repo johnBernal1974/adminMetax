@@ -28,10 +28,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
 
-
-  String filterVigencia = ""; // "", "vencido", "porVencer", "sinFecha", "vigente"
-
-
   @override
   void initState() {
     super.initState();
@@ -40,6 +36,35 @@ class _ConductoresPageState extends State<ConductoresPage> {
       Provider.of<DriverProvider>(context, listen: false)
           .fetchDriversInicial();
     });
+  }
+
+  int getPrioridad(Driver driver) {
+    if (tieneCorregida(driver)) return 0; // 🔥 MÁS ALTO
+    if (tieneRechazada(driver)) return 1;
+    return 2;
+  }
+
+  bool tienePendiente(Driver driver) {
+    return (driver.the29FotoPerfil ?? "") == "corregida" ||
+        (driver.the29FotoPerfil ?? "") == "rechazada" ||
+
+        (driver.the25CedulaDelanteraFoto ?? "") == "corregida" ||
+        (driver.the25CedulaDelanteraFoto ?? "") == "rechazada" ||
+
+        (driver.the26CedulaTraseraFoto ?? "") == "corregida" ||
+        (driver.the26CedulaTraseraFoto ?? "") == "rechazada";
+  }
+
+  bool tieneCorregida(Driver driver) {
+    return (driver.the29FotoPerfil ?? "") == "corregida" ||
+        (driver.the25CedulaDelanteraFoto ?? "") == "corregida" ||
+        (driver.the26CedulaTraseraFoto ?? "") == "corregida";
+  }
+
+  bool tieneRechazada(Driver driver) {
+    return (driver.the29FotoPerfil ?? "") == "rechazada" ||
+        (driver.the25CedulaDelanteraFoto ?? "") == "rechazada" ||
+        (driver.the26CedulaTraseraFoto ?? "") == "rechazada";
   }
 
 
@@ -53,27 +78,32 @@ class _ConductoresPageState extends State<ConductoresPage> {
         .width <= 600;
 
     Color getStatusColor(driver) {
-      if (driver?.verificacionStatus == "registrado") {
-        return Colors.blueGrey;
-      } else if (driver?.verificacionStatus == "foto_tomada") {
-        return Colors.amber;
-      } else if (driver?.the29FotoPerfil == 'corregida' &&
-          driver?.verificacionStatus == 'Procesando') {
+
+      /// 🔥 PRIORIDAD 1: CORREGIDA
+      if (tieneCorregida(driver)) {
         return Colors.purple;
-      } else if (driver?.verificacionStatus == 'Procesando') {
-        return Colors.blueAccent;
-      } else if (driver?.verificacionStatus == 'activado') {
-        return Colors.green;
-      } else if (driver?.verificacionStatus == 'bloqueado') {
-        return Colors.red.shade900;
-      } else if (driver?.verificacionStatus == 'bloqueo_AJ') {
+      }
+
+      /// 🔥 PRIORIDAD 2: RECHAZADA
+      if (tieneRechazada(driver)) {
         return Colors.deepOrange;
-      } else if (driver?.verificacionStatus == 'rechazada') {
-        return Colors.brown.shade900;
-      } else if (driver?.verificacionStatus == 'suspendido') {
-        return Colors.black;
-      } else {
-        return Colors.grey;
+      }
+
+      switch (driver?.verificacionStatus) {
+        case "registrado":
+          return Colors.blueGrey;
+
+        case "procesando":
+          return Colors.blueAccent;
+
+        case "activado":
+          return Colors.green;
+
+        case "bloqueado":
+          return Colors.red.shade900;
+
+        default:
+          return Colors.grey;
       }
     }
 
@@ -83,6 +113,17 @@ class _ConductoresPageState extends State<ConductoresPage> {
       }
       return true;
     }).toList();
+
+    filteredConductores = List.from(filteredConductores);
+
+    filteredConductores.sort((a, b) {
+      int prioridadA = getPrioridad(a);
+      int prioridadB = getPrioridad(b);
+
+      return prioridadA.compareTo(prioridadB);
+    });
+
+
     totalDrivers = filteredConductores.length;
 
 
@@ -130,9 +171,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
 
-
-
-
   Widget _buildMobileLayout(
       BuildContext context,
       DriverProvider driverProvider,
@@ -155,7 +193,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   .of(context)
                   .primaryColor,
               onPressed: () {
-                driverProvider.fetchDrivers();
+                driverProvider.fetchDriversInicial();
               },
             ),
           ],
@@ -170,7 +208,45 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const SizedBox(height: 10),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
-        _buildDriverTable(filteredConductores, getStatusColor),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// 🔥 PRIORIDAD
+            if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
+              const SizedBox(height: 10),
+              const Text(
+                "🚨 Prioridad (requieren atención)",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              _buildDriverTable(
+                filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
+                getStatusColor,
+              ),
+            ],
+
+            /// 🔹 NORMALES
+            if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
+              const SizedBox(height: 20),
+              const Text(
+                "Conductores",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              _buildDriverTable(
+                filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
+                getStatusColor,
+              ),
+            ],
+          ],
+        )
       ],
     );
   }
@@ -194,7 +270,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
             const SizedBox(width: 100),
             ElevatedButton(
               onPressed: () {
-                driverProvider.fetchDrivers();
+                driverProvider.fetchDriversInicial();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme
@@ -213,7 +289,45 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const SizedBox(height: 10),
 
         const SizedBox(height: 10),
-        _buildDriverTable(filteredConductores, getStatusColor),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// 🔥 PRIORIDAD
+            if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
+              const SizedBox(height: 10),
+              const Text(
+                "🚨 Prioridad (requieren atención)",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              _buildDriverTable(
+                filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
+                getStatusColor,
+              ),
+            ],
+
+            /// 🔹 NORMALES
+            if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
+              const SizedBox(height: 20),
+              const Text(
+                "Conductores",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              _buildDriverTable(
+                filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
+                getStatusColor,
+              ),
+            ],
+          ],
+        )
       ],
     );
   }
@@ -241,6 +355,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
           Provider.of<DriverProvider>(context, listen: false)
               .buscarDriver(value.trim());
         },
+
+        /// 🔥 SOLO PARA DETECTAR VACÍO (no para buscar)
+        onChanged: (value) {
+          if (value.trim().isEmpty) {
+            Provider.of<DriverProvider>(context, listen: false)
+                .fetchDriversInicial();
+          }
+        },
       ),
     );
   }
@@ -263,12 +385,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
             ),
             DataColumn(
               label: Text(
-                'Imagen',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
                 'Nombre',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -285,12 +401,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Correo',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
 
             DataColumn(
               label: Text(
@@ -298,14 +408,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            DataColumn(
-              label: Center(
-                child: Text(
-                  'Vigencia documentos',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+
             DataColumn(
               label: Text(
                 'Acción',
@@ -335,27 +438,63 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   ),
                 ),
                 DataCell(
-                  ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: driver.image,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Icon(Icons.error),
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+
+                      /// 👤 NOMBRE
+                      Text(
+                        driver.the01Nombres ?? "",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+
+                      /// 🏷️ ETIQUETA
+                      if (tieneCorregida(driver))
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            "Corregido",
+                            style: TextStyle(
+                              color: Colors.purple,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                      if (!tieneCorregida(driver) && tieneRechazada(driver))
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            "Rechazado",
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                DataCell(Text(driver.the01Nombres ?? "Nombre no disponible", style: TextStyle(color: Colors.black))),
                 DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
                 DataCell(Text(driver.the03NumeroDocumento ?? "Documento no disponible")),
-                DataCell(Text(driver.the06Email ?? "Email no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
-                DataCell(
-                  Center(
-                    child: vigenciaCell(driver),
-                  ),
-                ),
+
                 DataCell(
                   IconButton(
                     icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
@@ -451,21 +590,7 @@ _VigEstado _vigenciaGlobalDriver(driver) {
   return _VigEstado.sinFecha;
 }
 
-Widget vigenciaCell(driver) {
-  return Tooltip(
-    message: "Pendiente migración",
-    child: Center(
-      child: Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(
-          color: Colors.grey,
-          shape: BoxShape.circle,
-        ),
-      ),
-    ),
-  );
-}
+
 
 String vigenciaEstadoTexto(driver) {
   final estado = _vigenciaGlobalDriver(driver);

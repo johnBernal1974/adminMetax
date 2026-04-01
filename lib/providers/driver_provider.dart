@@ -141,26 +141,51 @@ class DriverProvider with ChangeNotifier {
   }
 
   Future<void> fetchDriversInicial() async {
-    final snapshot = await FirebaseFirestore.instance
+
+    /// 1️⃣ TRAER REGISTRADOS + PROCESANDO
+    final snapshotBase = await FirebaseFirestore.instance
         .collection("Drivers")
         .where("Verificacion_Status", whereIn: ["registrado", "procesando"])
         .get();
 
-    drivers.clear();
+    /// 2️⃣ TRAER ACTIVADOS (POCOS IDEALMENTE)
+    final snapshotActivados = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .where("Verificacion_Status", isEqualTo: "activado")
+        .get();
 
+    /// 🔥 FILTRAR SOLO LOS QUE TIENEN CORREGIDA
+    final activadosConCorregida = snapshotActivados.docs.where((doc) {
+      final data = doc.data();
+
+      return data["29_Foto_perfil"] == "corregida" ||
+          data["25_Cedula_Delantera_foto"] == "corregida" ||
+          data["26_Cedula_Trasera_foto"] == "corregida";
+    }).toList();
+
+    /// 🔥 UNIR TODO
+    final allDocs = [
+      ...snapshotBase.docs,
+      ...activadosConCorregida,
+    ];
+
+    drivers.clear();
     drivers.addAll(
-      snapshot.docs.map((doc) => Driver.fromJson(doc.data())).toList(),
+      allDocs.map((e) => Driver.fromJson(e.data())).toList(),
     );
+
     notifyListeners();
   }
 
-
   Future<void> buscarDriver(String query) async {
     print("🔍 BUSCANDO: $query");
+
     if (query.isEmpty) {
       await fetchDriversInicial();
       return;
     }
+
+    final queryFormatted = query.trim().toUpperCase();
 
     /// 🔍 1. Buscar por documento
     final snapshot = await FirebaseFirestore.instance
@@ -193,8 +218,6 @@ class DriverProvider with ChangeNotifier {
     }
 
     /// 🔍 3. Buscar por placa
-    final queryFormatted = query.trim().toUpperCase();
-
     final vehiculosSnapshot = await FirebaseFirestore.instance
         .collectionGroup("vehiculos")
         .where("18_Placa", isEqualTo: queryFormatted)
@@ -202,7 +225,7 @@ class DriverProvider with ChangeNotifier {
 
     List<String> driverIds = vehiculosSnapshot.docs
         .map((doc) => doc["driverId"] as String)
-        .toSet() // evita duplicados
+        .toSet()
         .toList();
 
     if (driverIds.isNotEmpty) {
@@ -216,7 +239,6 @@ class DriverProvider with ChangeNotifier {
         driversSnapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
       );
     } else {
-      /// 🔥 IMPORTANTE: si no encuentra nada → vuelve a lista inicial
       await fetchDriversInicial();
     }
 
