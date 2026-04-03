@@ -10,6 +10,7 @@ class RoutePermissions {
     'conductores_page': {'operadorFull', 'operadorSeguimientoMap'},
 
     'historial_viajes_page': {'operadorFull'},
+    'detalle_vehiculo_page': {'operadorFull'},
 
     // mapa
     'map_drivers_admin_page': {'operadorFull', 'operadorSeguimientoMap'},

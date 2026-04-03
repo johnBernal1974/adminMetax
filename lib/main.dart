@@ -1,4 +1,5 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -76,6 +77,7 @@ class MyApp extends StatelessWidget {
   Route<dynamic> _guardedRoute(Widget page, RouteSettings settings) {
     final raw = settings.name ?? '';
     final routeName = raw.startsWith('/') ? raw.substring(1) : raw;
+
     return MaterialPageRoute(
       settings: settings,
       builder: (_) {
@@ -87,10 +89,19 @@ class MyApp extends StatelessWidget {
               return const Splash();
             }
 
-            if (snap.data != true) {
-              return const SinPermisosPage(); // 🔥 mejor UX
+            final user = FirebaseAuth.instance.currentUser;
+
+            /// 🔴 NO LOGUEADO
+            if (user == null) {
+              return LoginPage();
             }
 
+            /// 🔴 SIN PERMISOS
+            if (snap.data != true) {
+              return const SinPermisosPage();
+            }
+
+            /// 🟢 ACCESO PERMITIDO
             return page;
           },
         );

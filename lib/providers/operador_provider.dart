@@ -15,9 +15,7 @@ class OperadorProvider with ChangeNotifier {
 
   OperadorProvider() {
     _ref = FirebaseFirestore.instance.collection('Operadores');
-
-    // ❌ Ya NO cargues todos los operadores aquí
-    // fetchOperadores();
+    fetchOperadorActual();
   }
 
   bool get isLoading => _loading;

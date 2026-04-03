@@ -37,7 +37,7 @@ class _SideBarState extends State<SideBar> {
     final active = op.activoActual;
 
     // ✅ cuando aún no ha cargado rol o está inactivo
-    final restricted = !active || role.isEmpty;
+    final restricted = role.isEmpty;
 
     return Drawer(
       elevation: 1,
@@ -115,7 +115,7 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.emoji_people,
                   press: () => _go('usuarios_page'),
                 ),
-              if (_canSee(role, 'usuarios_page'))
+              if (_canSee(role, 'vehiculos_page'))
                 DrawerListTitle(
                   title: "Vehículos",
                   icon: Icons.directions_car,

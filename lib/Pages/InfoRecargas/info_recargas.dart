@@ -14,12 +14,19 @@ class AdminTransaccionesPage extends StatefulWidget {
 
 class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  Map<String, String> _userNames = {};
-  Map<String, bool> _expandedCards = {};
-  Map<String, String> _userPlates = {};
+
+  DateTime? fechaInicio;
+  DateTime? fechaFin;
+
+  final TextEditingController anioController = TextEditingController();
+  final TextEditingController mesController = TextEditingController();
+  final TextEditingController diaController = TextEditingController();
+
+  String filtroRapidoActivo = "";
 
 
   Widget build(BuildContext context) {
+
     return MainLayout(
       pageTitle: "Transacciones",
       content: Center(
@@ -27,83 +34,283 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
           width: double.infinity,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection("recargas")
-                  .orderBy("createdAt", descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No hay transacciones registradas."));
-                }
 
-                List<QueryDocumentSnapshot> transacciones = snapshot.data!.docs;
-
-                // Agrupar por semana
-                Map<String, List<QueryDocumentSnapshot>> transaccionesPorSemana = {};
-                Map<String, int> totalPorSemana = {};
-                int totalGlobal = 0;
-
-                for (var transaction in transacciones) {
-                  var fecha = (transaction["createdAt"] as Timestamp).toDate();
-
-                  // 🔥 Obtener el inicio y fin de la semana (lunes - domingo)
-                  DateTime inicioSemana = fecha.subtract(Duration(days: fecha.weekday - 1)); // Lunes
-                  DateTime finSemana = inicioSemana.add(const Duration(days: 6)); // Domingo
-
-                  // 🔥 Formatear para mostrar "Semana entre el 10 y el 16 de marzo de 2025"
-                  String semana = "Semana entre el ${DateFormat("d", 'es_CO').format(inicioSemana)} "
-                      "y el ${DateFormat("d 'de' MMMM 'de' yyyy", 'es_CO').format(finSemana)}";
-
-                  transaccionesPorSemana.putIfAbsent(semana, () => []);
-                  transaccionesPorSemana[semana]!.add(transaction);
-
-                  // Solo sumar las transacciones aprobadas al total semanal y global
-                  if (transaction["status"] == "APPROVED") {
-                    totalPorSemana[semana] = (totalPorSemana[semana] ?? 0) + (transaction["amount"] as num).toInt();
-                    totalGlobal += (transaction["amount"] as num).toInt();
-                  }
-                }
-
-                // Detectar si es móvil o PC
-                bool esMovil = MediaQuery.of(context).size.width < 800;
-
-                return Column(
+            child: Column(
+              children: [
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: gris, width: 3)
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            "Valor Total de Transacciones (Aprobadas)",
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+
+                    /// 🔵 HOY
+                    ElevatedButton(
+                      style: estiloBoton("hoy"),
+                      onPressed: () {
+                        final now = DateTime.now();
+
+                        setState(() {
+                          filtroRapidoActivo = "hoy";
+
+                          fechaInicio = DateTime(now.year, now.month, now.day);
+                          fechaFin = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+                          /// 🔥 limpiar inputs
+                          anioController.clear();
+                          mesController.clear();
+                          diaController.clear();
+                        });
+                      },
+                      child: const Text("Hoy"),
+                    ),
+
+                    /// 🟣 MES
+                    ElevatedButton(
+                      style: estiloBoton("mes"),
+                      onPressed: () {
+                        final now = DateTime.now();
+
+                        setState(() {
+                          filtroRapidoActivo = "mes";
+
+                          fechaInicio = DateTime(now.year, now.month, 1);
+                          fechaFin = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+                          anioController.clear();
+                          mesController.clear();
+                          diaController.clear();
+                        });
+                      },
+                      child: const Text("Este mes"),
+                    ),
+
+                    /// 🟢 AÑO
+                    ElevatedButton(
+                      style: estiloBoton("anio"),
+                      onPressed: () {
+                        final now = DateTime.now();
+
+                        setState(() {
+                          filtroRapidoActivo = "anio";
+
+                          fechaInicio = DateTime(now.year, 1, 1);
+                          fechaFin = DateTime(now.year, 12, 31, 23, 59, 59);
+
+                          anioController.clear();
+                          mesController.clear();
+                          diaController.clear();
+                        });
+                      },
+                      child: const Text("Este año"),
+                    ),
+
+                    /// ⚪ TODOS
+                    ElevatedButton(
+                      style: estiloBoton("todos"),
+                      onPressed: () {
+                        setState(() {
+                          filtroRapidoActivo = "todos";
+
+                          fechaInicio = null;
+                          fechaFin = null;
+
+                          anioController.clear();
+                          mesController.clear();
+                          diaController.clear();
+                        });
+                      },
+                      child: const Text("Todos"),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+
+                    /// 📅 AÑO
+                    SizedBox(
+                      width: 90,
+                      child: TextField(
+                        controller: anioController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Año",
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
                           ),
-                          Text(
-                            "\$${NumberFormat("#,###", "es_CO").format(totalGlobal)}",
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
                           ),
-                        ],
+                        ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    /// 📅 MES
+                    SizedBox(
+                      width: 70,
+                      child: TextField(
+                        controller: mesController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Mes",
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ),
 
-                    esMovil
-                        ? _buildMobileView(transaccionesPorSemana, totalPorSemana)
-                        : _buildDesktopView(transaccionesPorSemana, totalPorSemana),
+                    /// 📅 DÍA
+                    SizedBox(
+                      width: 70,
+                      child: TextField(
+                        controller: diaController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Día",
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    /// 🔍 BUSCAR
+                    ElevatedButton(
+                      onPressed: () {
+                        final anio = int.tryParse(anioController.text);
+                        final mes = int.tryParse(mesController.text);
+                        final dia = int.tryParse(diaController.text);
+
+                        if (anio != null && mes == null && dia == null) {
+                          fechaInicio = DateTime(anio, 1, 1);
+                          fechaFin = DateTime(anio, 12, 31, 23, 59, 59);
+                        } else if (anio != null && mes != null && dia == null) {
+                          fechaInicio = DateTime(anio, mes, 1);
+                          fechaFin = DateTime(anio, mes + 1, 0, 23, 59, 59);
+                        } else if (anio != null && mes != null && dia != null) {
+                          fechaInicio = DateTime(anio, mes, dia);
+                          fechaFin = DateTime(anio, mes, dia, 23, 59, 59);
+                        }
+
+                        setState(() {
+                          /// 🔥 DESACTIVA BOTONES
+                          filtroRapidoActivo = "";
+                        });
+                      },
+                      child: const Text("Buscar"),
+                    ),
                   ],
-                );
-              },
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _firestore
+                        .collection("recargas")
+                        .orderBy("createdAt", descending: true)
+                        .where("createdAt", isGreaterThanOrEqualTo: fechaInicio ?? DateTime(2000))
+                        .where("createdAt", isLessThanOrEqualTo: fechaFin ?? DateTime.now())
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("No hay transacciones registradas."));
+                      }
+                  
+                      List<QueryDocumentSnapshot> transacciones = snapshot.data!.docs;
+                  
+                      // Agrupar por semana
+                      Map<String, List<QueryDocumentSnapshot>> transaccionesPorSemana = {};
+                      Map<String, int> totalPorSemana = {};
+                      int totalGlobal = 0;
+                  
+                      for (var transaction in transacciones) {
+                        var fecha = (transaction["createdAt"] as Timestamp).toDate();
+                  
+                        // 🔥 Obtener el inicio y fin de la semana (lunes - domingo)
+                        DateTime inicioSemana = fecha.subtract(Duration(days: fecha.weekday - 1)); // Lunes
+                        DateTime finSemana = inicioSemana.add(const Duration(days: 6)); // Domingo
+                  
+                        // 🔥 Formatear para mostrar "Semana entre el 10 y el 16 de marzo de 2025"
+                        String semana = "Semana entre el ${DateFormat("d", 'es_CO').format(inicioSemana)} "
+                            "y el ${DateFormat("d 'de' MMMM 'de' yyyy", 'es_CO').format(finSemana)}";
+                  
+                        transaccionesPorSemana.putIfAbsent(semana, () => []);
+                        transaccionesPorSemana[semana]!.add(transaction);
+                  
+                        // Solo sumar las transacciones aprobadas al total semanal y global
+                        if (transaction["status"] == "APPROVED") {
+                          totalPorSemana[semana] = (totalPorSemana[semana] ?? 0) + (transaction["amount"] as num).toInt();
+                          totalGlobal += (transaction["amount"] as num).toInt();
+                        }
+                      }
+                  
+                      // Detectar si es móvil o PC
+                      bool esMovil = MediaQuery.of(context).size.width < 800;
+                  
+                      return Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: gris, width: 3)
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Valor Total de Transacciones (Aprobadas)",
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                                ),
+                                Text(
+                                  "\$${NumberFormat("#,###", "es_CO").format(totalGlobal)}",
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
+                                ),
+                              ],
+                            ),
+                          ),
+                  
+                          const SizedBox(height: 20),
+                  
+                          esMovil
+                              ? _buildMobileView(transaccionesPorSemana, totalPorSemana)
+                              : _buildDesktopView(transaccionesPorSemana, totalPorSemana),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  ButtonStyle estiloBoton(String tipo) {
+    final isActive = filtroRapidoActivo == tipo;
+
+    return ElevatedButton.styleFrom(
+      backgroundColor: isActive ? Colors.deepPurple : Colors.grey[300],
+      foregroundColor: isActive ? Colors.white : Colors.black,
+      elevation: isActive ? 6 : 1,
+      padding: EdgeInsets.symmetric(
+        horizontal: isActive ? 18 : 14,
+        vertical: isActive ? 14 : 10,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
       ),
     );
   }
@@ -157,13 +364,11 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                   columns: const [
                     DataColumn(label: Text("Fecha", style: TextStyle(fontSize: 12))),
                     DataColumn(label: Text("Usuario", style: TextStyle(fontSize: 12))),
-                    DataColumn(label: Text("Placa", style: TextStyle(fontSize: 12))),
-                    DataColumn(label: Text("Método Pago", style: TextStyle(fontSize: 12))),
                     DataColumn(label: Text("Saldo Anterior", style: TextStyle(fontSize: 12))),
                     DataColumn(label: Text("Monto", style: TextStyle(fontSize: 12))),
                     DataColumn(label: Text("Saldo Final", style: TextStyle(fontSize: 12))),
-                    DataColumn(label: Text("Referencia de pago", style: TextStyle(fontSize: 12))),
-                    DataColumn(label: Text("Estado", style: TextStyle(fontSize: 12))),
+                    DataColumn(label: Text("Método Pago", style: TextStyle(fontSize: 12))),
+                    DataColumn(label: Text("Referencia", style: TextStyle(fontSize: 12))),
                   ],
                   rows: transacciones.map((transaction) {
                     var fecha = (transaction["createdAt"] as Timestamp).toDate();
@@ -179,35 +384,51 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
 
                     return DataRow(cells: [
                       DataCell(Text(formattedDate, style: const TextStyle(fontSize: 10))),
+
                       DataCell(FutureBuilder<String>(
                         future: _getUserName(userId),
                         builder: (context, snapshot) {
                           return Text(snapshot.data ?? "Cargando...", style: const TextStyle(fontSize: 10));
                         },
                       )),
-                      DataCell(FutureBuilder<String>(
-                        future: _getUserPlate(userId),
-                        builder: (context, snapshot) {
-                          return Text(snapshot.data ?? "Cargando...", style: const TextStyle(fontSize: 12));
-                        },
-                      )),
 
+                      DataCell(Text("\$${NumberFormat("#,###", "es_CO").format(saldoAnterior)}",
+                          style: const TextStyle(fontSize: 11))),
+
+                      DataCell(
+                        estado == "DECLINED"
+                            ? Text(formattedAmount,
+                            style: const TextStyle(color: Colors.red, fontSize: 11, decoration: TextDecoration.lineThrough))
+                            : Text(formattedAmount,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                      ),
+
+                      DataCell(Text("\$${NumberFormat("#,###", "es_CO").format(saldoFinal)}",
+                          style: const TextStyle(fontSize: 11))),
 
                       DataCell(Text(paymentMethod, style: const TextStyle(fontSize: 10))),
-                      DataCell(Text("\$${NumberFormat("#,###", "es_CO").format(saldoAnterior)}", style: const TextStyle(fontSize: 11),)),
-                      DataCell(estado == "DECLINED"
-                          ? Text(formattedAmount, style: const TextStyle(color: Colors.red, fontSize: 11, decoration: TextDecoration.lineThrough))
-                          : Text(formattedAmount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                      DataCell(Text("\$${NumberFormat("#,###", "es_CO").format(saldoFinal)}", style: const TextStyle(fontSize: 11),)),
-                      DataCell(Text(transactionId, style: const TextStyle(fontSize: 11))),
-                      DataCell(Text(
-                        _traducirEstado(estado),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: estado == "APPROVED" ? Colors.green : Colors.red,
-                          fontSize: 11
+
+                      /// 🔥 REFERENCIA + ESTADO
+                      DataCell(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(transactionId, style: const TextStyle(fontSize: 11)),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+                              _traducirEstado(estado),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: estado == "APPROVED" ? Colors.green : Colors.red,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
-                      )),
+                      ),
                     ]);
                   }).toList(),
                 ),
@@ -259,15 +480,6 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                   return Text("Usuario: ${snapshot.data ?? "Cargando..."}", style: const TextStyle(fontSize: 12, color: Colors.black));
                 },
               ),
-              FutureBuilder<String>(
-                future: _getUserPlate(userId),
-                builder: (context, snapshot) {
-                  return Text(
-                    "Placa: ${snapshot.data ?? "Cargando..."}",
-                    style: const TextStyle(fontSize: 12, color: Colors.black),
-                  );
-                },
-              ),
 
               Text("Saldo Anterior: \$${NumberFormat("#,###", "es_CO").format(saldoAnterior)}", style: const TextStyle(fontSize: 10)),
               Text("Saldo Final: \$${NumberFormat("#,###", "es_CO").format(saldoFinal)}", style: const TextStyle(fontSize: 10)),
@@ -276,6 +488,7 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                 _traducirEstado(estado),
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: estado == "APPROVED" ? Colors.green : Colors.red),
               ),
+
             ],
           ),
         ),
@@ -301,29 +514,6 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
     }
   }
 
-  /// **🔹 Widget reutilizable para mostrar filas de detalles**
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-        Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 12), textAlign: TextAlign.right, overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
-  }
-  Future<String> _getUserPlate(String userId) async {
-    try {
-      var userDoc = await FirebaseFirestore.instance.collection("Drivers").doc(userId).get();
-      if (userDoc.exists) {
-        return userDoc["18_Placa"] ?? "Sin placa";
-      }
-      return "Sin placa";
-    } catch (e) {
-      return "Error al cargar";
-    }
-  }
 
 }
 
