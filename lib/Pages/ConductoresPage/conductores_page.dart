@@ -1,12 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../common/main_layout.dart';
 import '../../models/conductor_model.dart';
 import '../../models/operador_model.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/driver_provider.dart';
-import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
 import 'package:intl/intl.dart';
@@ -25,8 +23,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
   int totalDrivers = 0;
   Operador? operador;
   Driver? driver;
-  OperadorProvider _operadorProvider = OperadorProvider();
-  MyAuthProvider _authProvider = MyAuthProvider();
+  Map<String, String> driversEstadoVehiculo = {};
 
   @override
   void initState() {
@@ -36,6 +33,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
       Provider.of<DriverProvider>(context, listen: false)
           .fetchDriversInicial();
     });
+    cargarErroresVehiculos();
   }
 
   int getPrioridad(Driver driver) {
@@ -67,6 +65,43 @@ class _ConductoresPageState extends State<ConductoresPage> {
         (driver.the26CedulaTraseraFoto ?? "") == "rechazada";
   }
 
+  //vehiculos
+  Future<void> cargarErroresVehiculos() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collectionGroup("vehiculos")
+        .get();
+
+    Map<String, String> mapa = {};
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+
+      String estado = "";
+
+      if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") == "corregida" ||
+          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") == "corregida") {
+        estado = "corregida";
+      } else if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") == "rechazada" ||
+          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") == "rechazada") {
+        estado = "rechazada";
+      }
+
+      if (estado.isNotEmpty) {
+        final driverId = data["driverId"];
+        mapa[driverId] = estado;
+      }
+    }
+
+    setState(() {
+      driversEstadoVehiculo = mapa;
+    });
+  }
+
+  bool tieneErrorTotal(Driver driver) {
+    return tienePendiente(driver) ||
+        driversEstadoVehiculo [driver.id] == true;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,29 +114,27 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
     Color getStatusColor(driver) {
 
-      /// 🔥 PRIORIDAD 1: CORREGIDA
-      if (tieneCorregida(driver)) {
+      final estadoVehiculo = driversEstadoVehiculo[driver.id];
+
+      /// 🔥 PRIORIDAD 1: CORREGIDA (driver o vehículo)
+      if (tieneCorregida(driver) || estadoVehiculo == "corregida") {
         return Colors.purple;
       }
 
       /// 🔥 PRIORIDAD 2: RECHAZADA
-      if (tieneRechazada(driver)) {
-        return Colors.deepOrange;
+      if (tieneRechazada(driver) || estadoVehiculo == "rechazada") {
+        return Colors.orange;
       }
 
       switch (driver?.verificacionStatus) {
         case "registrado":
           return Colors.blueGrey;
-
         case "procesando":
           return Colors.blueAccent;
-
         case "activado":
           return Colors.green;
-
         case "bloqueado":
           return Colors.red.shade900;
-
         default:
           return Colors.grey;
       }
@@ -219,45 +252,45 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const SizedBox(height: 10),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            /// 🔥 PRIORIDAD
-            if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
-              const SizedBox(height: 10),
-              const Text(
-                "🚨 Prioridad (requieren atención)",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              _buildDriverTable(
-                filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
-                getStatusColor,
-              ),
-            ],
-
-            /// 🔹 NORMALES
-            if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
-              const SizedBox(height: 20),
-              const Text(
-                "Conductores",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              _buildDriverTable(
-                filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
-                getStatusColor,
-              ),
-            ],
-          ],
-        )
+        // Column(
+        //   crossAxisAlignment: CrossAxisAlignment.start,
+        //   children: [
+        //
+        //     /// 🔥 PRIORIDAD
+        //     if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
+        //       const SizedBox(height: 10),
+        //       const Text(
+        //         "🚨 Prioridad (requieren atención)",
+        //         style: TextStyle(
+        //           fontSize: 16,
+        //           fontWeight: FontWeight.bold,
+        //         ),
+        //       ),
+        //       const Divider(),
+        //       _buildDriverTable(
+        //         filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
+        //         getStatusColor,
+        //       ),
+        //     ],
+        //
+        //     /// 🔹 NORMALES
+        //     if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
+        //       const SizedBox(height: 20),
+        //       const Text(
+        //         "Conductores",
+        //         style: TextStyle(
+        //           fontSize: 16,
+        //           fontWeight: FontWeight.bold,
+        //         ),
+        //       ),
+        //       const Divider(),
+        //       _buildDriverTable(
+        //         filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
+        //         getStatusColor,
+        //       ),
+        //     ],
+        //   ],
+        // )
       ],
     );
   }
