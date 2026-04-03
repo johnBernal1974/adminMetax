@@ -142,16 +142,18 @@ class DriverProvider with ChangeNotifier {
 
   Future<void> fetchDriversInicial() async {
 
-    /// 1️⃣ TRAER REGISTRADOS + PROCESANDO
+    /// 1️⃣ REGISTRADOS + PROCESANDO
     final snapshotBase = await FirebaseFirestore.instance
         .collection("Drivers")
         .where("Verificacion_Status", whereIn: ["registrado", "procesando"])
+        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
-    /// 2️⃣ TRAER ACTIVADOS (POCOS IDEALMENTE)
+    /// 2️⃣ ACTIVADOS
     final snapshotActivados = await FirebaseFirestore.instance
         .collection("Drivers")
         .where("Verificacion_Status", isEqualTo: "activado")
+        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
     /// 🔥 FILTRAR SOLO LOS QUE TIENEN CORREGIDA
@@ -168,6 +170,19 @@ class DriverProvider with ChangeNotifier {
       ...snapshotBase.docs,
       ...activadosConCorregida,
     ];
+
+    /// 🔥 ORDEN FINAL (CLAVE 🔥)
+    allDocs.sort((a, b) {
+      final fechaA = a["10_Fecha_Registro_Timestamp"] as Timestamp?;
+      final fechaB = b["10_Fecha_Registro_Timestamp"] as Timestamp?;
+
+      /// 🔥 si alguno no tiene fecha, lo mandamos abajo
+      if (fechaA == null && fechaB == null) return 0;
+      if (fechaA == null) return 1;
+      if (fechaB == null) return -1;
+
+      return fechaB.compareTo(fechaA);
+    });
 
     drivers.clear();
     drivers.addAll(
@@ -191,6 +206,7 @@ class DriverProvider with ChangeNotifier {
     final snapshot = await FirebaseFirestore.instance
         .collection("Drivers")
         .where("03_Numero_Documento", isEqualTo: query)
+        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
     if (snapshot.docs.isNotEmpty) {
@@ -206,6 +222,7 @@ class DriverProvider with ChangeNotifier {
     final snapshotCel = await FirebaseFirestore.instance
         .collection("Drivers")
         .where("07_Celular", isEqualTo: query)
+        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
     if (snapshotCel.docs.isNotEmpty) {
@@ -234,6 +251,19 @@ class DriverProvider with ChangeNotifier {
           .where(FieldPath.documentId, whereIn: driverIds)
           .get();
 
+      final docs = driversSnapshot.docs;
+
+      /// 🔥 ORDENAR MANUAL (porque aquí no puedes usar orderBy con whereIn fácil)
+      docs.sort((a, b) {
+        final fechaA = a["10_Fecha_Registro_Timestamp"] as Timestamp?;
+        final fechaB = b["10_Fecha_Registro_Timestamp"] as Timestamp?;
+
+        if (fechaA == null) return 1;
+        if (fechaB == null) return -1;
+
+        return fechaB.compareTo(fechaA);
+      });
+
       drivers.clear();
       drivers.addAll(
         driversSnapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
@@ -244,4 +274,5 @@ class DriverProvider with ChangeNotifier {
 
     notifyListeners();
   }
+
 }

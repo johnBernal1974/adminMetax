@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 Driver driverFromJson(String str) => Driver.fromJson(json.decode(str));
 
 String driverToJson(Driver data) => json.encode(data.toJson());
@@ -16,7 +18,7 @@ class Driver {
   String the07Celular;
   String the08FechaNacimiento;
   String the09Genero;
-  String the10FechaRegistro;
+  Timestamp? the10FechaRegistroTimestamp;
   bool the11EstaActivado;
   String the12FechaActivacion;
   String the13NombreActivador;
@@ -66,7 +68,7 @@ class Driver {
     required this.the07Celular,
     required this.the08FechaNacimiento,
     required this.the09Genero,
-    required this.the10FechaRegistro,
+    required this.the10FechaRegistroTimestamp,
     required this.the11EstaActivado,
     required this.the12FechaActivacion,
     required this.the13NombreActivador,
@@ -116,7 +118,7 @@ class Driver {
     the07Celular: json["07_Celular"],
     the08FechaNacimiento: json["08_Fecha_Nacimiento"],
     the09Genero: json["09_Genero"],
-    the10FechaRegistro: json["10_Fecha_Registro"],
+    the10FechaRegistroTimestamp: json["10_Fecha_Registro_Timestamp"] as Timestamp?,
     the11EstaActivado: json["11_Esta_activado"],
     the12FechaActivacion: json["12_Fecha_Activacion"],
     the13NombreActivador: json["13_Nombre_Activador"],
@@ -166,7 +168,7 @@ class Driver {
     "07_Celular": the07Celular,
     "08_Fecha_Nacimiento": the08FechaNacimiento,
     "09_Genero": the09Genero,
-    "10_Fecha_Registro": the10FechaRegistro,
+    "10_Fecha_Registro_Timestamp": the10FechaRegistroTimestamp,
     "11_Esta_activado": the11EstaActivado,
     "12_Fecha_Activacion": the12FechaActivacion,
     "13_Nombre_Activador": the13NombreActivador,

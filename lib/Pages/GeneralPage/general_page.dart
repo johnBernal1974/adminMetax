@@ -20,6 +20,10 @@ class _GeneralPageState extends State<GeneralPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DriverProvider>(context, listen: false)
+          .fetchDrivers();
+    });
   }
 
   void _refreshData() async {

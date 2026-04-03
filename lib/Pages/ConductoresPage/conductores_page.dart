@@ -114,13 +114,24 @@ class _ConductoresPageState extends State<ConductoresPage> {
       return true;
     }).toList();
 
-    filteredConductores = List.from(filteredConductores);
-
     filteredConductores.sort((a, b) {
       int prioridadA = getPrioridad(a);
       int prioridadB = getPrioridad(b);
 
-      return prioridadA.compareTo(prioridadB);
+      /// 1️⃣ PRIORIDAD
+      if (prioridadA != prioridadB) {
+        return prioridadA.compareTo(prioridadB);
+      }
+
+      /// 2️⃣ FECHA
+      final fechaA = a.the10FechaRegistroTimestamp;
+      final fechaB = b.the10FechaRegistroTimestamp;
+
+      if (fechaA == null && fechaB == null) return 0;
+      if (fechaA == null) return 1;
+      if (fechaB == null) return -1;
+
+      return fechaB.compareTo(fechaA);
     });
 
 
@@ -184,7 +195,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Conductores:\n$totalDrivers',
+            Text('Total de Conductores pendientes por activar:\n$totalDrivers',
                 style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 20),
             IconButton(
@@ -265,7 +276,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Conductores:\n$totalDrivers',
+            Text('Total de Conductores pendientes por activar:\n$totalDrivers',
                 style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 100),
             ElevatedButton(
@@ -411,6 +422,13 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
             DataColumn(
               label: Text(
+                'Celular',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            DataColumn(
+              label: Text(
                 'Acción',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -491,9 +509,13 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     ],
                   ),
                 ),
-                DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
+                DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: const TextStyle(color: Colors.black))),
                 DataCell(Text(driver.the03NumeroDocumento ?? "Documento no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
+                DataCell(Text(driver.the10FechaRegistroTimestamp != null
+                    ? DateFormat('dd/MM/yyyy HH:mm')
+                    .format(driver.the10FechaRegistroTimestamp!.toDate())
+                    : "no disponible")),
 
                 DataCell(
                   IconButton(

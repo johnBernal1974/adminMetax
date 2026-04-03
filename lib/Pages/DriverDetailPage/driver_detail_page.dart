@@ -634,7 +634,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                       ),
                     ),
                     Text(
-                      'Conductor desde: ${driver.the10FechaRegistro}', // ✅
+                      driver.the10FechaRegistroTimestamp != null
+                          ? 'Conductor desde: ${DateFormat('dd/MM/yyyy HH:mm').format(driver.the10FechaRegistroTimestamp!.toDate())}'
+                          : 'Conductor desde: no disponible',
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],
@@ -682,7 +684,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                       ),
                     ),
                     Text(
-                      'Conductor desde: ${driver.the10FechaRegistro}', // ✅
+                      driver.the10FechaRegistroTimestamp != null
+                          ? 'Conductor desde: ${DateFormat('dd/MM/yyyy HH:mm').format(driver.the10FechaRegistroTimestamp!.toDate())}'
+                          : 'Conductor desde: no disponible',
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],
