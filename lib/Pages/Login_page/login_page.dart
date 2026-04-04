@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/route_permissions.dart';
 import '../../models/operador_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/operador_provider.dart';
@@ -118,16 +119,15 @@ class _LoginPageState extends State<LoginPage> {
                             return;
                           }
 
-                          // ✅ Decide a qué página llevarlo según el rol
-                          String homeRoute;
-                          if (role == 'Master' || role == 'operadorFull') {
-                            homeRoute = 'general_page';
-                          } else if (role == 'adminRecargas') {
-                            homeRoute = 'recarga_info_page';
-                          } else if (role == 'operadorSeguimientoMap') {
-                            homeRoute = 'map_drivers_admin_page';
-                          } else {
-                            homeRoute = 'sin_permisos_page';
+                          final homeRoute = getHomeRouteByRole(role);
+
+                          if (!RoutePermissions.canRoleAccess(role, homeRoute)) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              'sin_permisos_page',
+                                  (_) => false,
+                            );
+                            return;
                           }
 
                           Navigator.pushNamedAndRemoveUntil(
@@ -224,14 +224,23 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  String _homeByRole(String role) {
-    if (role == 'Master') return 'general_page';
-    if (role == 'operadorFull') return 'general_page';
-    if (role == 'adminRecargas') return 'recarga_info_page';
-    if (role == 'operadorSeguimientoMap') return 'map_drivers_admin_page';
+  String getHomeRouteByRole(String role) {
+    switch (role) {
+      case 'adminRecargas':
+        return 'recarga_info_page';
 
-    // si cae aquí, no tiene home definido
-    return 'sin_permisos_page'; // o login_page
+      case 'operadorSeguimientoMap':
+        return 'map_drivers_admin_page';
+
+      case 'operadorFull':
+        return 'general_page';
+
+      case 'Master':
+        return 'general_page';
+
+      default:
+        return 'login_page';
+    }
   }
 
 }

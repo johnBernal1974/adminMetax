@@ -115,29 +115,19 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.emoji_people,
                   press: () => _go('usuarios_page'),
                 ),
-              if (_canSee(role, 'vehiculos_page'))
-                DrawerListTitle(
-                  title: "Vehículos",
-                  icon: Icons.directions_car,
-                  press: () => _go('vehiculos_page'),
-                ),
+              // if (_canSee(role, 'vehiculos_page'))
+              //   DrawerListTitle(
+              //     title: "Vehículos",
+              //     icon: Icons.directions_car,
+              //     press: () => _go('vehiculos_page'),
+              //   ),
 
-              // ⚠️ OJO: NO tenías permisos definidos para operadores_page en AdminGuard
-              // Si quieres que Master lo vea siempre y operadorFull también, debes agregar esa ruta en AdminGuard.routePermissions.
-              // Mientras tanto: lo dejo visible solo para Master por seguridad.
-              if (role == 'Master')
-                DrawerListTitle(
-                  title: "Operadores",
-                  icon: Icons.headphones,
-                  press: () => _go('operadores_page'),
-                ),
-
-              if (_canSee(role, 'prices_page'))
-                DrawerListTitle(
-                  title: "Configuraciones",
-                  icon: Icons.settings,
-                  press: () => _go('prices_page'),
-                ),
+              // if (_canSee(role, 'prices_page'))
+              //   DrawerListTitle(
+              //     title: "Configuraciones",
+              //     icon: Icons.settings,
+              //     press: () => _go('prices_page'),
+              //   ),
 
               if (_canSee(role, 'recarga_info_page'))
                 DrawerListTitle(
@@ -153,8 +143,15 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('historial_viajes_page'),
                 ),
 
-              // Registrar operadores (signUp) — tú lo tenías en menú
-              // Si quieres controlarlo por rol, lo mismo: define permiso o déjalo Master-only.
+              //MASTER
+
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Operadores",
+                  icon: Icons.headphones,
+                  press: () => _go('operadores_page'),
+                ),
+
               if (role == 'Master')
                 DrawerListTitle(
                   title: "Registrar Operadores",
@@ -164,15 +161,30 @@ class _SideBarState extends State<SideBar> {
 
               if (role == 'Master')
                 DrawerListTitle(
+                  title: "Porterías",
+                  icon: Icons.apartment,
+                  press: () => _go('porterias_page'),
+                ),
+
+              if (role == 'Master')
+                DrawerListTitle(
                   title: "Registrar Porterías",
                   icon: Icons.apartment,
                   press: () => _go('registro_porteria_page'),
                 ),
+
               if (role == 'Master')
                 DrawerListTitle(
-                  title: "Porterías",
-                  icon: Icons.apartment,
-                  press: () => _go('porterias_page'),
+                  title: "Configuraciones",
+                  icon: Icons.settings,
+                  press: () => _go('prices_page'),
+                ),
+
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Vehículos",
+                  icon: Icons.directions_car,
+                  press: () => _go('vehiculos_page'),
                 ),
             ],
 

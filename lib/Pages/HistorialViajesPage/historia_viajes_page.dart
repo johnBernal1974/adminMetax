@@ -274,6 +274,7 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                           ? _buildTable(filteredDocs)
                           : _buildCards(filteredDocs),
                     ),
+                    SizedBox(height: 50)
                   ],
                 );
               },
