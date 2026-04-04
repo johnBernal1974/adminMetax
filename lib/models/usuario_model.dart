@@ -1,170 +1,188 @@
-
-
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 Client clientFromJson(String str) => Client.fromJson(json.decode(str));
-
 String clientToJson(Client data) => json.encode(data.toJson());
 
 class Client {
   String id;
-  String the01Nombres;
-  String the02Apellidos;
-  String the06Email;
-  String the07Celular;
-  String the09Genero;
-  String the15FotoPerfilUsuario;
-  int the17Bono;
-  double the18Calificacion;
-  int the19Viajes;
-  String the20Rol;
-  String the21FechaDeRegistro;
+
+  String nombres;
+  String apellidos;
+  String celular;
+  String genero;
+
+  int bono;
+  double calificacion;
+  int viajes;
+
+  String rol;
+  String fechaRegistro;
   String token;
-  String image;
   String status;
-  bool the00isTraveling;
-  int the22Cancelaciones;
-  bool the41SuspendidoPorCancelaciones;
-  bool fotoPerfilTomada;
+
+  bool isTraveling;
+  int cancelaciones;
+  bool suspendido;
+
   String palabraClave;
-  String preuntaPalabraClave;
+  String preguntaPalabraClave;
 
-  bool cedulaFrontalTomada;
-  String the16CedulaFrontalUsuario;
-  String the16CedulaFrontalUrl;
+  // 🔥 SISTEMA LIMPIO DE DOCUMENTOS
+  String fotoPerfilUrl;
+  String fotoPerfilEstado;
 
-  bool cedulaReversoTomada;
-  String the23CedulaReversoUsuario;
-  String the23CedulaReversoUrl;
+  String cedulaFrontalUrl;
+  String cedulaFrontalEstado;
 
-  String the05FechaExpedicionDocumento;
-  String the08FechaNacimiento;
+  String cedulaReversoUrl;
+  String cedulaReversoEstado;
 
-  String the03NumeroDocumento;
-  String the04TipoDocumento;
+  String nombreEstado;
 
+  String numeroDocumento;
+  String tipoDocumento;
 
-
+  String fechaExpedicionDocumento;
+  String fechaNacimiento;
 
   Client({
     required this.id,
-    required this.the01Nombres,
-    required this.the02Apellidos,
-    required this.the06Email,
-    required this.the07Celular,
-    required this.the09Genero,
-    required this.the15FotoPerfilUsuario,
-    required this.the17Bono,
-    required this.the18Calificacion,
-    required this.the19Viajes,
-    required this.the20Rol,
-    required this.the21FechaDeRegistro,
+    required this.nombres,
+    required this.apellidos,
+    required this.celular,
+    required this.genero,
+    required this.bono,
+    required this.calificacion,
+    required this.viajes,
+    required this.rol,
+    required this.fechaRegistro,
     required this.token,
-    required this.image,
     required this.status,
-    required this.the00isTraveling,
-    required this.the22Cancelaciones,
-    required this.the41SuspendidoPorCancelaciones,
-    required this.fotoPerfilTomada,
+    required this.isTraveling,
+    required this.cancelaciones,
+    required this.suspendido,
     required this.palabraClave,
-    required this.preuntaPalabraClave,
+    required this.preguntaPalabraClave,
 
-    required this.cedulaFrontalTomada,
-    required this.the16CedulaFrontalUsuario,
-    required this.the16CedulaFrontalUrl,
-    required this.cedulaReversoTomada,
-    required this.the23CedulaReversoUsuario,
-    required this.the23CedulaReversoUrl,
+    required this.fotoPerfilUrl,
+    required this.fotoPerfilEstado,
+    required this.cedulaFrontalUrl,
+    required this.cedulaFrontalEstado,
+    required this.cedulaReversoUrl,
+    required this.cedulaReversoEstado,
 
-    required this.the05FechaExpedicionDocumento,
-    required this.the08FechaNacimiento,
+    required this.nombreEstado,
 
-    required this.the03NumeroDocumento,
-    required this.the04TipoDocumento,
+    required this.numeroDocumento,
+    required this.tipoDocumento,
 
-
-
+    required this.fechaExpedicionDocumento,
+    required this.fechaNacimiento,
   });
 
+  // =========================
+  // PARSEO SEGURO
+  // =========================
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  static double _toDouble(dynamic v) {
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString()) ?? 0.0;
+  }
+
+  static bool _toBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.toLowerCase() == 'true';
+    return false;
+  }
+
   factory Client.fromJson(Map<String, dynamic> json) => Client(
-    id: json["id"] ?? '',
-    the01Nombres: json["01_Nombres"]  ?? '',
-    the02Apellidos: json["02_Apellidos"]  ?? '',
-    the06Email: json["06_Email"]  ?? '',
-    the07Celular: json["07_Celular"]  ?? '',
-    the09Genero: json["09_Genero"]  ?? '',
-    the15FotoPerfilUsuario: json["15_Foto_perfil_usuario"]  ?? '',
-    the17Bono: json["17_Bono"]  ?? '',
-    the18Calificacion: json["18_Calificacion"]?.toDouble()  ?? '',
-    the19Viajes: json["19_Viajes"]  ?? '',
-    the20Rol: json["20_Rol"]  ?? '',
-    the21FechaDeRegistro: json["21_Fecha_de_registro"]  ?? '',
-    token: json["token"]  ?? '',
-    image: json["image"]  ?? '',
-    status: json["status"]  ?? '',
-    the00isTraveling: json["00_is_traveling"]  ?? '',
-    the22Cancelaciones: json["22_cancelaciones"]  ?? '',
-    the41SuspendidoPorCancelaciones: json["41_Suspendido_Por_Cancelaciones"],
-    fotoPerfilTomada: json["foto_perfil_tomada"],
-    palabraClave: json["palabra_clave"] ?? "",
-    preuntaPalabraClave: json["pregunta_palabra_clave"],
+    id: (json["id"] ?? "").toString(),
 
-    cedulaFrontalTomada: json["cedula_frontal_tomada"] == true,
-    the16CedulaFrontalUsuario: (json["16_Cedula_frontal_usuario"] ?? "").toString(),
-    the16CedulaFrontalUrl: (json["16_Cedula_frontal_url"] ?? "").toString(),
+    nombres: (json["01_Nombres"] ?? "").toString(),
+    apellidos: (json["02_Apellidos"] ?? "").toString(),
+    celular: (json["07_Celular"] ?? "").toString(),
+    genero: (json["09_Genero"] ?? "").toString(),
 
-    cedulaReversoTomada: json["cedula_reverso_tomada"] == true,
-    the23CedulaReversoUsuario: (json["23_Cedula_reverso_usuario"] ?? "").toString(),
-    the23CedulaReversoUrl: (json["23_Cedula_reverso_url"] ?? "").toString(),
+    bono: _toInt(json["17_Bono"]),
+    calificacion: _toDouble(json["18_Calificacion"]),
+    viajes: _toInt(json["19_Viajes"]),
 
-    the05FechaExpedicionDocumento: (json["05_Fecha_Expedicion_Documento"] ?? "").toString(),
-    the08FechaNacimiento: (json["08_Fecha_Nacimiento"] ?? "").toString(),
+    rol: (json["20_Rol"] ?? "").toString(),
+    fechaRegistro: (json["21_Fecha_de_registro"] ?? "").toString(),
+    token: (json["token"] ?? "").toString(),
+    status: (json["status"] ?? "").toString(),
 
-    the03NumeroDocumento: (json["03_Numero_Documento"] ?? "").toString(),
-    the04TipoDocumento: (json["04_Tipo_Documento"] ?? "").toString(),
+    isTraveling: _toBool(json["00_is_traveling"]),
+    cancelaciones: _toInt(json["22_cancelaciones"]),
+    suspendido: _toBool(json["41_Suspendido_Por_Cancelaciones"]),
 
+    palabraClave: (json["palabra_clave"] ?? "").toString(),
+    preguntaPalabraClave: (json["pregunta_palabra_clave"] ?? "").toString(),
 
+    // 🔥 NUEVO SISTEMA
+    fotoPerfilUrl: (json["foto_perfil_url"] ?? "").toString(),
+    fotoPerfilEstado: (json["foto_perfil_estado"] ?? "").toString(),
 
+    cedulaFrontalUrl: (json["cedula_frontal_url"] ?? "").toString(),
+    cedulaFrontalEstado: (json["cedula_frontal_estado"] ?? "").toString(),
+
+    cedulaReversoUrl: (json["cedula_reverso_url"] ?? "").toString(),
+    cedulaReversoEstado: (json["cedula_reverso_estado"] ?? "").toString(),
+
+    nombreEstado: (json["nombre_estado"] ?? "").toString(),
+    numeroDocumento: (json["03_Numero_Documento"] ?? "").toString(),
+    tipoDocumento: (json["04_Tipo_Documento"] ?? "").toString(),
+
+    fechaExpedicionDocumento: (json["05_Fecha_Expedicion_Documento"] ?? "").toString(),
+    fechaNacimiento: (json["08_Fecha_Nacimiento"] ?? "").toString(),
   );
 
   Map<String, dynamic> toJson() => {
     "id": id,
-    "01_Nombres": the01Nombres,
-    "02_Apellidos": the02Apellidos,
-    "06_Email": the06Email,
-    "07_Celular": the07Celular,
-    "09_Genero": the09Genero,
-    "15_Foto_perfil_usuario": the15FotoPerfilUsuario,
-    "17_Bono": the17Bono,
-    "18_Calificacion": the18Calificacion,
-    "19_Viajes": the19Viajes,
-    "20_Rol": the20Rol,
-    "21_Fecha_de_registro": the21FechaDeRegistro,
+    "01_Nombres": nombres,
+    "02_Apellidos": apellidos,
+    "07_Celular": celular,
+    "09_Genero": genero,
+
+    "17_Bono": bono,
+    "18_Calificacion": calificacion,
+    "19_Viajes": viajes,
+
+    "20_Rol": rol,
+    "21_Fecha_de_registro": fechaRegistro,
     "token": token,
-    "image": image,
-    "Verificacion_Status": status,
-    "00_is_traveling": the00isTraveling,
-    "22_cancelaciones": the22Cancelaciones,
-    "41_Suspendido_Por_Cancelaciones": the41SuspendidoPorCancelaciones,
-    "foto_perfil_tomada": fotoPerfilTomada,
+    "status": status,
+
+    "00_is_traveling": isTraveling,
+    "22_cancelaciones": cancelaciones,
+    "41_Suspendido_Por_Cancelaciones": suspendido,
+
     "palabra_clave": palabraClave,
-    "pregunta_palabra_clave": preuntaPalabraClave,
+    "pregunta_palabra_clave": preguntaPalabraClave,
 
-    "cedula_frontal_tomada": cedulaFrontalTomada,
-    "16_Cedula_frontal_usuario": the16CedulaFrontalUsuario,
-    "16_Cedula_frontal_url": the16CedulaFrontalUrl,
+    // 🔥 NUEVO SISTEMA
+    "foto_perfil_url": fotoPerfilUrl,
+    "foto_perfil_estado": fotoPerfilEstado,
 
-    "cedula_reverso_tomada": cedulaReversoTomada,
-    "23_Cedula_reverso_usuario": the23CedulaReversoUsuario,
-    "23_Cedula_reverso_url": the23CedulaReversoUrl,
+    "cedula_frontal_url": cedulaFrontalUrl,
+    "cedula_frontal_estado": cedulaFrontalEstado,
 
-    "05_Fecha_Expedicion_Documento": the05FechaExpedicionDocumento,
-    "08_Fecha_Nacimiento": the08FechaNacimiento,
+    "cedula_reverso_url": cedulaReversoUrl,
+    "cedula_reverso_estado": cedulaReversoEstado,
 
-    "03_Numero_Documento": the03NumeroDocumento,
-    "04_Tipo_Documento": the04TipoDocumento,
+    "nombre_estado": nombreEstado,
+    "03_Numero_Documento": numeroDocumento,
+    "04_Tipo_Documento": tipoDocumento,
 
+    "05_Fecha_Expedicion_Documento": fechaExpedicionDocumento,
+    "08_Fecha_Nacimiento": fechaNacimiento,
   };
 }

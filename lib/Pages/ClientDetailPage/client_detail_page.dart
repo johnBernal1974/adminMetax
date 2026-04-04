@@ -48,14 +48,14 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   void initState() {
     super.initState();
     getOperadorInfo();
-    selectedGenero = widget.client.the09Genero;
-    selectedRol = widget.client.the20Rol;
-    selectedTipoDocumento = widget.client.the04TipoDocumento;
+    selectedGenero = widget.client.genero;
+    selectedRol = widget.client.rol;
+    selectedTipoDocumento = widget.client.tipoDocumento;
 
 
-    _initController("01_Nombres", widget.client.the01Nombres);
-    _initController("02_Apellidos", widget.client.the02Apellidos);
-    _initController("03_Numero_Documento", widget.client.the03NumeroDocumento);
+    _initController("01_Nombres", widget.client.nombres);
+    _initController("02_Apellidos", widget.client.apellidos);
+    _initController("03_Numero_Documento", widget.client.numeroDocumento);
 
 
     getClientRatings();
@@ -81,44 +81,40 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   }
 
   Color getStatusColor() {
-    if (widget.client.status == "registrado"
-    ) {
-      return Colors.blueGrey;
-    }
-    else if (widget.client.status == "foto_tomada") {
-      return Colors.amber;
-    }
-    else if (widget.client.status == 'verificando_email') {
-      return Colors.blueAccent;
-    }
-    else if (widget.client.status == 'corregida') {
-      return Colors.purple;
-    }
+    switch (widget.client.status) {
+      case "registrado":
+        return Colors.grey;
 
-    else if (widget.client.status == 'activado') {
-      return Colors.green;
-    }
-    else if (widget.client.status == 'bloqueado') {
-      return Colors.red.shade900;
-    }
-    else if (widget.client.status == '') {
-      return Colors.brown.shade900;
-    }
-    else {
-      return Colors.grey;
+      case "procesando":
+        return Colors.blue;
+
+      case "activado":
+        return Colors.green;
+
+      case "bloqueado":
+        return Colors.red.shade900;
+
+      default:
+        return Colors.grey;
     }
   }
 
-  Color getStatusColorFotos(String fotoStatus) {
-    switch (fotoStatus) {
+  Color getStatusColorFotos(String estado) {
+    switch (estado) {
       case "rechazada":
         return Colors.red;
+
       case "corregida":
         return Colors.purple;
-      case "aceptada":
+
+      case "aprobada":
         return Colors.green;
+
+      case "tomada":
+        return Colors.blue;
+
       default:
-        return Colors.grey;  // Por si acaso el estado es diferente o nulo
+        return Colors.grey;
     }
   }
 
@@ -154,26 +150,42 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _encabezadoSeccion(),
-                          const Divider(),
-                          _seccionDatosGenerales(),
-                          const Divider(),
-                          _seccionDocumentosdeIdentidad(),
-                          const Divider(),
-                          //_seccionComunicacionNotificaciones(),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('Clients')
+                      .doc(widget.client.id)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+
+                    final client = Client.fromJson(data); // 👈 CLAVE
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _encabezadoSeccion(client),
+                              const Divider(),
+                              _seccionDatosGenerales(client),
+                              const Divider(),
+                              _seccionDocumentosdeIdentidad(client),
+                              const Divider(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -184,7 +196,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   }
   /////// widgets interfaz/////////////////////////////////////////
 
-  Widget _encabezadoSeccion() {
+  Widget _encabezadoSeccion(Client client) {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
@@ -198,15 +210,15 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.client.id,
+              client.id,
               style: TextStyle(fontSize: fontSize),
             ),
             isMobile
                 ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${widget.client.the01Nombres} ${widget.client.the02Apellidos}', style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
-                Text('Cliente desde: ${widget.client.the21FechaDeRegistro}'),
+                Text('${client.nombres} ${client.apellidos}', style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold), ),
+                Text('Cliente desde: ${client.fechaRegistro}'),
                 const Divider(),
                 Container(
                     alignment: Alignment.center,
@@ -221,8 +233,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${widget.client.the01Nombres} ${widget.client.the02Apellidos}', style: const TextStyle( fontSize: 24, fontWeight: FontWeight.bold)),
-                    Text('Cliente desde: ${widget.client.the21FechaDeRegistro}')
+                    Text('${client.nombres} ${client.apellidos}', style: const TextStyle( fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('Cliente desde: ${client.fechaRegistro}')
 
                   ],
                 ),
@@ -235,7 +247,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
 
-  Widget _seccionDatosGenerales() {
+  Widget _seccionDatosGenerales(Client client) {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
@@ -259,13 +271,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoColumns(),
+                _buildInfoColumns(client),
                 const SizedBox(height: 25),
                 _buildActionButtonRow(context),
                 const SizedBox(height: 25),
                 Row(
                   children: [
-                    _buildPhotoStack(),
+                    _buildPhotoStack(client),
                     const SizedBox(width: 25),
                     _buildButtonRowAceptarRechazarFotoPerfil(context),
                   ],
@@ -278,13 +290,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               children: [
                 Column(
                   children: [
-                    _buildPhotoStack(),
+                    _buildPhotoStack(client),
                     const SizedBox(height: 30),
                     _buildButtonRowAceptarRechazarFotoPerfil(context),
                   ],
                 ),
                 const SizedBox(width: 50),
-                _buildInfoColumns(),
+                _buildInfoColumns(client),
                 const SizedBox(width: 150),
                 _buildActionButtonColumn(context),
               ],
@@ -317,7 +329,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
         const SizedBox(width: 20), // Espacio entre la imagen y el icono
         GestureDetector(
           onTap: () {
-            makePhoneCall(widget.client.the07Celular);
+            makePhoneCall(widget.client.celular);
           },
           child: const Icon(
             Icons.phone,
@@ -331,8 +343,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   }
 
   void _openWhatsApp(BuildContext context) async {
-    String phoneNumber = widget.client.the07Celular;
-    String? name = widget.client.the01Nombres;
+    String phoneNumber = widget.client.celular;
+    String? name = widget.client.nombres;
     String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     final whatsappLink = Uri.parse('whatsapp://send?phone=+57$phoneNumber&text=$message');
     try {
@@ -344,8 +356,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
 
   void _openWhatsAppActivacion(BuildContext context) async {
-    String phoneNumber = widget.client.the07Celular;
-    String? clientName = widget.client.the01Nombres;
+    String phoneNumber = widget.client.celular;
+    String? clientName = widget.client.nombres;
     String message = '''Hola *$clientName*,
 
 Soy $nameOperador del grupo de soporte de *Metax* y me complace informarte que tu cuenta de *Cliente* ya está activada.
@@ -368,15 +380,15 @@ El equipo de Metax''';
 
 
   void _openWhatsAppWeb(BuildContext context) async {
-    String phoneNumber = widget.client.the07Celular;
-    String? name = widget.client.the01Nombres;
+    String phoneNumber = widget.client.celular;
+    String? name = widget.client.nombres;
     String message = 'Hola $name, mi nombre es $nameOperador del equipo de asistencia de Metax.';
     sendWhatsAppWeb(phone: phoneNumber, text: message);
   }
 
   void _openWhatsAppWebActivacion(BuildContext context) async {
-    String phoneNumber = widget.client.the07Celular;
-    String? clientName = widget.client.the01Nombres;
+    String phoneNumber = widget.client.celular;
+    String? clientName = widget.client.nombres;
 
     String message = '''Hola *$clientName*,
 
@@ -602,7 +614,7 @@ El equipo de Metax''';
           width: 30,
           child: ElevatedButton(
             onPressed: () {
-              _showConfirmationFotoPerfil(context, "¿Aceptar la foto de perfil?", "aceptada");
+              _showConfirmationFotoPerfil(context, "¿Aceptar la foto de perfil?", "aprobada");
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
@@ -641,11 +653,11 @@ El equipo de Metax''';
     );
   }
 
-  Widget _buildPhotoStack() {
+  Widget _buildPhotoStack(Client client) {
     return Stack(
       clipBehavior: Clip.none,  // Permitir que los elementos dentro del Stack se dibujen fuera de sus límites
       children: [
-        _buildPerfilPhoto(widget.client.image),
+        _buildPerfilPhoto(client.fotoPerfilUrl),
         Positioned(
           top: -10,  // Ajusta la posición vertical para que el círculo no quede recortado
           right: -10,  // Ajusta la posición horizontal para que el círculo no quede recortado
@@ -653,7 +665,7 @@ El equipo de Metax''';
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: getStatusColorFotos(widget.client.the15FotoPerfilUsuario),
+              color: getStatusColorFotos(client.fotoPerfilEstado),
               shape: BoxShape.circle,
             ),
           ),
@@ -662,16 +674,15 @@ El equipo de Metax''';
     );
   }
 
-  Widget _buildInfoColumns() {
+  Widget _buildInfoColumns(Client client) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRowHorizontal('Email:   ', widget.client.the06Email),
-        _buildInfoRowHorizontal('Celular:   ', widget.client.the07Celular),
-        _buildInfoRowHorizontal('Viajes:   ', widget.client.the19Viajes.toString()),
+        _buildInfoRowHorizontal('Celular:   ', client.celular),
+        _buildInfoRowHorizontal('Viajes:   ', client.viajes.toString()),
         _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
-        _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', widget.client.the22Cancelaciones.toString()),
-        _buildInfoRowHorizontalTpoBold('Rol:   ', widget.client.the20Rol.toString()),
+        _buildInfoRowHorizontalIconocancel('Cancelaciones:   ', client.cancelaciones.toString()),
+        _buildInfoRowHorizontalTpoBold('Rol:   ', client.rol.toString()),
       ],
     );
   }
@@ -832,7 +843,7 @@ El equipo de Metax''';
 
                 _saveField("09_Genero", valueToSave, () {
                   setState(() {
-                    widget.client.the09Genero = valueToSave;
+                    widget.client.genero = valueToSave;
                   });
                 });
               },
@@ -876,7 +887,7 @@ El equipo de Metax''';
 
                 _saveField("20_Rol", valueToSave, () {
                   setState(() {
-                    widget.client.the20Rol = valueToSave;
+                    widget.client.rol = valueToSave;
                   });
                 });
               },
@@ -907,9 +918,9 @@ El equipo de Metax''';
 
               _saveField(key, valueToSave, () {
                 setState(() {
-                  if (key == "01_Nombres") widget.client.the01Nombres = valueToSave;
-                  if (key == "02_Apellidos") widget.client.the02Apellidos = valueToSave;
-                  if (key == "03_Numero_Documento") widget.client.the03NumeroDocumento = valueToSave;
+                  if (key == "01_Nombres") widget.client.nombres = valueToSave;
+                  if (key == "02_Apellidos") widget.client.apellidos = valueToSave;
+                  if (key == "03_Numero_Documento") widget.client.numeroDocumento = valueToSave;
                 });
               });
 
@@ -1090,10 +1101,10 @@ El equipo de Metax''';
               child: const Text("Sí"),
               onPressed: () {
                 Navigator.of(context).pop(); // Cerrar el diálogo
-                _saveField("15_Foto_perfil_usuario", isBloquear, () {});
+                _saveField("foto_perfil_estado", isBloquear, () {});
 
                 setState(() {
-                  widget.client.the15FotoPerfilUsuario = isBloquear;
+                  widget.client.fotoPerfilEstado = isBloquear;
                 });// Llama al método para guardar el campo
               },
             ),
@@ -1135,24 +1146,25 @@ El equipo de Metax''';
     Color statusColor = getStatusColor();
     String statusText = '';
 
-    if (widget.client.status == "registrado") {
-      statusText = 'Registrado';
-    } else if (widget.client.status == "foto_tomada") {
-      statusText = 'Fotos faltantes';
-    } else if (widget.client.status == 'verificando_email') {
-      statusText = 'Verificando email';
-    }
-    else if (widget.client.status == 'corregida') {
-      statusText = 'Corregida';
-    }
-    else if (widget.client.status == 'rechazada') {
-      statusText = 'En espera';
-    }
-    else if (widget.client.status == 'activado') {
-      statusText = 'Activado';
-    }
-    else if (widget.client.status == 'bloqueado') {
-      statusText = 'Bloqueado';
+    switch (widget.client.status) {
+      case "registrado":
+        statusText = 'Registrado';
+        break;
+
+      case "procesando":
+        statusText = 'En validación';
+        break;
+
+      case "activado":
+        statusText = 'Activado';
+        break;
+
+      case "bloqueado":
+        statusText = 'Bloqueado';
+        break;
+
+      default:
+        statusText = 'Sin estado';
     }
 
    return Container(
@@ -1285,32 +1297,27 @@ El equipo de Metax''';
         children: [
           Container(
             width: 180,
-            height: 180, // Ajusta el tamaño cuadrado aquí
+            height: 180,
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(10),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: photoUrl != null
+              child: (photoUrl != null && photoUrl.isNotEmpty)
                   ? Image.network(
                 photoUrl,
+                key: ValueKey(photoUrl), // 🔥 SOLUCIÓN
                 fit: BoxFit.cover,
-                errorBuilder: (BuildContext context, Object exception, StackTrace? stackTrace) {
+                errorBuilder: (context, exception, stackTrace) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.image,
-                          color: Colors.grey,
-                          size: 50, // Ajusta el tamaño del ícono aquí
-                        ),
+                        Icon(Icons.image, color: Colors.grey, size: 50),
                         SizedBox(height: 10),
-                        Text(
-                          'Foto no disponible',
-                          style: TextStyle(color: Colors.grey),
-                        ),
+                        Text('Foto no disponible',
+                            style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
@@ -1320,16 +1327,10 @@ El equipo de Metax''';
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.image,
-                      color: Colors.grey,
-                      size: 50, // Ajusta el tamaño del ícono aquí
-                    ),
+                    Icon(Icons.image, color: Colors.grey, size: 50),
                     SizedBox(height: 10),
-                    Text(
-                      'Foto no disponible',
-                      style: TextStyle(color: Colors.grey),
-                    ),
+                    Text('Foto no disponible',
+                        style: TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),
@@ -1339,10 +1340,9 @@ El equipo de Metax''';
       ),
     );
   }
-  //PARA EL PANEL DE LA CEDULA
 
 
-  Widget _seccionDocumentosdeIdentidad() {
+  Widget _seccionDocumentosdeIdentidad(Client client) {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
@@ -1395,7 +1395,7 @@ El equipo de Metax''';
                                 children: [
                                   _buildDocumentPhoto(
                                     "Cédula parte delantera",
-                                    widget.client.the16CedulaFrontalUrl,
+                                    client.cedulaFrontalUrl,
                                   ),
                                   Positioned(
                                     top: -10,
@@ -1405,7 +1405,7 @@ El equipo de Metax''';
                                       height: 20,
                                       decoration: BoxDecoration(
                                         color: getStatusColorFotos(
-                                          widget.client.the16CedulaFrontalUsuario,
+                                          client.cedulaFrontalEstado,
                                         ),
                                         shape: BoxShape.circle,
                                       ),
@@ -1415,10 +1415,10 @@ El equipo de Metax''';
                               ),
 
                               // ✅ Si quieres mostrar nombres/apellidos como en conductor (ya los tienes)
-                              _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
-                              _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                              _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
+                              _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
                               _dropTipoDocumentoClient(),
-                              _buildTextField(widget.client.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                              _buildTextField(client.numeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                               const SizedBox(height: 30),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -1431,7 +1431,7 @@ El equipo de Metax''';
                                         _showConfirmationCedulaFrontal(
                                           context,
                                           "¿Aceptar la foto del documento de identidad en su parte delantera?",
-                                          "aceptada",
+                                          "aprobada",
                                         );
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -1483,7 +1483,7 @@ El equipo de Metax''';
                                 children: [
                                   _buildDocumentPhoto(
                                     "Cédula parte trasera",
-                                    widget.client.the23CedulaReversoUrl,
+                                    client.cedulaReversoUrl,
                                   ),
                                   Positioned(
                                     top: -10,
@@ -1493,7 +1493,7 @@ El equipo de Metax''';
                                       height: 20,
                                       decoration: BoxDecoration(
                                         color: getStatusColorFotos(
-                                          widget.client.the23CedulaReversoUsuario,
+                                          client.cedulaReversoEstado,
                                         ),
                                         shape: BoxShape.circle,
                                       ),
@@ -1505,13 +1505,13 @@ El equipo de Metax''';
                               _buildDateField(
                                 label: 'Fecha de expedición',
                                 key: '05_Fecha_Expedicion_Documento',
-                                initialValue: widget.client.the05FechaExpedicionDocumento ?? '',
+                                initialValue: client.fechaExpedicionDocumento ?? '',
                               ),
 
                               _buildDateField(
                                 label: 'Fecha de nacimiento',
                                 key: '08_Fecha_Nacimiento',
-                                initialValue: widget.client.the08FechaNacimiento ?? '',
+                                initialValue: client.fechaNacimiento ?? '',
                               ),
 
 
@@ -1531,7 +1531,7 @@ El equipo de Metax''';
                                         _showConfirmationCedulaReverso(
                                           context,
                                           "¿Aceptar la foto del documento de identidad en su parte trasera?",
-                                          "aceptada",
+                                          "aprobada",
                                         );
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -1625,7 +1625,7 @@ El equipo de Metax''';
                                   children: [
                                     _buildDocumentPhoto(
                                       "Cédula parte delantera",
-                                      widget.client.the16CedulaFrontalUrl,
+                                      client.cedulaFrontalUrl,
                                     ),
                                     Positioned(
                                       top: -10,
@@ -1635,7 +1635,7 @@ El equipo de Metax''';
                                         height: 20,
                                         decoration: BoxDecoration(
                                           color: getStatusColorFotos(
-                                            widget.client.the16CedulaFrontalUsuario,
+                                            client.cedulaFrontalEstado,
                                           ),
                                           shape: BoxShape.circle,
                                         ),
@@ -1643,10 +1643,10 @@ El equipo de Metax''';
                                     ),
                                   ],
                                 ),
-                                _buildTextField(widget.client.the01Nombres, 'Nombres', "01_Nombres"),
-                                _buildTextField(widget.client.the02Apellidos, 'Apellidos', "02_Apellidos"),
+                                _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
+                                _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
                                 _dropTipoDocumentoClient(),
-                                _buildTextField(widget.client.the03NumeroDocumento, 'Número de Documento', "03_Numero_Documento"),
+                                _buildTextField(client.numeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                                 const SizedBox(height: 30),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
@@ -1659,7 +1659,7 @@ El equipo de Metax''';
                                           _showConfirmationCedulaFrontal(
                                             context,
                                             "¿Aceptar la foto del documento de identidad en su parte delantera?",
-                                            "aceptada",
+                                            "aprobada",
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -1710,7 +1710,7 @@ El equipo de Metax''';
                                   children: [
                                     _buildDocumentPhoto(
                                       "Cédula parte trasera",
-                                      widget.client.the23CedulaReversoUrl,
+                                      client.cedulaReversoUrl,
                                     ),
                                     Positioned(
                                       top: -10,
@@ -1720,7 +1720,7 @@ El equipo de Metax''';
                                         height: 20,
                                         decoration: BoxDecoration(
                                           color: getStatusColorFotos(
-                                            widget.client.the23CedulaReversoUsuario,
+                                            client.cedulaReversoEstado,
                                           ),
                                           shape: BoxShape.circle,
                                         ),
@@ -1732,13 +1732,13 @@ El equipo de Metax''';
                                 _buildDateField(
                                   label: 'Fecha de expedición',
                                   key: '05_Fecha_Expedicion_Documento',
-                                  initialValue: widget.client.the05FechaExpedicionDocumento ?? '',
+                                  initialValue: client.fechaExpedicionDocumento ?? '',
                                 ),
 
                                 _buildDateField(
                                   label: 'Fecha de nacimiento',
                                   key: '08_Fecha_Nacimiento',
-                                  initialValue: widget.client.the08FechaNacimiento ?? '',
+                                  initialValue: client.fechaNacimiento ?? '',
                                 ),
 
                                 _dropGenero(),
@@ -1755,7 +1755,7 @@ El equipo de Metax''';
                                           _showConfirmationCedulaReverso(
                                             context,
                                             "¿Aceptar la foto del documento de identidad en su parte trasera?",
-                                            "aceptada",
+                                            "aprobada",
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -1824,9 +1824,9 @@ El equipo de Metax''';
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              _saveField("16_Cedula_frontal_usuario", value, () {});
+              _saveField("cedula_frontal_estado", value, () {});
               setState(() {
-                widget.client.the16CedulaFrontalUsuario = value;
+                widget.client.cedulaFrontalEstado = value;
               });
             },
             child: const Text("Sí"),
@@ -1849,9 +1849,9 @@ El equipo de Metax''';
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-             _saveField("23_Cedula_reverso_usuario", value, () {});
+             _saveField("cedula_reverso_estado", value, () {});
               setState(() {
-                widget.client.the23CedulaReversoUsuario = value;
+                widget.client.cedulaReversoEstado = value;
               });
             },
             child: const Text("Sí"),
@@ -1999,7 +1999,7 @@ El equipo de Metax''';
 
                 _saveField("04_Tipo_Documento", valueToSave, () {
                   setState(() {
-                    widget.client.the04TipoDocumento = valueToSave;
+                    widget.client.tipoDocumento = valueToSave;
                   });
                 });
               },

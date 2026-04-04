@@ -21,19 +21,19 @@ class ClientProvider with ChangeNotifier {
   }
 
   Future<void> fetchClients() async {
-    setLoading(true);
     try {
-      QuerySnapshot querySnapshot = await _ref.get();
-      _clients = querySnapshot.docs.map((doc) {
-        return Client.fromJson(doc.data() as Map<String, dynamic>);
-      }).toList();
-      // Imprimir la cantidad de usuarios obtenidos
-      print('Total de usuarios obtenidos: ${_clients.length}');
-    } catch (error) {
-      print('Error al obtener los usuarios: $error');
-      _clients = [];
-    } finally {
-      setLoading(false);
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Clients')
+          .where('status', whereIn: ['registrado', 'procesando'])
+          .get();
+
+      _clients = snapshot.docs
+          .map((doc) => Client.fromJson(doc.data()))
+          .toList();
+
+      notifyListeners();
+    } catch (e) {
+      print('Error cargando clientes: $e');
     }
   }
 
@@ -63,4 +63,26 @@ class ClientProvider with ChangeNotifier {
       print('Error al eliminar el Usuario: $error');
     }
   }
+
+  Future<void> searchClients(String query) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Clients')
+          .get();
+
+      _clients = snapshot.docs
+          .map((doc) => Client.fromJson(doc.data()))
+          .where((client) =>
+      client.nombres.toLowerCase().contains(query.toLowerCase()) ||
+          client.apellidos.toLowerCase().contains(query.toLowerCase()) ||
+          client.celular.contains(query))
+          .toList();
+
+      notifyListeners();
+    } catch (e) {
+      print('Error buscando clientes: $e');
+    }
+  }
+
+
 }

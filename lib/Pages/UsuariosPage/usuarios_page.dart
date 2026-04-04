@@ -35,32 +35,28 @@ class _UsuariosPageState extends State<UsuariosPage> {
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
 
     Color getStatusColor(client) {
-      if (client?.status == "registrado"
-      ) {
-        return Colors.blueGrey;
-      }
-      else if (client?.status == "foto_tomada") {
-        return Colors.amber;
+
+      if (client.status == "registrado") {
+        return Colors.grey; // ⚪ gris
       }
 
-      else if (client?.status == 'verificando_email') {
-        return Colors.blueAccent;
+      if (client.status == "procesando") {
+        return Colors.blue; // 🔵 proceso
       }
 
-      else if (client?.status == 'activado') {
-        return Colors.green;
+      if (client.status == "corregida") {
+        return Colors.purple; // 🟣 corregida
       }
-      else if (client?.status == 'bloqueado') {
-        return Colors.red.shade900;
+
+      if (client.status == "rechazada") {
+        return Colors.amber; // 🟡 rechazada
       }
-      else if (client?.status == 'rechazada') {
-        return Colors.brown.shade900;
-      }else if (client?.status == 'suspendido') {
-        return Colors.black;
+
+      if (client.status == "foto_tomada") {
+        return Colors.blue; // 🔵 info cargada
       }
-      else {
-        return Colors.grey;
-      }
+
+      return Colors.grey;
     }
 
     List filteredClientes = usuarios.where((client) {
@@ -73,52 +69,31 @@ class _UsuariosPageState extends State<UsuariosPage> {
           case 'foto_tomada':
             matchesFilter = client.status == 'foto_tomada';
             break;
-          case 'verificando_email':
-            matchesFilter = client.status == 'Verificando email';
-            break;
           case 'corregida':
             matchesFilter = client.status == 'corregida';
             break;
           case 'rechazada':
             matchesFilter = client.status == 'rechazada';
             break;
-          case 'activado':
-            matchesFilter = client.status == 'activado';
-            break;
-          case 'bloqueado':
-            matchesFilter = client.status == "bloqueado";
-            break;
-          case 'suspendido':
-            matchesFilter = client.the41SuspendidoPorCancelaciones == true;
-            break;
 
         }
       }
       return matchesFilter &&
-          (client.the01Nombres.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              client.the02Apellidos.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              client.the06Email.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              client.the07Celular.toLowerCase().contains(searchQuery.toLowerCase()));
+          (client.nombres.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              client.apellidos.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              client.celular.toLowerCase().contains(searchQuery.toLowerCase()));
     }).toList();
     totalClients = filteredClientes.length;
 
     int countByStatus(String status) {
       return usuarios.where((client) {
         switch (status) {
+
           case 'registrado':
             return client.status == 'registrado';
 
-          case 'foto_tomada':
-            return client.status == 'foto_tomada';
-
-          case 'verificando_email':
-            return client.status == 'Verificando email';
-
-          case 'corregida':
-            return client.status == 'corregida';
-
-          case 'rechazada':
-            return client.status == 'rechazada';
+          case 'procesando':
+            return client.status == 'procesando';
 
           case 'activado':
             return client.status == 'activado';
@@ -126,8 +101,16 @@ class _UsuariosPageState extends State<UsuariosPage> {
           case 'bloqueado':
             return client.status == 'bloqueado';
 
-          case 'Suspendido':
-            return client.the41SuspendidoPorCancelaciones == true;
+          case 'rechazado_docs':
+            return client.fotoPerfilEstado == 'rechazada' ||
+                client.cedulaFrontalEstado == 'rechazada' ||
+                client.cedulaReversoEstado == 'rechazada';
+
+          case 'corregido_docs':
+            return client.fotoPerfilEstado == 'corregida' ||
+                client.cedulaFrontalEstado == 'corregida' ||
+                client.cedulaReversoEstado == 'corregida';
+
           default:
             return false;
         }
@@ -249,10 +232,20 @@ class _UsuariosPageState extends State<UsuariosPage> {
             },
           ),
         ),
-        onChanged: (value) {
+        onChanged: (value) async {
+          final query = value.trim();
+
           setState(() {
-            searchQuery = value.trim();
+            searchQuery = query;
           });
+
+          final provider = Provider.of<ClientProvider>(context, listen: false);
+
+          if (query.isEmpty) {
+            await provider.fetchClients(); // vuelve a filtrado normal
+          } else {
+            await provider.searchClients(query); // busca en TODOS
+          }
         },
       ),
     );
@@ -290,15 +283,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
         },
         tooltip: 'Doc. Faltantes (${countByStatus('foto_tomada')})',
       ),
-      IconButton(
-        icon: Icon(Icons.pending, color: Colors.blueAccent),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'verificando_email';
-          });
-        },
-        tooltip: 'Verificando email (${countByStatus('Verificando email')})',
-      ),
+
       IconButton(
         icon: Icon(Icons.check_circle, color: Colors.purple),
         onPressed: () {
@@ -317,33 +302,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
         },
         tooltip: 'En espera (${countByStatus('rechazada')})',
       ),
-      IconButton(
-        icon: Icon(Icons.verified, color: Colors.green),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'activado';
-          });
-        },
-        tooltip: 'Activado (${countByStatus('activado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.block, color: Colors.red.shade900),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueado';
-          });
-        },
-        tooltip: 'Bloqueado (${countByStatus('bloqueado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.pause_circle_filled, color: Colors.black),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'suspendido';
-          });
-        },
-        tooltip: 'Suspendido (${countByStatus('suspendido')})',
-      ),
+
       IconButton(
         icon: Icon(Icons.refresh),
         onPressed: () {
@@ -381,17 +340,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
         },
         child: Text('Doc. Faltantes (${countByStatus('foto_tomada')})', style: TextStyle(color: negro)),
       ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.blueAccent,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'verificando_email';
-          });
-        },
-        child: Text('Verificando email (${countByStatus('Verificando email')})'),
-      ),
+
       ElevatedButton(
         style: ElevatedButton.styleFrom(
           foregroundColor: Colors.white, backgroundColor: Colors.purple,
@@ -414,40 +363,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
         },
         child: Text('En espera (${countByStatus('rechazada')})'),
       ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.green,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'activado';
-          });
-        },
-        child: Text('Activado (${countByStatus('activado')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.red.shade900,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'bloqueado';
-          });
-        },
-        child: Text('Bloqueado (${countByStatus('bloqueado')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          primary: Colors.black,
-          onPrimary: Colors.white,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'suspendido';
-          });
-        },
-        child: Text('Suspendido (${countByStatus('suspendido')})'),
-      ),
+
       IconButton(
         icon: const Icon(Icons.refresh),
         onPressed: () {
@@ -477,12 +393,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Imagen',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+
             DataColumn(
               label: Text(
                 'Nombre',
@@ -492,13 +403,6 @@ class _UsuariosPageState extends State<UsuariosPage> {
             DataColumn(
               label: Text(
                 'Apellidos',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            DataColumn(
-              label: Text(
-                'Correo',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -536,22 +440,9 @@ class _UsuariosPageState extends State<UsuariosPage> {
                     ),
                   ),
                 ),
-                DataCell(
-                  ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: client.image,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Icon(Icons.error),
-                    ),
-                  ),
-                ),
-                DataCell(Text(client.the01Nombres ?? "Nombre no disponible", style: TextStyle(color: Colors.black))),
-                DataCell(Text(client.the02Apellidos ?? "Apellidos no disponibles", style: TextStyle(color: Colors.black))),
-                DataCell(Text(client.the06Email ?? "Email no disponible")),
-                DataCell(Text(client.the07Celular ?? "Celular no disponible")),
+                DataCell(Text(client.nombres.isNotEmpty ? client.nombres : "Nombre no disponible")),
+                DataCell(Text(client.apellidos.isNotEmpty ? client.apellidos : "Apellidos no disponibles")),
+                DataCell(Text(client.celular.isNotEmpty ? client.celular : "Celular no disponible")),
                 DataCell(
                   IconButton(
                     icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
