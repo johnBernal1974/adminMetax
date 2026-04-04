@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:metax_administrador/models/usuario_model.dart';
@@ -34,26 +34,35 @@ class _UsuariosPageState extends State<UsuariosPage> {
     final usuarios = clientProvider.clients;
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
 
-    Color getStatusColor(client) {
+    Color getStatusColor(Client client) {
 
-      if (client.status == "registrado") {
-        return Colors.grey; // ⚪ gris
+      // 🔴 prioridad máxima
+      if (client.fotoPerfilEstado == 'rechazada' ||
+          client.cedulaFrontalEstado == 'rechazada' ||
+          client.cedulaReversoEstado == 'rechazada') {
+        return Colors.red;
       }
 
-      if (client.status == "procesando") {
-        return Colors.blue; // 🔵 proceso
+      // 🟣 corregida
+      if (client.fotoPerfilEstado == 'corregida' ||
+          client.cedulaFrontalEstado == 'corregida' ||
+          client.cedulaReversoEstado == 'corregida') {
+        return Colors.purple;
       }
 
-      if (client.status == "corregida") {
-        return Colors.purple; // 🟣 corregida
+      // 🔵 en proceso
+      if (client.status == 'procesando') {
+        return Colors.blue;
       }
 
-      if (client.status == "rechazada") {
-        return Colors.amber; // 🟡 rechazada
+      // ⚪ registrado
+      if (client.status == 'registrado') {
+        return Colors.grey;
       }
 
-      if (client.status == "foto_tomada") {
-        return Colors.blue; // 🔵 info cargada
+      // 🟢 activado
+      if (client.status == 'activado') {
+        return Colors.green;
       }
 
       return Colors.grey;
@@ -70,10 +79,17 @@ class _UsuariosPageState extends State<UsuariosPage> {
             matchesFilter = client.status == 'foto_tomada';
             break;
           case 'corregida':
-            matchesFilter = client.status == 'corregida';
+            matchesFilter =
+                client.fotoPerfilEstado == 'corregida' ||
+                    client.cedulaFrontalEstado == 'corregida' ||
+                    client.cedulaReversoEstado == 'corregida';
             break;
+
           case 'rechazada':
-            matchesFilter = client.status == 'rechazada';
+            matchesFilter =
+                client.fotoPerfilEstado == 'rechazada' ||
+                    client.cedulaFrontalEstado == 'rechazada' ||
+                    client.cedulaReversoEstado == 'rechazada';
             break;
 
         }
@@ -154,7 +170,12 @@ class _UsuariosPageState extends State<UsuariosPage> {
     // Asegúrate de llamar a setState si es necesario para actualizar la UI
   }
 
-  Widget _buildMobileLayout(BuildContext context, ClientProvider clientProvider, List filteredClientes, int Function(String) countByStatus, Color Function(dynamic) getStatusColor) {
+  Widget _buildMobileLayout(
+      BuildContext context,
+      ClientProvider clientProvider,
+      List filteredClientes,
+      int Function(String) countByStatus,
+      Color Function(Client) getStatusColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,7 +197,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
         const Divider(color: Colors.grey, height: 20, thickness: 2),
         _buildSearchField(),
         const SizedBox(height: 30),
-        _buildFilterButtons(true, countByStatus),
+        // _buildFilterButtons(true, countByStatus),
         const SizedBox(height: 10),
         _buildClientTable(filteredClientes, getStatusColor),
       ],
@@ -185,7 +206,12 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
 
 
-  Widget _buildDesktopLayout(BuildContext context, ClientProvider clienProvider, List filteredClientes, int Function(String) countByStatus, Color Function(dynamic) getStatusColor) {
+  Widget _buildDesktopLayout(
+      BuildContext context,
+      ClientProvider clienProvider,
+      List filteredClientes,
+      int Function(String) countByStatus,
+      Color Function(Client) getStatusColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,175 +235,71 @@ class _UsuariosPageState extends State<UsuariosPage> {
         const Divider(color: Colors.grey, height: 20, thickness: 2),
         _buildSearchField(),
         const SizedBox(height: 30),
-        _buildFilterButtons(false, countByStatus),
-        const SizedBox(height: 10),
         _buildClientTable(filteredClientes, getStatusColor),
       ],
     );
   }
 
   Widget _buildSearchField() {
-    return Container(
+    return SizedBox(
       width: 350,
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
           labelText: 'Buscar cliente',
           suffixIcon: IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {
-              setState(() {
-                searchQuery = searchController.text.trim();
-              });
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              await _ejecutarBusqueda();
             },
           ),
         ),
-        onChanged: (value) async {
-          final query = value.trim();
 
-          setState(() {
-            searchQuery = query;
-          });
+        // 🔥 SOLO cuando presiona ENTER
+        onSubmitted: (value) async {
+          await _ejecutarBusqueda();
+        },
 
-          final provider = Provider.of<ClientProvider>(context, listen: false);
-
-          if (query.isEmpty) {
-            await provider.fetchClients(); // vuelve a filtrado normal
-          } else {
-            await provider.searchClients(query); // busca en TODOS
-          }
+        // ❌ IMPORTANTE: quitar lógica de búsqueda en tiempo real
+        onChanged: (value) {
+          // solo actualiza el texto, NO busca
+          searchQuery = value.trim();
         },
       ),
     );
   }
 
-  Widget _buildFilterButtons(bool isMobile, int Function(String) countByStatus) {
-    return Wrap(
-      spacing: 10.0,
-      runSpacing: 10.0,
-      children: [
-        if (isMobile)
-          ..._buildMobileFilterButtons(countByStatus)
-        else
-          ..._buildDesktopFilterButtons(countByStatus),
-      ],
-    );
-  }
-  List<Widget> _buildMobileFilterButtons(int Function(String) countByStatus) {
-    return [
-      IconButton(
-        icon: Icon(Icons.account_circle, color: Colors.blueGrey),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'registrado';
-          });
-        },
-        tooltip: 'Registrado (${countByStatus('registrado')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.photo_camera, color: Colors.amber),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'foto_tomada';
-          });
-        },
-        tooltip: 'Doc. Faltantes (${countByStatus('foto_tomada')})',
-      ),
+  Future<void> _ejecutarBusqueda() async {
+    final query = searchController.text.trim();
 
-      IconButton(
-        icon: Icon(Icons.check_circle, color: Colors.purple),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'corregida';
-          });
-        },
-        tooltip: 'Corregida (${countByStatus('corregida')})',
-      ),
-      IconButton(
-        icon: Icon(Icons.watch_later, color: Colors.brown.shade900),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'rechazada';
-          });
-        },
-        tooltip: 'En espera (${countByStatus('rechazada')})',
-      ),
+    final provider = Provider.of<ClientProvider>(context, listen: false);
 
-      IconButton(
-        icon: Icon(Icons.refresh),
-        onPressed: () {
-          setState(() {
-            filterStatus = '';
-            searchQuery = '';
-          });
-        },
-        tooltip: 'Reset',
-      ),
-    ];
+    if (query.isEmpty) {
+      await provider.fetchClients();
+      return;
+    }
+
+    await provider.searchClients(query);
+
+    // 🔥 validar si no encontró resultados
+    if (provider.clients.isEmpty && mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Sin resultados"),
+          content: const Text("No se encontró ningún cliente con ese criterio."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar"),
+            )
+          ],
+        ),
+      );
+    }
   }
 
-  List<Widget> _buildDesktopFilterButtons(int Function(String) countByStatus) {
-    return [
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.black, backgroundColor: Colors.blueGrey,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'registrado';
-          });
-        },
-        child: Text('Registrado (${countByStatus('registrado')})', style: TextStyle(color: blanco)),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.amber,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'foto_tomada';
-          });
-        },
-        child: Text('Doc. Faltantes (${countByStatus('foto_tomada')})', style: TextStyle(color: negro)),
-      ),
-
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.purple,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'corregida';
-          });
-        },
-        child: Text('Corregida (${countByStatus('corregida')})'),
-      ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Colors.brown.shade900,
-        ),
-        onPressed: () {
-          setState(() {
-            filterStatus = 'rechazada';
-          });
-        },
-        child: Text('En espera (${countByStatus('rechazada')})'),
-      ),
-
-      IconButton(
-        icon: const Icon(Icons.refresh),
-        onPressed: () {
-          setState(() {
-            filterStatus = '';
-            searchQuery = '';
-          });
-        },
-        tooltip: 'Reset',
-      ),
-    ];
-  }
-
-  Widget _buildClientTable(List filteredClientes, Color Function(dynamic) getStatusColor) {
+  Widget _buildClientTable(List filteredClientes, Color Function(Client) getStatusColor) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SingleChildScrollView(

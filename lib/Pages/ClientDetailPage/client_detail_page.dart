@@ -273,7 +273,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
               children: [
                 _buildInfoColumns(client),
                 const SizedBox(height: 25),
-                _buildActionButtonRow(context),
+                _buildActionButtonRow(context, client),
                 const SizedBox(height: 25),
                 Row(
                   children: [
@@ -298,7 +298,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 const SizedBox(width: 50),
                 _buildInfoColumns(client),
                 const SizedBox(width: 150),
-                _buildActionButtonColumn(context),
+                _buildActionButtonColumn(context, client),
               ],
             ),
             const SizedBox(height: 20),
@@ -462,136 +462,6 @@ El equipo de Metax''';
     );
   }
 
-  Widget _seccionComunicacionNotificaciones(){
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        // Define el tamaño de la letra según el ancho de la pantalla
-        double fontSize = screenWidth < 600 ? 12.0 : 16.0;
-
-        // Define si es móvil o no
-        bool isMobile = screenWidth < 600;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                    onTap: (){
-                      setState(() {
-                        isComunicacionNotificacionesVisible = !isComunicacionNotificacionesVisible;
-                      });
-                    },
-                    child: _buildSectionTitle('Activación y notificaciones')),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      isComunicacionNotificacionesVisible = !isComunicacionNotificacionesVisible;
-                    });
-                  },
-                  icon: Icon(
-                    isComunicacionNotificacionesVisible ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    size: 30,
-                  ),
-                ),
-              ],
-            ),
-            Visibility(
-              visible: isComunicacionNotificacionesVisible,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 30),
-                        Row(
-                          children: [
-                            SizedBox(
-                              height: 50,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  // Lógica para informar activación por WhatsApp
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                                  backgroundColor: Colors.green,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: const TextStyle(fontSize: 12),
-                                ),
-                                icon: const Icon(Icons.message, color: Colors.white, size: 14,),
-                                label: const Text('WhatsApp', style: TextStyle(color: Colors.white)),
-                              ),
-                            ),
-                            const SizedBox(width: 30),
-                            SizedBox(
-                              height: 50,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  // Lógica para informar activación por Mail
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                                  backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: const TextStyle(fontSize: 12),
-                                ),
-                                icon: const Icon(Icons.email, color: Colors.white, size: 14,),
-                                label: const Text('EMail', style: TextStyle(color: Colors.white)),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 30),
-                        const TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Mensaje de Notificación',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 50,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Lógica para enviar notificación directa
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              backgroundColor: Theme.of(context).primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              textStyle: const TextStyle(fontSize: 12),
-                            ),
-                            icon: const Icon(Icons.send, color: Colors.white, size: 14,),
-                            label: const Text('Notificación', style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 30),
-                ],
-              ),
-            ),
-          ],
-        );
-
-      },
-    );
-  }
 
   void getOperadorInfo() async {
     var user = _authProvider.getUser();
@@ -723,7 +593,7 @@ El equipo de Metax''';
     }
   }
 
-  Widget _buildActionButtonColumn(BuildContext context) {
+  Widget _buildActionButtonColumn(BuildContext context, Client client) {
     return Column(
       children: [
         SizedBox(
@@ -749,7 +619,12 @@ El equipo de Metax''';
           height: 40, // Altura del botón
           child: ElevatedButton.icon(
             onPressed: () {
-             _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+              _showConfirmationDialogActivarusuario(
+                context,
+                "¿Está seguro de activar este cliente?",
+                false,
+                client,
+              );
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -767,7 +642,7 @@ El equipo de Metax''';
     );
   }
 
-  Widget _buildActionButtonRow(BuildContext context) {
+  Widget _buildActionButtonRow(BuildContext context, Client client) {
     return Row(
       mainAxisAlignment:MainAxisAlignment.spaceEvenly ,
       children: [
@@ -794,7 +669,12 @@ El equipo de Metax''';
           height: 40, // Altura del botón
           child: ElevatedButton.icon(
             onPressed: () {
-              _showConfirmationDialogActivarusuario(context, "¿Está seguro de activar este conductor?", false);
+              _showConfirmationDialogActivarusuario(
+                context,
+                "¿Está seguro de activar este cliente?",
+                false,
+                client,
+              );
             },
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 20),
@@ -934,50 +814,94 @@ El equipo de Metax''';
   }
 
 
-  void activarUsuario(BuildContext context) {
+  void activarUsuario(BuildContext context, Client client) {
+
+    final faltantes = validarCamposFaltantes(client);
+    bool canActivate = faltantes.isEmpty;
+
     String message;
-    bool canActivate = false; // Variable para determinar si se puede activar el usuario
 
-    // Verificar si el conductor ya está activado
-    if (widget.client.status == "activado") {
+    if (client.status == "activado") {
       message = 'El cliente ya se encuentra activado';
-    } else {
-      message = 'El cliente ya puede ser activado';
-      canActivate = true;
-
+    }
+    else if (!canActivate) {
+      message = 'No se puede activar.\n\nFaltan:\n- ${faltantes.join("\n- ")}';
+    }
+    else {
+      message = 'El cliente cumple todos los requisitos y puede ser activado';
     }
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Activar Cliente'),
-          content: Text(message),
-          actions: <Widget>[
-            if (canActivate)
-              TextButton(
-                child: const Text('Activar'),
-                onPressed: () {
-                  _saveField("status", "activado", () {});
+      builder: (_) => AlertDialog(
+        title: const Text('Activar Cliente'),
+        content: Text(message),
+        actions: [
 
-                  setState(() {
-                    widget.client.status = "activado";
-                  });
+          TextButton(
+            child: const Text('Cerrar'),
+            onPressed: () => Navigator.pop(context),
+          ),
 
-                  Navigator.of(context).pop(); // Cerrar el diálogo
+          if (canActivate && client.status != "activado")
+            TextButton(
+              child: const Text('Activar'),
+              onPressed: () async {
 
-                  // Verificar si es móvil o web y abrir WhatsApp
-                  if (!kIsWeb) {
-                    _openWhatsAppActivacion(context); // Llamada a la app móvil de WhatsApp
-                  } else {
-                    _openWhatsAppWebActivacion(context); // Llamada a la versión web de WhatsApp
-                  }
-                },
-              ),
-          ],
-        );
-      },
+                await FirebaseFirestore.instance
+                    .collection('Clients')
+                    .doc(client.id)
+                    .update({
+                  "status": "activado"
+                });
+
+                Navigator.pop(context);
+
+                if (!kIsWeb) {
+                  _openWhatsAppActivacion(context);
+                } else {
+                  _openWhatsAppWebActivacion(context);
+                }
+              },
+            ),
+        ],
+      ),
     );
+  }
+
+  bool puedeActivarse(Client client) {
+
+    // ✅ 1. FOTO PERFIL OBLIGATORIA
+    final fotoOk = client.fotoPerfilEstado == "aprobada";
+
+    // ✅ 2. VIAJES (mínimo 1 por ejemplo, puedes cambiar)
+    final viajesOk = client.viajes >= 1;
+
+    // ✅ 3. DATOS OBLIGATORIOS
+    final datosOk =
+        client.nombres.isNotEmpty &&
+            client.apellidos.isNotEmpty &&
+            client.celular.isNotEmpty &&
+            client.genero.isNotEmpty &&
+            client.rol.isNotEmpty;
+
+    return fotoOk && viajesOk && datosOk;
+  }
+
+  List<String> validarCamposFaltantes(Client client) {
+    List<String> faltantes = [];
+
+    if (client.fotoPerfilEstado != "aprobada") {
+      faltantes.add("Foto de perfil no aprobada");
+    }
+
+    if (client.nombres.isEmpty) faltantes.add("Nombres");
+    if (client.apellidos.isEmpty) faltantes.add("Apellidos");
+    if (client.celular.isEmpty) faltantes.add("Celular");
+    if (client.genero.isEmpty) faltantes.add("Género");
+    if (client.rol.isEmpty) faltantes.add("Rol");
+
+    return faltantes;
   }
 
   void bloquearUsuario(BuildContext context) {
@@ -1036,30 +960,30 @@ El equipo de Metax''';
     );
   }
 
-  void _showConfirmationDialogActivarusuario(BuildContext context, String message, bool isBloquear) {
+  void _showConfirmationDialogActivarusuario(
+      BuildContext context,
+      String message,
+      bool isBloquear,
+      Client client,
+      ) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("No"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-              },
-            ),
-            TextButton(
-              child: const Text("Sí"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-                activarUsuario(context); // Llama al método para activar el usuario
-
-              },
-            ),
-          ],
-        );
-      },
+      builder: (_) => AlertDialog(
+        title: Text(message),
+        actions: [
+          TextButton(
+            child: const Text("No"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text("Sí"),
+            onPressed: () {
+              Navigator.pop(context);
+              activarUsuario(context, client);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -1111,6 +1035,88 @@ El equipo de Metax''';
           ],
         );
       },
+    );
+  }
+
+  Widget _buildButtonRowAceptarRechazarNombre(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // ✅ ACEPTAR
+        SizedBox(
+          height: 30,
+          width: 30,
+          child: ElevatedButton(
+            onPressed: () {
+              _showConfirmationNombre(
+                context,
+                "¿Aceptar nombre del cliente?",
+                "aprobada",
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: EdgeInsets.zero,
+            ),
+            child: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+          ),
+        ),
+
+        const SizedBox(width: 35),
+
+        // ❌ RECHAZAR
+        SizedBox(
+          height: 30,
+          width: 30,
+          child: ElevatedButton(
+            onPressed: () {
+              _showConfirmationNombre(
+                context,
+                "¿Rechazar nombre del cliente?",
+                "rechazado",
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: EdgeInsets.zero,
+            ),
+            child: const Icon(Icons.block, color: Colors.white, size: 20),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showConfirmationNombre(BuildContext context, String message, String value) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              _saveField("nombre_estado", value, () {});
+
+              setState(() {
+                // opcional si quieres reflejarlo localmente
+              });
+            },
+            child: const Text("Sí"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1415,8 +1421,36 @@ El equipo de Metax''';
                               ),
 
                               // ✅ Si quieres mostrar nombres/apellidos como en conductor (ya los tienes)
-                              _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
-                              _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                  // 🔥 CAMPOS
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
+                                        _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 10),
+
+                                  // 🔥 INDICADOR DE ESTADO (AQUÍ USAS TU FUNCIÓN)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 10),
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: getNombreStatusColor(client.nombreEstado),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              _buildButtonRowAceptarRechazarNombre(context),
                               _dropTipoDocumentoClient(),
                               _buildTextField(client.numeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                               const SizedBox(height: 30),
@@ -1643,8 +1677,36 @@ El equipo de Metax''';
                                     ),
                                   ],
                                 ),
-                                _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
-                                _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+
+                                    // 🔥 CAMPOS
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildTextField(client.nombres, 'Nombres', "01_Nombres"),
+                                          _buildTextField(client.apellidos, 'Apellidos', "02_Apellidos"),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 10),
+
+                                    // 🔥 INDICADOR DE ESTADO (AQUÍ USAS TU FUNCIÓN)
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 10),
+                                      width: 14,
+                                      height: 14,
+                                      decoration: BoxDecoration(
+                                        color: getNombreStatusColor(client.nombreEstado),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                _buildButtonRowAceptarRechazarNombre(context),
                                 _dropTipoDocumentoClient(),
                                 _buildTextField(client.numeroDocumento, 'Número de Documento', "03_Numero_Documento"),
                                 const SizedBox(height: 30),
@@ -1809,6 +1871,19 @@ El equipo de Metax''';
         );
       },
     );
+  }
+
+  Color getNombreStatusColor(String estado) {
+    switch (estado) {
+      case "rechazado":
+        return Colors.red;
+      case "corregida":
+        return Colors.purple;
+      case "aprobada":
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   void _showConfirmationCedulaFrontal(BuildContext context, String message, String value) {

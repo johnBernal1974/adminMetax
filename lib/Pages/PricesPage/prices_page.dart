@@ -164,6 +164,7 @@ class _PricesPageState extends State<PricesPage> {
 
       _fieldInt("distancia_tarifa_minima", "Distancia tarifa mínima", d),
       _fieldInt("comision", "Comisión %", d),
+      _fieldInt("descuento_porteria", "Comisión porterias", d),
     ]);
   }
 
