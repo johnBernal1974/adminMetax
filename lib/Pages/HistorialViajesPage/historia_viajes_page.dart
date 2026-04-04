@@ -236,9 +236,9 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                 final filteredDocs = travelHistoryDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
 
-                  // placa_norm (ya viene guardada)
+
                   final placaNorm =
-                  (data['placa_norm'] ?? '').toString().toUpperCase();
+                  (data['placa'] ?? '').toString().toUpperCase();
                   final okPlaca =
                   placaQ.isEmpty ? true : placaNorm.contains(placaQ);
 
@@ -285,77 +285,120 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
   }
 
   Widget _buildTable(List<QueryDocumentSnapshot> docs) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('N° Viaje', style: TextStyle(fontWeight: FontWeight.w800))),
-          DataColumn(label: Text('Destino del viaje', style: TextStyle(fontWeight: FontWeight.w800))),
-          DataColumn(label: Text('Cliente / Conductor', style: TextStyle(fontWeight: FontWeight.w800))),
-          DataColumn(label: Text('Fecha solicitud', style: TextStyle(fontWeight: FontWeight.w800))),
-          DataColumn(label: Text('Tarifa', style: TextStyle(fontWeight: FontWeight.w800))),
-        ],
-        rows: docs.map((travelDoc) {
-          final data = travelDoc.data() as Map<String, dynamic>;
-
-          // ✅ OJO: en tu BD es numero_viaje (no numeroViaje)
-          final numeroViaje = (data['numeroViaje'] ?? '—').toString();
-
-          final idClient = data['idClient'];
-          final idDriver = data['idDriver'];
-
-          return DataRow(
-            onSelectChanged: (_) => _openTravelDetailModal(travelDoc),
-            cells: [
-              DataCell(Text(numeroViaje)),
-
-              DataCell(Text('${data['to'] ?? ''}')),
-
-              // ✅ Cliente/Conductor consultando Firestore
-              DataCell(
-                FutureBuilder<List<String>>(
-                  future: Future.wait([
-                    _getClientName(idClient),
-                    _getDriverName(idDriver),
-                  ]),
-                  builder: (context, snap) {
-                    final clientName = (snap.data != null && snap.data!.isNotEmpty)
-                        ? snap.data![0]
-                        : 'Cargando...';
-                    final driverName = (snap.data != null && snap.data!.length > 1)
-                        ? snap.data![1]
-                        : 'Cargando...';
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Cliente: $clientName'),
-                        Text('Conductor: $driverName'),
-                      ],
-                    );
-                  },
+    return Scrollbar(
+      thumbVisibility: true,
+        child: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('N° Viaje', style: TextStyle(fontWeight: FontWeight.w800))),
+            DataColumn(label: Text('Destino del viaje', style: TextStyle(fontWeight: FontWeight.w800))),
+            DataColumn(label: Text('Cliente / Conductor', style: TextStyle(fontWeight: FontWeight.w800))),
+            DataColumn(label: Text('Tarifa', style: TextStyle(fontWeight: FontWeight.w800))),
+          ],
+          rows: docs.map((travelDoc) {
+            final data = travelDoc.data() as Map<String, dynamic>;
+      
+            // ✅ OJO: en tu BD es numero_viaje (no numeroViaje)
+            final numeroViaje = (data['numeroViaje'] ?? '—').toString();
+      
+            final idClient = data['idClient'];
+            final idDriver = data['idDriver'];
+      
+            return DataRow(
+              onSelectChanged: (_) => _openTravelDetailModal(travelDoc),
+              cells: [
+                DataCell(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        numeroViaje,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data['solicitudViaje'] != null
+                            ? formatTimestamp(data['solicitudViaje'])
+                            : '—',
+                        style: const TextStyle(fontSize: 11, color: Colors.black87),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              DataCell(
-                Text(
-                  data['solicitudViaje'] != null
-                      ? formatTimestamp(data['solicitudViaje'])
-                      : '—',
+                DataCell(
+                  SizedBox(
+                    width: 250,
+                    child: Text(
+                      data['to'] ?? '',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
-              ),
-
-              DataCell(
-                Text(
-                  '\$${numberFormat.format((data['tarifa'] ?? 0))}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+      
+                // ✅ Cliente/Conductor consultando Firestore
+                DataCell(
+                  FutureBuilder<List<String>>(
+                    future: Future.wait([
+                      _getClientName(idClient),
+                      _getDriverName(idDriver),
+                    ]),
+                    builder: (context, snap) {
+                      final clientName = (snap.data != null && snap.data!.isNotEmpty)
+                          ? snap.data![0]
+                          : 'Cargando...';
+                      final driverName = (snap.data != null && snap.data!.length > 1)
+                          ? snap.data![1]
+                          : 'Cargando...';
+      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 14, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Expanded(child: Text(clientName, overflow: TextOverflow.ellipsis)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.directions_car, size: 14, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Expanded(child: Text(driverName, overflow: TextOverflow.ellipsis)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          );
-        }).toList(),
+                DataCell(
+                  Text(
+                    '\$${numberFormat.format((data['tarifa'] ?? 0))}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
+        )
     );
   }
 
@@ -476,51 +519,141 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
 
 
   Widget _buildCards(List<QueryDocumentSnapshot> docs) {
-    return ListView.builder(
-      itemCount: docs.length,
-      itemBuilder: (context, index) {
-        final travel = docs[index];
+    return Expanded(
+      child: ListView.builder(
+        itemCount: docs.length,
+        itemBuilder: (context, index) {
+          final travel = docs[index];
 
-        final idClient = travel['idClient'];
-        final idDriver = travel['idDriver'];
-        final driverPlate = (travel['placa_show'] ?? '').toString();
+          final data = travel.data() as Map<String, dynamic>;
 
-        return FutureBuilder(
-          future: Future.wait([
-            _getClientName(idClient),
-            _getDriverName(idDriver),
-          ]),
-          builder: (context, snapshot) {
-            final clientName = snapshot.data?[0] ?? '';
-            final driverName = snapshot.data?[1] ?? '';
+          final idClient = data['idClient'];
+          final idDriver = data['idDriver'];
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabelValue('Origen:', travel['from']),
-                    _buildLabelValue('Destino:', travel['to']),
-                    const Divider(),
-                    _buildRow('Fecha:', formatTimestamp(travel['solicitudViaje'])),
-                    _buildRow('Tarifa:', '\$${numberFormat.format(travel['tarifa'])}', isBold: true),
-                    const Divider(),
-                    _buildRow('Cliente:', clientName),
-                    _buildRow('Conductor:', driverName),
-                    _buildRow('Placa:', driverPlate),
-                  ],
+          final driverPlate = (data['placa'] ?? '').toString();
+
+          return FutureBuilder(
+            future: Future.wait([
+              _getClientName(idClient),
+              _getDriverName(idDriver),
+            ]),
+            builder: (context, snapshot) {
+              final clientName = snapshot.data?[0] ?? '';
+              final driverName = snapshot.data?[1] ?? '';
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                      /// 🔥 NUMERO VIAJE + FECHA
+                      Text(
+                        data['numeroViaje'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data['solicitudViaje'] != null
+                            ? formatTimestamp(data['solicitudViaje'])
+                            : '—',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+
+                      const Divider(),
+
+                      /// 📍 ORIGEN / DESTINO
+                      _buildLabelValue('Origen:', data['from'] ?? ''),
+                      _buildLabelValue('Destino:', data['to'] ?? ''),
+
+                      const Divider(),
+
+                      /// ⏱ TIEMPOS
+                      _buildRow(
+                        'Inicio:',
+                        data['inicioViaje'] != null
+                            ? formatTimestamp(data['inicioViaje'])
+                            : '—',
+                      ),
+                      _buildRow(
+                        'Final:',
+                        data['finalViaje'] != null
+                            ? formatTimestamp(data['finalViaje'])
+                            : '—',
+                      ),
+
+                      const Divider(),
+
+                      /// 💰 TARIFAS
+                      _buildRow(
+                        'Tarifa:',
+                        '\$${numberFormat.format(data['tarifa'] ?? 0)}',
+                        isBold: true,
+                      ),
+                      _buildRow(
+                        'Descuento:',
+                        '\$${numberFormat.format(data['tarifaDescuento'] ?? 0)}',
+                      ),
+                      _buildRow(
+                        'Inicial:',
+                        '\$${numberFormat.format(data['tarifaInicial'] ?? 0)}',
+                      ),
+
+                      const Divider(),
+
+                      /// 👤 CLIENTE / 🚗 CONDUCTOR (CON ICONOS 🔥)
+                      Row(
+                        children: [
+                          const Icon(Icons.person, size: 16, color: Colors.grey),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text(clientName)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.directions_car, size: 16, color: Colors.grey),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text(driverName)),
+                        ],
+                      ),
+
+                      const Divider(),
+
+                      /// ⭐ CALIFICACIONES
+                      _buildRow(
+                        'Cliente:',
+                        '${data['calificacionAlCliente'] ?? 0} ⭐',
+                      ),
+                      _buildRow(
+                        'Conductor:',
+                        '${data['calificacionAlConductor'] ?? 0} ⭐',
+                      ),
+
+                      const Divider(),
+
+                      /// 🚗 PLACA (opcional, puedes quitarla después)
+                      _buildRow('Placa:', driverPlate),
+
+                      /// 📝 APUNTES
+                      if ((data['apuntes'] ?? '').toString().isNotEmpty)
+                        _buildLabelValue('Apuntes:', data['apuntes']),
+
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
-
-
 
   //new para filtrado
 
