@@ -62,11 +62,17 @@ class DriverProvider with ChangeNotifier {
 
   // Función para obtener conductores por rol y estado de trabajo
   List<Driver> getDriversByRoleAndWorkingStatus(String role, bool isWorking) {
-    return _drivers.where((driver) => driver.rol == role).toList();
+    return _drivers.where((driver) =>
+    driver.rol == role &&
+        driver.the00_is_working == isWorking
+    ).toList();
   }
 
   List<Driver> getDriversByRoleAndActiveStatus(String role, bool isActive) {
-    return _drivers.where((driver) => driver.rol == role).toList();
+    return _drivers.where((driver) =>
+    driver.rol == role &&
+        driver.the00_is_active == isActive
+    ).toList();
   }
 
   // List<Driver> getDriversByIsWorking(bool isWorking) {

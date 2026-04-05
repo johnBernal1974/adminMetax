@@ -17,6 +17,8 @@ class GeneralPage extends StatefulWidget {
 
 class _GeneralPageState extends State<GeneralPage> {
 
+  int totalClientes = 0;
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +26,16 @@ class _GeneralPageState extends State<GeneralPage> {
       Provider.of<DriverProvider>(context, listen: false)
           .fetchDrivers();
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final clientProvider = Provider.of<ClientProvider>(context, listen: false);
+
+      totalClientes = await clientProvider.fetchTotalClients();
+
+      setState(() {});
+    });
+
+
   }
 
   void _refreshData() async {
@@ -292,7 +304,7 @@ class _GeneralPageState extends State<GeneralPage> {
           child: _buildInfoContainerMobil(context, 'Conductores', Icons.directions_car, conductores.toString(), Colors.lightBlue.shade300)),
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
-          child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
+          child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, totalClientes.toString(), Colors.green.shade300)),
       _buildInfoContainerMobil(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey),
       //_buildInfoContainerMobil(context, 'Viajes', Icons.info_outline,  driverProvider.travelHistoryCount.toString(), Colors.purple.shade300),
       // Agregar más contenedores según sea necesario
@@ -314,7 +326,7 @@ class _GeneralPageState extends State<GeneralPage> {
           Expanded(
             child: GestureDetector(
                 onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
-                child: _buildInfoContainer(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
+                child: _buildInfoContainer(context, 'Clientes', Icons.person, totalClientes.toString(), Colors.green.shade300)),
           ),
           Expanded(
             child: _buildInfoContainer(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey.shade400),

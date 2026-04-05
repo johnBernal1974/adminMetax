@@ -37,6 +37,14 @@ class ClientProvider with ChangeNotifier {
     }
   }
 
+  Future<int> fetchTotalClients() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('Clients')
+        .get();
+
+    return snapshot.size;
+  }
+
   Future<void> create(Client client) async {
     try {
       await _ref.doc(client.id).set(client.toJson());
