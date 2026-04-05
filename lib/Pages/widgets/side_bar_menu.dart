@@ -115,19 +115,6 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.emoji_people,
                   press: () => _go('usuarios_page'),
                 ),
-              // if (_canSee(role, 'vehiculos_page'))
-              //   DrawerListTitle(
-              //     title: "Vehículos",
-              //     icon: Icons.directions_car,
-              //     press: () => _go('vehiculos_page'),
-              //   ),
-
-              // if (_canSee(role, 'prices_page'))
-              //   DrawerListTitle(
-              //     title: "Configuraciones",
-              //     icon: Icons.settings,
-              //     press: () => _go('prices_page'),
-              //   ),
 
               if (_canSee(role, 'recarga_info_page'))
                 DrawerListTitle(
@@ -141,6 +128,20 @@ class _SideBarState extends State<SideBar> {
                   title: "Historial de viajes",
                   icon: Icons.list_alt_outlined,
                   press: () => _go('historial_viajes_page'),
+                ),
+
+              if (_canSee(role, 'porterias_page'))
+                DrawerListTitle(
+                  title: "Porterías",
+                  icon: Icons.apartment,
+                  press: () => _go('porterias_page'),
+                ),
+
+              if (_canSee(role, 'registro_porteria_page'))
+                DrawerListTitle(
+                  title: "Registrar Porterías",
+                  icon: Icons.apartment,
+                  press: () => _go('registro_porteria_page'),
                 ),
 
               //MASTER

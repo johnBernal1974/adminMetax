@@ -2,11 +2,12 @@ class RoutePermissions {
   static const String masterRole = 'Master';
 
   static const Map<String, Set<String>> routePermissions = {
+
     // acceso total (para operadorFull)
     'general_page': {'operadorFull'},
     'usuarios_page': {'operadorFull'},
 
-    // ✅ AHORA también entra operadorSeguimientoMap
+    // conductores
     'conductores_page': {'operadorFull', 'operadorSeguimientoMap'},
 
     'historial_viajes_page': {'operadorFull'},
@@ -17,6 +18,10 @@ class RoutePermissions {
 
     // recargas
     'recarga_info_page': {'operadorFull', 'adminRecargas'},
+
+    /// 🔥 NUEVO (AQUÍ ESTÁ LA CLAVE)
+    'registro_porteria_page': {'operadorFull'},
+    'porterias_page': {'operadorFull'},
   };
 
   static bool canRoleAccess(String role, String routeName) {

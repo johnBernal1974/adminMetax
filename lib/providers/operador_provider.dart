@@ -13,6 +13,12 @@ class OperadorProvider with ChangeNotifier {
   String? _rolActual;
   bool _activoActual = false;
 
+  String? _nombreActual;
+  String? _apellidosActual;
+
+  String? get nombreActual => _nombreActual;
+  String? get apellidosActual => _apellidosActual;
+
   OperadorProvider() {
     _ref = FirebaseFirestore.instance.collection('Operadores');
     fetchOperadorActual();
@@ -50,6 +56,8 @@ class OperadorProvider with ChangeNotifier {
       }
 
       final data = doc.data() as Map<String, dynamic>;
+      _nombreActual = data['01_Nombres'];
+      _apellidosActual = data['02_Apellidos'];
       _rolActual = (data['20_Rol'] ?? '').toString().trim();
       _activoActual = data['activo'] == true;
 
@@ -140,6 +148,8 @@ class OperadorProvider with ChangeNotifier {
   void clearOperadorActual() {
     _rolActual = null;
     _activoActual = false;
+    _nombreActual = null;
+    _apellidosActual = null;
     notifyListeners();
   }
 
