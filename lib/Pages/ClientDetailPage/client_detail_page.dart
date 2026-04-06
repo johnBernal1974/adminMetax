@@ -852,7 +852,8 @@ El equipo de Metax''';
                     .collection('Clients')
                     .doc(client.id)
                     .update({
-                  "status": "activado"
+                  "status": "activado",
+                  "requiere_revision": false, // 🔥 CLAVE
                 });
 
                 Navigator.pop(context);

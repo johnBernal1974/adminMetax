@@ -545,10 +545,37 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 DataCell(Text(driver.the02Apellidos ?? "Apellidos no disponibles", style: const TextStyle(color: Colors.black))),
                 DataCell(Text(driver.the03NumeroDocumento ?? "Documento no disponible")),
                 DataCell(Text(driver.the07Celular ?? "Celular no disponible")),
-                DataCell(Text(driver.the10FechaRegistroTimestamp != null
-                    ? DateFormat('dd/MM/yyyy HH:mm')
-                    .format(driver.the10FechaRegistroTimestamp!.toDate())
-                    : "no disponible")),
+                DataCell(
+                  Builder(
+                    builder: (_) {
+                      final rawFecha = driver.the10FechaRegistroTimestamp;
+
+                      if (rawFecha != null) {
+                        return Text(
+                          DateFormat('dd/MM/yyyy HH:mm')
+                              .format(rawFecha.toDate()),
+                        );
+                      }
+
+                      // 🔥 intentar leer como string (fallback)
+                      try {
+                        final fechaString = driver.toJson()["10_Fecha_Registro_Timestamp"];
+
+                        if (fechaString != null && fechaString is String) {
+                          final parsed = DateTime.tryParse(fechaString);
+
+                          if (parsed != null) {
+                            return Text(
+                              DateFormat('dd/MM/yyyy HH:mm').format(parsed),
+                            );
+                          }
+                        }
+                      } catch (_) {}
+
+                      return const Text("no disponible");
+                    },
+                  ),
+                ),
 
                 DataCell(
                   IconButton(

@@ -92,5 +92,13 @@ class ClientProvider with ChangeNotifier {
     }
   }
 
+  Stream<List<Client>> getClientsStream() {
+    return FirebaseFirestore.instance
+        .collection('Clients')
+        .snapshots()
+        .map((snapshot) =>
+        snapshot.docs.map((doc) => Client.fromJson(doc.data())).toList());
+  }
+
 
 }

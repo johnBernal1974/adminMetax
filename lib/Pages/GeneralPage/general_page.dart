@@ -1,4 +1,8 @@
 
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../common/main_layout.dart';
@@ -7,6 +11,7 @@ import '../../models/usuario_model.dart';
 import '../../providers/client_provider.dart';
 import '../../providers/driver_provider.dart';
 import '../../src/color.dart';
+import 'dart:html' as html;
 
 class GeneralPage extends StatefulWidget {
   const GeneralPage({Key? key}) : super(key: key);
@@ -141,6 +146,10 @@ class _GeneralPageState extends State<GeneralPage> {
                 icon: const Icon(Icons.refresh),
                 onPressed: _refreshData,
               ),
+              const SizedBox(height: 10),
+              const ExportarUsuariosButton(),
+
+
               Wrap(
                 spacing: 10, // Espacio horizontal entre los contenedores
                 // Espacio vertical entre las filas de contenedores
@@ -424,4 +433,75 @@ class _GeneralPageState extends State<GeneralPage> {
     );
   }
 
+
+
+}
+
+
+class ExportarUsuariosButton extends StatelessWidget {
+  const ExportarUsuariosButton({super.key});
+
+  Future<void> exportarUsuarios() async {
+    List<List<String>> rows = [];
+
+    /// 🔥 ENCABEZADOS
+    rows.add(["Tipo", "Nombres", "Apellidos", "Celular"]);
+
+    /// =========================
+    /// CLIENTES
+    /// =========================
+    final clientesSnapshot =
+    await FirebaseFirestore.instance.collection('Clients').get();
+
+    for (var doc in clientesSnapshot.docs) {
+      final data = doc.data();
+
+      rows.add([
+        "Cliente",
+        (data["01_Nombres"] ?? "").toString(),
+        (data["02_Apellidos"] ?? "").toString(),
+        (data["07_Celular"] ?? "").toString(),
+      ]);
+    }
+
+    /// =========================
+    /// DRIVERS
+    /// =========================
+    final driversSnapshot =
+    await FirebaseFirestore.instance.collection('Drivers').get();
+
+    for (var doc in driversSnapshot.docs) {
+      final data = doc.data();
+
+      rows.add([
+        "Conductor",
+        (data["01_Nombres"] ?? "").toString(),
+        (data["02_Apellidos"] ?? "").toString(),
+        (data["07_Celular"] ?? "").toString(),
+      ]);
+    }
+
+    /// 🔥 CONVERTIR A CSV
+    String csv = const ListToCsvConverter().convert(rows);
+
+    /// 🔥 DESCARGAR ARCHIVO
+    final bytes = utf8.encode(csv);
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute("download", "usuarios_metax.csv")
+      ..click();
+
+    html.Url.revokeObjectUrl(url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: exportarUsuarios,
+      icon: const Icon(Icons.download),
+      label: const Text("Descargar usuarios"),
+    );
+  }
 }

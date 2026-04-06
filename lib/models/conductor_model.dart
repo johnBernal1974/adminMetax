@@ -118,7 +118,10 @@ class Driver {
     the07Celular: json["07_Celular"],
     the08FechaNacimiento: json["08_Fecha_Nacimiento"],
     the09Genero: json["09_Genero"],
-    the10FechaRegistroTimestamp: json["10_Fecha_Registro_Timestamp"] as Timestamp?,
+      the10FechaRegistroTimestamp:
+      json["10_Fecha_Registro_Timestamp"] is Timestamp
+          ? json["10_Fecha_Registro_Timestamp"]
+          : null,
     the11EstaActivado: json["11_Esta_activado"],
     the12FechaActivacion: json["12_Fecha_Activacion"],
     the13NombreActivador: json["13_Nombre_Activador"],
