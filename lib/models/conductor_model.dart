@@ -56,6 +56,8 @@ class Driver {
   String vehiculoActivoId;
   String placaActiva;
 
+  String? the10FechaRegistroString;
+
   Driver({
     required this.id,
     required this.rol,
@@ -103,59 +105,67 @@ class Driver {
     required this.fotoPerfilTomada,
     required this.vehiculoActivoId,
     required this.placaActiva,
+    required this.the10FechaRegistroString,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
-    return Driver (
-    id: json["id"],
-    rol: json["rol"],
-    the01Nombres: json["01_Nombres"],
-    the02Apellidos: json["02_Apellidos"],
-    the03NumeroDocumento: json["03_Numero_Documento"],
-    the04TipoDocumento: json["04_Tipo_Documento"],
-    the05FechaExpedicionDocumento: json["05_Fecha_Expedicion_Documento"],
-    the06Email: json["06_Email"],
-    the07Celular: json["07_Celular"],
-    the08FechaNacimiento: json["08_Fecha_Nacimiento"],
-    the09Genero: json["09_Genero"],
+
+    final rawFecha = json["10_Fecha_Registro_Timestamp"];
+
+    return Driver(
+      id: json["id"],
+      rol: json["rol"],
+      the01Nombres: json["01_Nombres"],
+      the02Apellidos: json["02_Apellidos"],
+      the03NumeroDocumento: json["03_Numero_Documento"],
+      the04TipoDocumento: json["04_Tipo_Documento"],
+      the05FechaExpedicionDocumento: json["05_Fecha_Expedicion_Documento"],
+      the06Email: json["06_Email"],
+      the07Celular: json["07_Celular"],
+      the08FechaNacimiento: json["08_Fecha_Nacimiento"],
+      the09Genero: json["09_Genero"],
+
+      // 🔥 AQUÍ ESTÁ EL FIX
       the10FechaRegistroTimestamp:
-      json["10_Fecha_Registro_Timestamp"] is Timestamp
-          ? json["10_Fecha_Registro_Timestamp"]
-          : null,
-    the11EstaActivado: json["11_Esta_activado"],
-    the12FechaActivacion: json["12_Fecha_Activacion"],
-    the13NombreActivador: json["13_Nombre_Activador"],
-    the25CedulaDelanteraFoto: json["25_Cedula_Delantera_foto"],
-    the26CedulaTraseraFoto: json["26_Cedula_Trasera_foto"],
-    the29FotoPerfil: json["29_Foto_perfil"],
-    the30NumeroViajes: json["30_Numero_viajes"] ?? 0,
-    the31Calificacion: (json["31_Calificacion"] ?? 0).toDouble(),
-    the321SaldoAnteriorInfo: json["321_Saldo_Anterior_Info"],
-    the32SaldoRecarga: json["32_Saldo_Recarga"] ?? 0,
-    the33FechaUltimaRecarga: json["33_Fecha_Ultima_Recarga"],
-    the34NuevaRecarga: json["34_Nueva_Recarga"],
-    the35NuevaRecargaInfo: json["35_Nueva_Recarga_Info"],
-    the36FechaNuevaRecarga: json["36_Fecha_Nueva_Recarga"],
-    the37RecargaRedimir: json["37_Recarga_Redimir"],
-    the38EstaBloqueado: json["38_Esta_bloqueado"],
-    the39EstaConectado: json["39_Esta_conectado"],
-    the40NumeroCancelaciones: json["40_Numero_Cancelaciones"],
-    the41SuspendidoPorCancelaciones: json["41_Suspendido_Por_Cancelaciones"],
-    token: json["token"],
-    image: json["image"],
-    fotoCedulaDelantera: json["foto_cedula_delantera"] ?? '',
-    fotoCedulaTrasera: json["foto_cedula_trasera"] ?? '',
-    verificacionStatus: json["Verificacion_Status"] ?? '',
-    the00_is_active: json["00_is_active"] ?? false,
-    the00_is_working: json["00_is_working"] ?? false,
-    the00_ultimo_cliente: json["00_ultimo_cliente"] ?? '',
-    ceduladelanteraTomada: json["cedula_delantera_tomada"] ?? false,
-    cedulatraseraTomada: json["cedula_trasera_tomada"] ?? false,
-    licenciaCategoria: json["licencia_categoria"] ?? '',
-    licenciaVigencia: json["licencia_vigencia"] ?? '',
-    fotoPerfilTomada: json["foto_perfil_tomada"] ?? false,
-    vehiculoActivoId: json["vehiculoActivoId"] ?? '',
-    placaActiva: json["placaActiva"] ?? '',
+      rawFecha is Timestamp ? rawFecha : null,
+
+      the10FechaRegistroString:
+      rawFecha is String ? rawFecha : null,
+
+      the11EstaActivado: json["11_Esta_activado"],
+      the12FechaActivacion: json["12_Fecha_Activacion"],
+      the13NombreActivador: json["13_Nombre_Activador"],
+      the25CedulaDelanteraFoto: json["25_Cedula_Delantera_foto"],
+      the26CedulaTraseraFoto: json["26_Cedula_Trasera_foto"],
+      the29FotoPerfil: json["29_Foto_perfil"],
+      the30NumeroViajes: json["30_Numero_viajes"] ?? 0,
+      the31Calificacion: (json["31_Calificacion"] ?? 0).toDouble(),
+      the321SaldoAnteriorInfo: json["321_Saldo_Anterior_Info"],
+      the32SaldoRecarga: json["32_Saldo_Recarga"] ?? 0,
+      the33FechaUltimaRecarga: json["33_Fecha_Ultima_Recarga"],
+      the34NuevaRecarga: json["34_Nueva_Recarga"],
+      the35NuevaRecargaInfo: json["35_Nueva_Recarga_Info"],
+      the36FechaNuevaRecarga: json["36_Fecha_Nueva_Recarga"],
+      the37RecargaRedimir: json["37_Recarga_Redimir"],
+      the38EstaBloqueado: json["38_Esta_bloqueado"],
+      the39EstaConectado: json["39_Esta_conectado"],
+      the40NumeroCancelaciones: json["40_Numero_Cancelaciones"],
+      the41SuspendidoPorCancelaciones: json["41_Suspendido_Por_Cancelaciones"],
+      token: json["token"],
+      image: json["image"],
+      fotoCedulaDelantera: json["foto_cedula_delantera"] ?? '',
+      fotoCedulaTrasera: json["foto_cedula_trasera"] ?? '',
+      verificacionStatus: json["Verificacion_Status"] ?? '',
+      the00_is_active: json["00_is_active"] ?? false,
+      the00_is_working: json["00_is_working"] ?? false,
+      the00_ultimo_cliente: json["00_ultimo_cliente"] ?? '',
+      ceduladelanteraTomada: json["cedula_delantera_tomada"] ?? false,
+      cedulatraseraTomada: json["cedula_trasera_tomada"] ?? false,
+      licenciaCategoria: json["licencia_categoria"] ?? '',
+      licenciaVigencia: json["licencia_vigencia"] ?? '',
+      fotoPerfilTomada: json["foto_perfil_tomada"] ?? false,
+      vehiculoActivoId: json["vehiculoActivoId"] ?? '',
+      placaActiva: json["placaActiva"] ?? '',
     );
   }
 

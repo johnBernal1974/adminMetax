@@ -636,7 +636,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     Text(
                       driver.the10FechaRegistroTimestamp != null
                           ? 'Conductor desde: ${DateFormat('dd/MM/yyyy HH:mm').format(driver.the10FechaRegistroTimestamp!.toDate())}'
-                          : 'Conductor desde: no disponible',
+                          : (driver.the10FechaRegistroString != null &&
+                          driver.the10FechaRegistroString!.isNotEmpty
+                          ? 'Conductor desde: ${driver.the10FechaRegistroString}'
+                          : 'Conductor desde: no disponible'),
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],
@@ -686,7 +689,10 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     Text(
                       driver.the10FechaRegistroTimestamp != null
                           ? 'Conductor desde: ${DateFormat('dd/MM/yyyy HH:mm').format(driver.the10FechaRegistroTimestamp!.toDate())}'
-                          : 'Conductor desde: no disponible',
+                          : (driver.the10FechaRegistroString != null &&
+                          driver.the10FechaRegistroString!.isNotEmpty
+                          ? 'Conductor desde: ${driver.the10FechaRegistroString}'
+                          : 'Conductor desde: no disponible'),
                       style: TextStyle(fontSize: fontSize),
                     ),
                   ],

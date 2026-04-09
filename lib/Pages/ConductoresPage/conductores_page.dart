@@ -592,7 +592,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
             DataColumn(
               label: Text(
-                'Celular',
+                'Fecha registro',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -685,29 +685,20 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 DataCell(
                   Builder(
                     builder: (_) {
-                      final rawFecha = driver.the10FechaRegistroTimestamp;
 
-                      if (rawFecha != null) {
+                      // 🔥 CASO 1: Timestamp
+                      if (driver.the10FechaRegistroTimestamp != null) {
                         return Text(
                           DateFormat('dd/MM/yyyy HH:mm')
-                              .format(rawFecha.toDate()),
+                              .format(driver.the10FechaRegistroTimestamp!.toDate()),
                         );
                       }
 
-                      // 🔥 intentar leer como string (fallback)
-                      try {
-                        final fechaString = driver.toJson()["10_Fecha_Registro_Timestamp"];
-
-                        if (fechaString != null && fechaString is String) {
-                          final parsed = DateTime.tryParse(fechaString);
-
-                          if (parsed != null) {
-                            return Text(
-                              DateFormat('dd/MM/yyyy HH:mm').format(parsed),
-                            );
-                          }
-                        }
-                      } catch (_) {}
+                      // 🔥 CASO 2: String
+                      if (driver.the10FechaRegistroString != null &&
+                          driver.the10FechaRegistroString!.isNotEmpty) {
+                        return Text(driver.the10FechaRegistroString!);
+                      }
 
                       return const Text("no disponible");
                     },
@@ -823,6 +814,52 @@ String vigenciaEstadoTexto(driver) {
       return "vigente";
     case _VigEstado.sinFecha:
       return "sinFecha";
+  }
+}
+
+DateTime? parseFechaColombia(String input) {
+  try {
+    final partes = input.split(" - ");
+    if (partes.length != 2) return null;
+
+    final fechaParte = partes[0]; // "6 de abril/2026"
+    final horaParte = partes[1];  // "16:01:21"
+
+    final fechaSplit = fechaParte.split(" de ");
+    if (fechaSplit.length != 2) return null;
+
+    final dia = int.parse(fechaSplit[0]);
+
+    final mesAnio = fechaSplit[1].split("/");
+    final mesTexto = mesAnio[0].toLowerCase();
+    final anio = int.parse(mesAnio[1]);
+
+    final meses = {
+      "enero": 1,
+      "febrero": 2,
+      "marzo": 3,
+      "abril": 4,
+      "mayo": 5,
+      "junio": 6,
+      "julio": 7,
+      "agosto": 8,
+      "septiembre": 9,
+      "octubre": 10,
+      "noviembre": 11,
+      "diciembre": 12,
+    };
+
+    final mes = meses[mesTexto];
+    if (mes == null) return null;
+
+    final horaSplit = horaParte.split(":");
+    final hora = int.parse(horaSplit[0]);
+    final minuto = int.parse(horaSplit[1]);
+    final segundo = int.parse(horaSplit[2]);
+
+    return DateTime(anio, mes, dia, hora, minuto, segundo);
+  } catch (_) {
+    return null;
   }
 }
 
