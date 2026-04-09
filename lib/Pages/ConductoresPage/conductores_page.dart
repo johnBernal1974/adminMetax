@@ -25,6 +25,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
   Driver? driver;
   Map<String, String> driversEstadoVehiculo = {};
 
+  bool mostrarSoloActivosBloqueados = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,9 +39,15 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
   int getPrioridad(Driver driver) {
-    if (tieneCorregida(driver)) return 0; // 🔥 MÁS ALTO
-    if (tieneRechazada(driver)) return 1;
-    return 2;
+    final estado = driver.verificacionStatus;
+
+    if (estado == "procesando") return 0;
+    if (estado == "registrado") return 1;
+
+    if (tieneCorregida(driver)) return 2;
+    if (tieneRechazada(driver)) return 3;
+
+    return 4; // otros (activado, bloqueado)
   }
 
   bool tienePendiente(Driver driver) {
@@ -141,10 +149,26 @@ class _ConductoresPageState extends State<ConductoresPage> {
     }
 
     List filteredConductores = conductores.where((driver) {
-      if (driver.rol.isNotEmpty) {
-        return driver.rol == "carro";
+
+      if (driver.rol.isNotEmpty && driver.rol != "carro") {
+        return false;
       }
-      return true;
+
+      final estado = (driver.verificacionStatus ?? "")
+          .toString()
+          .trim()
+          .toLowerCase();
+
+      print("👉 estado limpio: [$estado]"); // DEBUG
+
+      if (mostrarSoloActivosBloqueados) {
+        return estado.contains("activado") ||
+            estado.contains("bloqueado");
+      } else {
+        return estado.contains("registrado") ||
+            estado.contains("procesando");
+      }
+
     }).toList();
 
     filteredConductores.sort((a, b) {
@@ -225,72 +249,127 @@ class _ConductoresPageState extends State<ConductoresPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 20),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Conductores pendientes por activar:\n$totalDrivers',
-                style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                mostrarSoloActivosBloqueados
+                    ? 'Total de Conductores activos/bloqueados:\n$totalDrivers'
+                    : 'Total de Conductores pendientes por activar:\n$totalDrivers',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
             IconButton(
-              icon: Icon(Icons.refresh),
-              color: Theme
-                  .of(context)
-                  .primaryColor,
+              icon: const Icon(Icons.refresh),
+              color: Theme.of(context).primaryColor,
               onPressed: () {
                 driverProvider.fetchDriversInicial();
               },
             ),
           ],
         ),
+
         const Divider(color: Colors.grey, height: 20, thickness: 2),
-        _buildSearchField(),
-        const SizedBox(height: 30),
-        const SizedBox(height: 10),
+
+        Column(
+          children: [
+            _buildSearchField(),
+            const SizedBox(height: 20),
+
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  mostrarSoloActivosBloqueados =
+                  !mostrarSoloActivosBloqueados;
+                });
+              },
+              icon: Icon(
+                mostrarSoloActivosBloqueados
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: Colors.white,
+              ),
+              label: Text(
+                mostrarSoloActivosBloqueados
+                    ? "Ver pendientes"
+                    : "Ver activados/bloqueados",
+                style: const TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
-        const Text("Filtrado vigencia documentos", style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        const Divider(height: 1, color: grisMedio),
-        const SizedBox(height: 10),
-        // Column(
-        //   crossAxisAlignment: CrossAxisAlignment.start,
-        //   children: [
-        //
-        //     /// 🔥 PRIORIDAD
-        //     if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
-        //       const SizedBox(height: 10),
-        //       const Text(
-        //         "🚨 Prioridad (requieren atención)",
-        //         style: TextStyle(
-        //           fontSize: 16,
-        //           fontWeight: FontWeight.bold,
-        //         ),
-        //       ),
-        //       const Divider(),
-        //       _buildDriverTable(
-        //         filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
-        //         getStatusColor,
-        //       ),
-        //     ],
-        //
-        //     /// 🔹 NORMALES
-        //     if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
-        //       const SizedBox(height: 20),
-        //       const Text(
-        //         "Conductores",
-        //         style: TextStyle(
-        //           fontSize: 16,
-        //           fontWeight: FontWeight.bold,
-        //         ),
-        //       ),
-        //       const Divider(),
-        //       _buildDriverTable(
-        //         filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
-        //         getStatusColor,
-        //       ),
-        //     ],
-        //   ],
-        // )
+
+        /// 🔥 CONTENIDO PRINCIPAL
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// ✅ MODO ACTIVADOS/BLOQUEADOS
+            if (mostrarSoloActivosBloqueados) ...[
+              const SizedBox(height: 10),
+              const Text(
+                "Conductores activos y bloqueados",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Divider(),
+              _buildDriverTable(filteredConductores, getStatusColor),
+            ]
+
+            /// ✅ MODO PENDIENTES
+            else ...[
+
+              /// 🔥 PRIORIDAD
+              if (filteredConductores.any((d) => getPrioridad(d) < 2)) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  "🚨 Prioridad (requieren atención)",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(),
+                _buildDriverTable(
+                  filteredConductores
+                      .where((d) => getPrioridad(d) < 2)
+                      .toList(),
+                  getStatusColor,
+                ),
+              ],
+
+              /// 🔹 RESTO
+              if (filteredConductores.any((d) => getPrioridad(d) >= 2)) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  "Conductores",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(),
+                _buildDriverTable(
+                  filteredConductores
+                      .where((d) => getPrioridad(d) >= 2)
+                      .toList(),
+                  getStatusColor,
+                ),
+              ],
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -306,69 +385,127 @@ class _ConductoresPageState extends State<ConductoresPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 20),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Conductores pendientes por activar:\n$totalDrivers',
-                style: const TextStyle(fontSize: 16)),
+            Text(
+              mostrarSoloActivosBloqueados
+                  ? 'Total de Conductores activos/bloqueados:\n$totalDrivers'
+                  : 'Total de Conductores pendientes por activar:\n$totalDrivers',
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(width: 100),
             ElevatedButton(
               onPressed: () {
                 driverProvider.fetchDriversInicial();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme
-                    .of(context)
-                    .primaryColor,
+                backgroundColor: Theme.of(context).primaryColor,
               ),
               child: const Text(
-                  'Cargar Conductores', style: TextStyle(color: Colors.white)),
+                'Cargar Conductores',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
+
         const Divider(color: Colors.grey, height: 20, thickness: 2),
-        _buildSearchField(),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSearchField(),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  mostrarSoloActivosBloqueados =
+                  !mostrarSoloActivosBloqueados;
+                });
+              },
+              icon: Icon(
+                mostrarSoloActivosBloqueados
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: Colors.black,
+              ),
+              label: Text(
+                mostrarSoloActivosBloqueados
+                    ? "Ver pendientes"
+                    : "Ver activados/bloqueados",
+                style: const TextStyle(color: Colors.black),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
+
         const SizedBox(height: 30),
         const Divider(height: 1, color: grisMedio),
         const SizedBox(height: 10),
 
-        const SizedBox(height: 10),
+        /// 🔥 CONTENIDO PRINCIPAL
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            /// 🔥 PRIORIDAD
-            if (filteredConductores.any((d) => getPrioridad(d) == 0 || getPrioridad(d) == 1)) ...[
+            /// ✅ MODO ACTIVADOS/BLOQUEADOS
+            if (mostrarSoloActivosBloqueados) ...[
               const SizedBox(height: 10),
               const Text(
-                "🚨 Prioridad (requieren atención)",
+                "Conductores activos y bloqueados",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Divider(),
-              _buildDriverTable(
-                filteredConductores.where((d) => getPrioridad(d) < 2).toList(),
-                getStatusColor,
-              ),
-            ],
+              _buildDriverTable(filteredConductores, getStatusColor),
+            ]
 
-            /// 🔹 NORMALES
-            if (filteredConductores.any((d) => getPrioridad(d) == 2)) ...[
-              const SizedBox(height: 20),
-              const Text(
-                "Conductores",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            /// ✅ MODO PENDIENTES (con prioridad)
+            else ...[
+
+              /// 🔥 PRIORIDAD
+              if (filteredConductores.any((d) => getPrioridad(d) < 2)) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  "🚨 Prioridad (requieren atención)",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const Divider(),
-              _buildDriverTable(
-                filteredConductores.where((d) => getPrioridad(d) == 2).toList(),
-                getStatusColor,
-              ),
+                const Divider(),
+                _buildDriverTable(
+                  filteredConductores
+                      .where((d) => getPrioridad(d) < 2)
+                      .toList(),
+                  getStatusColor,
+                ),
+              ],
+
+              /// 🔹 RESTO (IMPORTANTE 🔥)
+              if (filteredConductores.any((d) => getPrioridad(d) >= 2)) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  "Conductores",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(),
+                _buildDriverTable(
+                  filteredConductores
+                      .where((d) => getPrioridad(d) >= 2)
+                      .toList(),
+                  getStatusColor,
+                ),
+              ],
             ],
           ],
         )

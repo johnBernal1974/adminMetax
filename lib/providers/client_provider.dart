@@ -24,8 +24,7 @@ class ClientProvider with ChangeNotifier {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('Clients')
-          .where('status', whereIn: ['registrado', 'procesando'])
-          .get();
+          .get(); // 🔥 traer TODOS
 
       _clients = snapshot.docs
           .map((doc) => Client.fromJson(doc.data()))

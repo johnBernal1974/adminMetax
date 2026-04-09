@@ -27,6 +27,8 @@ class _UsuariosPageState extends State<UsuariosPage> {
   OperadorProvider _operadorProvider = OperadorProvider();
   MyAuthProvider _authProvider = MyAuthProvider();
 
+  bool mostrarSoloActivosBloqueados = false;
+
   @override
   Widget build(BuildContext context) {
     print('Nombre del operador recibido es/////////////////////**************************: ${operador?.the01Nombres}');
@@ -69,35 +71,28 @@ class _UsuariosPageState extends State<UsuariosPage> {
     }
 
     List filteredClientes = usuarios.where((client) {
-      bool matchesFilter = true;
-      if (filterStatus.isNotEmpty) {
-        switch (filterStatus) {
-          case 'registrado':
-            matchesFilter = client.status == 'registrado';
-            break;
-          case 'foto_tomada':
-            matchesFilter = client.status == 'foto_tomada';
-            break;
-          case 'corregida':
-            matchesFilter =
-                client.fotoPerfilEstado == 'corregida' ||
-                    client.cedulaFrontalEstado == 'corregida' ||
-                    client.cedulaReversoEstado == 'corregida';
-            break;
 
-          case 'rechazada':
-            matchesFilter =
-                client.fotoPerfilEstado == 'rechazada' ||
-                    client.cedulaFrontalEstado == 'rechazada' ||
-                    client.cedulaReversoEstado == 'rechazada';
-            break;
+      final estado = (client.status ?? "")
+          .toString()
+          .trim()
+          .toLowerCase();
 
+      // 🔥 FILTRO BOTÓN
+      if (mostrarSoloActivosBloqueados) {
+        if (!(estado.contains("activado") || estado.contains("bloqueado"))) {
+          return false;
+        }
+      } else {
+        if (!(estado.contains("registrado") || estado.contains("procesando"))) {
+          return false;
         }
       }
-      return matchesFilter &&
-          (client.nombres.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              client.apellidos.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              client.celular.toLowerCase().contains(searchQuery.toLowerCase()));
+
+      // 🔍 BUSCADOR
+      return client.nombres.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          client.apellidos.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          client.celular.toLowerCase().contains(searchQuery.toLowerCase());
+
     }).toList();
     totalClients = filteredClientes.length;
 
@@ -175,18 +170,25 @@ class _UsuariosPageState extends State<UsuariosPage> {
       ClientProvider clientProvider,
       List filteredClientes,
       int Function(String) countByStatus,
-      Color Function(Client) getStatusColor) {
+      Color Function(Client) getStatusColor
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 20),
+
         Row(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Clientes:\n$totalClients', style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                mostrarSoloActivosBloqueados
+                    ? 'Total de Clientes activos/bloqueados:\n$totalClients'
+                    : 'Total de Clientes pendientes:\n$totalClients',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
             IconButton(
-              icon: Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh),
               color: Theme.of(context).primaryColor,
               onPressed: () {
                 clientProvider.fetchClients();
@@ -194,47 +196,114 @@ class _UsuariosPageState extends State<UsuariosPage> {
             ),
           ],
         ),
+
         const Divider(color: Colors.grey, height: 20, thickness: 2),
+
         _buildSearchField(),
-        const SizedBox(height: 30),
-        // _buildFilterButtons(true, countByStatus),
-        const SizedBox(height: 10),
+
+        const SizedBox(height: 20),
+
+        ElevatedButton.icon(
+          onPressed: () {
+            setState(() {
+              mostrarSoloActivosBloqueados =
+              !mostrarSoloActivosBloqueados;
+            });
+          },
+          icon: Icon(
+            mostrarSoloActivosBloqueados
+                ? Icons.visibility_off
+                : Icons.visibility,
+            color: Colors.white,
+          ),
+          label: Text(
+            mostrarSoloActivosBloqueados
+                ? "Ver pendientes"
+                : "Ver activados/bloqueados",
+            style: const TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
         _buildClientTable(filteredClientes, getStatusColor),
       ],
     );
   }
 
-
-
   Widget _buildDesktopLayout(
       BuildContext context,
-      ClientProvider clienProvider,
+      ClientProvider clientProvider,
       List filteredClientes,
       int Function(String) countByStatus,
-      Color Function(Client) getStatusColor) {
+      Color Function(Client) getStatusColor
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 20),
+
         Row(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text('Total de Clientes:\n$totalClients', style: const TextStyle(fontSize: 16)),
+            Text(
+              mostrarSoloActivosBloqueados
+                  ? 'Total de Clientes activos/bloqueados:\n$totalClients'
+                  : 'Total de Clientes pendientes:\n$totalClients',
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(width: 100),
             ElevatedButton(
               onPressed: () {
-                clienProvider.fetchClients();
+                clientProvider.fetchClients();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
               ),
-              child: const Text('Cargar Clientes', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Cargar Clientes',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
+
         const Divider(color: Colors.grey, height: 20, thickness: 2),
-        _buildSearchField(),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSearchField(),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  mostrarSoloActivosBloqueados =
+                  !mostrarSoloActivosBloqueados;
+                });
+              },
+              icon: Icon(
+                mostrarSoloActivosBloqueados
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: Colors.black,
+              ),
+              label: Text(
+                mostrarSoloActivosBloqueados
+                    ? "Ver pendientes"
+                    : "Ver activados/bloqueados",
+                style: const TextStyle(color: Colors.black),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
+
         const SizedBox(height: 30),
+
         _buildClientTable(filteredClientes, getStatusColor),
       ],
     );
