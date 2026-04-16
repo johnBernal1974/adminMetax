@@ -851,6 +851,16 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
   }
 
+  void _verImagenGrande(String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return _FloatingImageViewer(imageUrl: url);
+      },
+    );
+  }
+
   Widget _badgeEstadoFoto(String estado) {
     Color color;
     String texto;
@@ -911,37 +921,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
   }
 
-  void _verImagenGrande(String url) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(10),
-        child: Stack(
-          children: [
 
-            /// 📸 IMAGEN GRANDE
-            InteractiveViewer(
-              child: Image.network(
-                url,
-                fit: BoxFit.contain,
-              ),
-            ),
-
-            /// ❌ BOTÓN CERRAR
-            Positioned(
-              top: 10,
-              right: 10,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _seccionSOAT() {
     return LayoutBuilder(
@@ -1505,5 +1485,159 @@ Color _colorEstadoVigencia(VigenciaEstado e) {
       return Colors.green;
     case VigenciaEstado.sinFecha:
       return Colors.grey;
+  }
+}
+class _FloatingImageViewer extends StatefulWidget {
+  final String imageUrl;
+
+  const _FloatingImageViewer({required this.imageUrl});
+
+  @override
+  State<_FloatingImageViewer> createState() => _FloatingImageViewerState();
+}
+
+class _FloatingImageViewerState extends State<_FloatingImageViewer> {
+  double top = 100;
+  double left = 80;
+
+  double width = 350;
+  double height = 450;
+
+  double rotation = 0;
+
+  Offset lastPosition = Offset.zero;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+
+        /// 🔲 Fondo
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(color: Colors.transparent),
+        ),
+
+        /// 🪟 Ventana flotante
+        Positioned(
+          top: top,
+          left: left,
+          child: GestureDetector(
+            onPanStart: (details) {
+              lastPosition = details.globalPosition;
+            },
+            onPanUpdate: (details) {
+              setState(() {
+                left += details.globalPosition.dx - lastPosition.dx;
+                top += details.globalPosition.dy - lastPosition.dy;
+                lastPosition = details.globalPosition;
+              });
+            },
+            child: Material(
+              elevation: 12,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+
+                    /// 🔝 BARRA CONTROL
+                    Container(
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: Row(
+                        children: [
+
+                          /// 🔄 ROTAR
+                          IconButton(
+                            icon: const Icon(Icons.rotate_right, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                rotation += 0.25;
+                              });
+                            },
+                          ),
+
+                          /// ➕ AGRANDAR
+                          IconButton(
+                            icon: const Icon(Icons.open_in_full, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                width += 50;
+                                height += 50;
+                              });
+                            },
+                          ),
+
+                          /// ➖ REDUCIR
+                          IconButton(
+                            icon: const Icon(Icons.close_fullscreen, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                width = (width - 50).clamp(250, 900);
+                                height = (height - 50).clamp(250, 900);
+                              });
+                            },
+                          ),
+
+                          const Spacer(),
+
+                          /// ❌ CERRAR
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    /// 🖼️ IMAGEN
+                    Expanded(
+                      child: InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 5,
+                        child: Center(
+                          child: Transform.rotate(
+                            angle: rotation * 3.1416 * 2,
+                            child: Image.network(widget.imageUrl),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    /// 🔽 REDIMENSIONAR CON DRAG
+                    GestureDetector(
+                      onPanUpdate: (details) {
+                        setState(() {
+                          width += details.delta.dx;
+                          height += details.delta.dy;
+
+                          width = width.clamp(250, 900);
+                          height = height.clamp(250, 900);
+                        });
+                      },
+                      child: Container(
+                        height: 25,
+                        alignment: Alignment.bottomRight,
+                        padding: const EdgeInsets.all(5),
+                        child: const Icon(Icons.drag_handle, color: Colors.white54),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

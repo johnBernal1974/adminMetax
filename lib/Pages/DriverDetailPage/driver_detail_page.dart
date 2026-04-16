@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +15,7 @@ import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 
 class DriverDetailPage extends StatefulWidget {
@@ -55,6 +57,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   final Map<String, FocusNode> _focusNodes = {};
 
   List<Map<String, dynamic>> vehiculos = [];
+
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
 
 
@@ -745,8 +749,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               ],
             ),
 
-            isMobile
-                ? Column(
+            if (isMobile) Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildInfoColumns(driver), // ✅
@@ -764,9 +767,13 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                     _buildButtonRowAceptarRechazarFotoPerfil(context),
                   ],
                 ),
+                const SizedBox(height: 15),
+                ComentariosAdminWidget(
+                  driverId: widget.driver.id,
+                  nombreOperador: "${nameOperador ?? ''} ${apellidosOperador ?? ''}".trim(),
+                ),
               ],
-            )
-                : Row(
+            ) else Row(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -785,6 +792,19 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 const SizedBox(width: 150),
 
                 _buildActionButtonColumn(context),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400), // 🔥 ancho máximo
+                      child: ComentariosAdminWidget(
+                        driverId: widget.driver.id,
+                        nombreOperador:
+                        "${nameOperador ?? ''} ${apellidosOperador ?? ''}".trim(),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
 
@@ -1804,6 +1824,27 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             label: const Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
+
+        SizedBox(
+          height: 40,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              enviarNotificacionTest();
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            label: const Text(
+              'TEST NOTIFICACIÓN',
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -2107,6 +2148,52 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     });
   }
 
+  // Future<void> activarConductorEnFirestore() async {
+  //   try {
+  //     final vehiculosSnapshot = await FirebaseFirestore.instance
+  //         .collection("Drivers")
+  //         .doc(widget.driver.id)
+  //         .collection("vehiculos")
+  //         .where("estado_documentos", isEqualTo: "aprobado")
+  //         .limit(1)
+  //         .get();
+  //
+  //     if (vehiculosSnapshot.docs.isEmpty) {
+  //       throw Exception("No hay vehículos aprobados");
+  //     }
+  //
+  //     final vehiculoDoc = vehiculosSnapshot.docs.first;
+  //     final vehiculoData = vehiculoDoc.data();
+  //
+  //     final data = {
+  //       "Verificacion_Status": "activado",
+  //
+  //       /// 🔥 ESTA ES LA CLAVE (TE FALTABA)
+  //       "11_Esta_activado": true,
+  //
+  //       "38_Esta_bloqueado": false,
+  //       "vehiculoActivoId": vehiculoDoc.id,
+  //       "placaActiva": vehiculoData["18_Placa"],
+  //
+  //       "13_Nombre_Activador":
+  //       "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
+  //
+  //       "12_Fecha_Activacion":
+  //       DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
+  //           .format(DateTime.now()),
+  //     };
+  //
+  //     await _driverProvider.update(data, widget.driver.id);
+  //
+  //     if (!context.mounted) return;
+  //     _showSnackBar(context, 'Conductor activado correctamente');
+  //
+  //   } catch (e) {
+  //     if (!context.mounted) return;
+  //     _showSnackBar(context, 'Error: ${e.toString()}');
+  //   }
+  // }
+
   Future<void> activarConductorEnFirestore() async {
     try {
       final vehiculosSnapshot = await FirebaseFirestore.instance
@@ -2126,23 +2213,31 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
       final data = {
         "Verificacion_Status": "activado",
-
-        /// 🔥 ESTA ES LA CLAVE (TE FALTABA)
         "11_Esta_activado": true,
-
         "38_Esta_bloqueado": false,
         "vehiculoActivoId": vehiculoDoc.id,
         "placaActiva": vehiculoData["18_Placa"],
-
         "13_Nombre_Activador":
         "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
-
         "12_Fecha_Activacion":
         DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
             .format(DateTime.now()),
       };
 
       await _driverProvider.update(data, widget.driver.id);
+
+      // 🔥🔥🔥 AQUÍ VA LA NOTIFICACIÓN 🔥🔥🔥
+      try {
+        await _functions
+            .httpsCallable('notificarActivacionDriver')
+            .call({
+          'driverId': widget.driver.id,
+        });
+
+        print("✅ Notificación enviada");
+      } catch (e) {
+        print("⚠️ Error enviando notificación: $e");
+      }
 
       if (!context.mounted) return;
       _showSnackBar(context, 'Conductor activado correctamente');
@@ -2660,49 +2755,86 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
   }
 
   Widget _buildDocumentPhoto(String title, String? imageUrl) {
-    bool isZoomed = false;
-
     return Column(
       children: [
         if (imageUrl != null && imageUrl.isNotEmpty)
-          StatefulBuilder(
-            builder: (context, setState) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isZoomed = !isZoomed;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isZoomed ? 400 : 150,
-                  height: isZoomed ? 320 : 100,
-                  child: InteractiveViewer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        image: DecorationImage(
-                          fit: BoxFit.cover,
-                          image: NetworkImage(imageUrl),
-                        ),
-                      ),
-                    ),
-                  ),
+          GestureDetector(
+            onTap: () => _openFloatingViewer(imageUrl),
+            child: Container(
+              width: 150,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                image: DecorationImage(
+                  fit: BoxFit.cover,
+                  image: NetworkImage(imageUrl),
                 ),
-              );
-            },
+              ),
+            ),
           )
         else
-          const Icon(
-            Icons.image,
-            size: 100,
-          ),
+          const Icon(Icons.image, size: 100),
+
         const SizedBox(height: 10),
+
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
+    );
+  }
+
+  void _openFloatingViewer(String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return _FloatingImageViewer(imageUrl: imageUrl);
+      },
+    );
+  }
+
+  void _showImageDialog(String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(imageUrl),
+                  ),
+                ),
+              ),
+
+              /// Botón cerrar
+              Positioned(
+                top: 20,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.black54,
+                    child: Icon(Icons.close, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -3058,6 +3190,20 @@ El equipo de Metax''';
     );
   }
 
+  Future<void> enviarNotificacionTest() async {
+    try {
+      await _functions
+          .httpsCallable('notificarActivacionDriver')
+          .call({
+        'driverId': widget.driver.id,
+      });
+
+      _showSnackBar(context, '✅ Notificación enviada');
+    } catch (e) {
+      _showSnackBar(context, '❌ Error: $e');
+    }
+  }
+
 }
 // class para calcular la fecha real de vencimiento
 enum VigenciaEstado { sinFecha, vencido, porVencer, vigente }
@@ -3104,6 +3250,393 @@ class VehiculoDetailArgs {
     required this.vehiculo,
     required this.driverId,
   });
+}
+
+class _FloatingImageViewer extends StatefulWidget {
+  final String imageUrl;
+
+  const _FloatingImageViewer({required this.imageUrl});
+
+  @override
+  State<_FloatingImageViewer> createState() => _FloatingImageViewerState();
+}
+
+class _FloatingImageViewerState extends State<_FloatingImageViewer> {
+  double top = 100;
+  double left = 50;
+
+  double width = 300;
+  double height = 400;
+
+  double rotation = 0;
+
+  Offset lastPosition = Offset.zero;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        /// Fondo (tap para cerrar)
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(color: Colors.transparent),
+        ),
+
+        /// Ventana flotante
+        Positioned(
+          top: top,
+          left: left,
+          child: GestureDetector(
+            onPanStart: (details) {
+              lastPosition = details.globalPosition;
+            },
+            onPanUpdate: (details) {
+              setState(() {
+                left += details.globalPosition.dx - lastPosition.dx;
+                top += details.globalPosition.dy - lastPosition.dy;
+                lastPosition = details.globalPosition;
+              });
+            },
+            child: Material(
+              elevation: 10,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    /// 🔝 Barra superior (controles)
+                    Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.rotate_right, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                rotation += 0.25; // 90 grados
+                              });
+                            },
+                          ),
+
+                          IconButton(
+                            icon: const Icon(Icons.zoom_out_map, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                width += 50;
+                                height += 50;
+                              });
+                            },
+                          ),
+
+                          IconButton(
+                            icon: const Icon(Icons.zoom_in_map, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                width = (width - 50).clamp(200, 800);
+                                height = (height - 50).clamp(200, 800);
+                              });
+                            },
+                          ),
+
+                          const Spacer(),
+
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    /// 🖼️ Imagen con zoom + rotación
+                    Expanded(
+                      child: InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 5,
+                        child: Center(
+                          child: Transform.rotate(
+                            angle: rotation * 3.1416 * 2,
+                            child: Image.network(widget.imageUrl),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    /// 🔽 Esquina para redimensionar
+                    GestureDetector(
+                      onPanUpdate: (details) {
+                        setState(() {
+                          width += details.delta.dx;
+                          height += details.delta.dy;
+
+                          width = width.clamp(200, 800);
+                          height = height.clamp(200, 800);
+                        });
+                      },
+                      child: Container(
+                        height: 20,
+                        width: double.infinity,
+                        alignment: Alignment.bottomRight,
+                        padding: const EdgeInsets.all(4),
+                        child: const Icon(Icons.drag_handle, color: Colors.white54),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ComentariosAdminWidget extends StatelessWidget {
+  final String driverId;
+  final String nombreOperador;
+
+  const ComentariosAdminWidget({
+    super.key,
+    required this.driverId,
+    required this.nombreOperador,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("Drivers")
+          .doc(driverId)
+          .collection("comentarios_admin")
+          .orderBy("fecha", descending: true)
+          .limit(2)
+          .snapshots(),
+      builder: (context, snapshot) {
+
+        if (!snapshot.hasData) {
+          return const SizedBox();
+        }
+
+        final comentarios = snapshot.data!.docs;
+
+        return GestureDetector(
+          onTap: () => _verTodosComentarios(context),
+          child: Card(
+            color: Colors.white,
+            surfaceTintColor: Colors.white,
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  /// 🔝 HEADER
+                  Row(
+                    children: [
+                      const Icon(Icons.comment, color: Colors.blue),
+                      const SizedBox(width: 6),
+                      const Text(
+                        "Comentarios",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () => _agregarComentario(context),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  /// 📄 LISTA
+                  if (comentarios.isEmpty)
+                    const Text("Sin comentarios"),
+
+                  ...comentarios.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+
+                    DateTime? fecha;
+
+                    if (data["fecha"] != null && data["fecha"] is Timestamp) {
+                      fecha = (data["fecha"] as Timestamp).toDate();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(data["texto"] ?? ""),
+                            const SizedBox(height: 4),
+                            Text(
+                              fecha != null
+                                  ? "${data["operador"]} · ${DateFormat('dd/MM/yyyy HH:mm').format(fecha)}"
+                                  : "Guardando...",
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 🔍 VER TODOS
+  void _verTodosComentarios(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          child: SizedBox(
+            width: 200,
+            height: 500,
+            child: Column(
+              children: [
+
+                /// HEADER
+                const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Text(
+                    "Todos los comentarios",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const Divider(),
+
+                /// LISTA COMPLETA
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection("Drivers")
+                        .doc(driverId)
+                        .collection("comentarios_admin")
+                        .orderBy("fecha", descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final comentarios = snapshot.data!.docs;
+
+                      return ListView.builder(
+                        itemCount: comentarios.length,
+                        itemBuilder: (_, i) {
+                          final data = comentarios[i].data() as Map<String, dynamic>;
+                          final fecha = (data["fecha"] as Timestamp).toDate();
+
+                          return ListTile(
+                            title: Text(data["texto"] ?? ""),
+                            subtitle: Text(
+                              "${data["operador"]} · ${DateFormat('dd/MM/yyyy HH:mm').format(fecha)}",
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                /// BOTÓN AGREGAR
+                ElevatedButton.icon(
+                  onPressed: () => _agregarComentario(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text("Agregar comentario"),
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// ➕ AGREGAR
+  void _agregarComentario(BuildContext context) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Nuevo comentario"),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: "Escribe el comentario...",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+
+                if (controller.text.trim().isEmpty) return;
+
+                await FirebaseFirestore.instance
+                    .collection("Drivers")
+                    .doc(driverId)
+                    .collection("comentarios_admin")
+                    .add({
+                  "texto": controller.text.trim(),
+                  "fecha": FieldValue.serverTimestamp(),
+                  "operador": nombreOperador,
+                  "operadorId": FirebaseAuth.instance.currentUser!.uid,
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text("Guardar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 

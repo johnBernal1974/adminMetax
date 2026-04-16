@@ -25,6 +25,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   BitmapDescriptor? _taxiIconNormal;
   BitmapDescriptor? _taxiIconEmergency;
+  BitmapDescriptor? _taxiIconWorking;
 
   static const CameraPosition _initial = CameraPosition(
     target: LatLng(4.1461765, -73.641138),
@@ -62,6 +63,8 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   // ====== PANEL IZQUIERDO: lista de emergencias ======
   // guardamos la info para mostrarla y poder centrar la cámara
   final Map<String, _EmergencyDriver> _emergencies = {};
+
+  final Map<String, _DriverAvailable> _availableDrivers = {};
 
   @override
   void initState() {
@@ -160,7 +163,12 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(
           cfg, 'assets/marker_conductores_emergencia.png');
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        if (_lastDocs != null) {
+          _rebuildMarkersFromDocs(_lastDocs!);
+        }
+      }
     } catch (e) {
       if (kDebugMode) print('❌ Error loading icons: $e');
     }
@@ -177,7 +185,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   void _listenWorkingDrivers() {
     final q = FirebaseFirestore.instance
         .collection('Locations')
-        .where('status', isEqualTo: 'driver_working');
+        .where('status', whereIn: ['driver_working', 'driver_available']);
 
     _sub = q.snapshots().listen((snap) async {
       _lastDocs = snap.docs;
@@ -192,10 +200,17 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   }
 
   Future<void> _rebuildMarkersFromDocs(List<QueryDocumentSnapshot> docs) async {
+
+    // 🔥 asegurar que los iconos ya cargaron
+    if (_taxiIconNormal == null || _taxiIconEmergency == null) {
+      if (kDebugMode) print("⏳ Esperando iconos...");
+      return;
+    }
+
     final markers = <Marker>{};
     final currentEmergencyIds = <String>{};
+    final newAvailable = <String, _DriverAvailable>{};
 
-    // reconstruimos panel de emergencias desde cero
     final newEmergencies = <String, _EmergencyDriver>{};
 
     for (final doc in docs) {
@@ -206,6 +221,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
       final placaRaw = pos['placa']?.toString() ?? 'SINPLACA';
       final placa = formatPlaca(placaRaw);
+      final status = data['status'];
 
       final nombres = (pos['nombres'] ?? '').toString();
       final apellidos = (pos['apellidos'] ?? '').toString();
@@ -219,6 +235,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       final heading = (pos['heading'] as num?)?.toDouble() ?? 0.0;
       final latLng = LatLng(geo.latitude, geo.longitude);
 
+      // 🔴 Emergencias
       if (emergencyActive) {
         currentEmergencyIds.add(doc.id);
 
@@ -231,13 +248,32 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
         );
       }
 
-      // icono con titileo
-      final icon = emergencyActive
-          ? (_blinkOn
-          ? (_taxiIconEmergency ?? BitmapDescriptor.defaultMarker)
-          : (_taxiIconNormal ?? BitmapDescriptor.defaultMarker))
-          : (_taxiIconNormal ?? BitmapDescriptor.defaultMarker);
+      // 🟢 Disponibles
+      else if (status == 'driver_available') {
+        newAvailable[doc.id] = _DriverAvailable(
+          id: doc.id,
+          placa: placa,
+          nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
+          imageUrl: imageUrl,
+          latLng: latLng,
+        );
+      }
 
+      // 🔥 ICONO CORRECTO (SIN ERRORES)
+      BitmapDescriptor icon;
+
+      if (emergencyActive) {
+        // 🔴 emergencia titila
+        icon = _blinkOn ? _taxiIconEmergency! : _taxiIconWorking!;
+      } else if (status == 'driver_working') {
+        // 🟡 working → nuevo icono
+        icon = _taxiIconWorking!;
+      } else {
+        // 🟢 available → se queda como antes
+        icon = _taxiIconNormal!;
+      }
+
+      // 🧭 Marker
       markers.add(
         Marker(
           markerId: MarkerId(doc.id),
@@ -259,7 +295,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       );
     }
 
-    // sonido: nuevas emergencias
+    // 🔊 sonido de nuevas emergencias
     final newOnes = currentEmergencyIds.difference(_prevEmergencyIds);
     if (_soundEnabled && newOnes.isNotEmpty) {
       await _playEmergencySound();
@@ -270,13 +306,17 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       ..addAll(currentEmergencyIds);
 
     if (!mounted) return;
+
     setState(() {
       _markers = markers;
 
-      // panel izquierdo
       _emergencies
         ..clear()
         ..addAll(newEmergencies);
+
+      _availableDrivers
+        ..clear()
+        ..addAll(newAvailable);
     });
   }
 
@@ -317,6 +357,86 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       _cardPoint = null;
       _cardLatLng = null;
     });
+  }
+
+  Widget _availablePanel() {
+    final list = _availableDrivers.values.toList();
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 320),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              border: Border(
+                bottom: BorderSide(color: Colors.green.shade100),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
+                const Text(
+                  'DISPONIBLES',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${list.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: list.isEmpty
+                ? Center(
+              child: Text(
+                'Sin disponibles',
+                style: TextStyle(color: Colors.grey.shade700),
+              ),
+            )
+                : ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (_, i) {
+                final d = list[i];
+                return ListTile(
+                  onTap: () => _focusDriver(d.latLng),
+                  leading: CircleAvatar(
+                    backgroundImage: d.imageUrl.isNotEmpty
+                        ? NetworkImage(d.imageUrl)
+                        : null,
+                  ),
+                  title: Text(d.placa),
+                  subtitle: Text(d.nombre),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _focusDriver(LatLng latLng) async {
@@ -621,6 +741,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
         children: [
           // ✅ PC: panel fijo a la izquierda
           _leftPanel(),
+          _availablePanel(),
 
           Expanded(
             child: Stack(
@@ -677,6 +798,22 @@ class _EmergencyDriver {
   final LatLng latLng;
 
   _EmergencyDriver({
+    required this.id,
+    required this.placa,
+    required this.nombre,
+    required this.imageUrl,
+    required this.latLng,
+  });
+}
+
+class _DriverAvailable {
+  final String id;
+  final String placa;
+  final String nombre;
+  final String imageUrl;
+  final LatLng latLng;
+
+  _DriverAvailable({
     required this.id,
     required this.placa,
     required this.nombre,

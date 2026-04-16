@@ -53,6 +53,8 @@ dependencies:
   firebase_app_check: ^0.2.1+17
   http: ^0.13.6
   csv: ^5.0.2
+  firebase_messaging: ^14.7.10
+  cloud_functions: ^4.6.0
 
 dev_dependencies:
   flutter_test:
