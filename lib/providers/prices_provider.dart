@@ -41,10 +41,19 @@ class PricesProvider {
   // Actualizar un precio
   Future<void> updatePrice(String key, dynamic value) async {
     try {
-      await _firestore.collection('Prices').doc('info').update({key: value});
-      print('Campo guardado exitosamente con key: $key y valor: $value');
+
+      // 🔥 FORZAR DOUBLE SOLO PARA DINÁMICA
+      if (key == "dinamica") {
+        value = (value as num).toDouble();
+      }
+
+      await _firestore.collection('Prices').doc('info').update({
+        key: value
+      });
+
+      print('✅ Guardado: $key = $value');
     } catch (error) {
-      print('Error al guardar campo con key: $key y valor: $value. Error: $error');
+      print('❌ Error guardando $key: $error');
       throw error;
     }
   }

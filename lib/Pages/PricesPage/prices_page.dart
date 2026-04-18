@@ -78,7 +78,7 @@ class _PricesPageState extends State<PricesPage> {
         selectedMantenimientoUsuarios = (data["mantenimiento_usuarios"] ?? "").toString();
 
         final dyn = data["dinamica"];
-        selectedDinamica = dyn is num ? dyn.toDouble() : 1.0;
+        selectedDinamica ??= dyn is num ? dyn.toDouble() : 1.0;
 
         selectedCedula = (data["cedula"] is bool) ? data["cedula"] as bool : false;
 
@@ -198,7 +198,7 @@ class _PricesPageState extends State<PricesPage> {
 
   Widget _cardBusquedaEspera(Map<String, dynamic> d) {
     return _cardBase("Búsqueda y espera", Icons.radar, [
-      _fieldInt("radio_de_busqueda", "Radio de búsqueda", d),
+      _fieldDouble("radio_de_busqueda", "Radio de búsqueda (km)", d),
 
       // ✅ NUEVO
       _fieldInt("tiempo_busqueda", "Tiempo de búsqueda", d),
@@ -336,6 +336,40 @@ class _PricesPageState extends State<PricesPage> {
           suffixIcon: IconButton(
             icon: const Icon(Icons.save),
             onPressed: () => _saveInt(key, controller),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fieldDouble(String key, String label, Map<String, dynamic> d) {
+    final initial = (d[key] ?? 0.0).toString();
+    final controller = _c(key, initial);
+
+    if (!controller.value.isComposingRangeValid && controller.text != initial) {
+      controller.text = initial;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () async {
+              final v = double.tryParse(controller.text.trim());
+              if (v == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Número decimal inválido")),
+                );
+                return;
+              }
+              await _save(key, v);
+            },
           ),
         ),
       ),

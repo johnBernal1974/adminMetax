@@ -1,4 +1,5 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:metax_administrador/models/usuario_model.dart';
@@ -405,6 +406,12 @@ class _UsuariosPageState extends State<UsuariosPage> {
             ),
             DataColumn(
               label: Text(
+                'Fecha registro',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
                 'Acción',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -435,6 +442,11 @@ class _UsuariosPageState extends State<UsuariosPage> {
                 DataCell(Text(client.apellidos.isNotEmpty ? client.apellidos : "Apellidos no disponibles")),
                 DataCell(Text(client.celular.isNotEmpty ? client.celular : "Celular no disponible")),
                 DataCell(
+                  Text(
+                    _formatearFecha(client.fechaRegistro),
+                  ),
+                ),
+                DataCell(
                   IconButton(
                     icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
                     onPressed: () {
@@ -453,6 +465,24 @@ class _UsuariosPageState extends State<UsuariosPage> {
         ),
       ),
     );
+  }
+  String _formatearFecha(dynamic fecha) {
+    try {
+      if (fecha == null) return "Sin fecha";
+
+      if (fecha is Timestamp) {
+        final date = fecha.toDate();
+        return "${date.day}/${date.month}/${date.year}";
+      }
+
+      if (fecha is String) {
+        return fecha;
+      }
+
+      return "Formato inválido";
+    } catch (e) {
+      return "Error";
+    }
   }
 
 

@@ -17,7 +17,7 @@ class Price {
   int theDistanciaTarifaMinima;
   int theNumeroCancelacionesConductor;
   int theNumeroCancelacionesUsuario;
-  int theRadioDeBusqueda;
+  double theRadioDeBusqueda;
   int theRecargaInicial;
   int theTarifaAeropuerto;
   int theTarifaMinimaRegular;
