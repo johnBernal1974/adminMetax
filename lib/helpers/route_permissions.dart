@@ -22,6 +22,8 @@ class RoutePermissions {
     /// 🔥 NUEVO (AQUÍ ESTÁ LA CLAVE)
     'registro_porteria_page': {'operadorFull'},
     'porterias_page': {'operadorFull'},
+
+    'prices_page': {'operadorFull'},
   };
 
   static bool canRoleAccess(String role, String routeName) {

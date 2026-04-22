@@ -327,7 +327,7 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana])}",
+                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}",
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.black),
               ),
               const SizedBox(height: 8),
@@ -352,7 +352,7 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana])}",
+                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}",
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.black),
               ),
               const SizedBox(height: 8),

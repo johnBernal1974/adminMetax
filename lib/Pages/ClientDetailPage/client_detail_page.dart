@@ -178,6 +178,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                               const Divider(),
                               _seccionDatosGenerales(client),
                               const Divider(),
+                              _seccionValidacionUsuario(client),
+                              const Divider(),
                               _seccionDocumentosdeIdentidad(client),
                               const Divider(),
                             ],
@@ -195,6 +197,57 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     );
   }
   /////// widgets interfaz/////////////////////////////////////////
+
+  Widget _seccionValidacionUsuario(Client client) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isMobile = constraints.maxWidth < 600;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Validación de usuario'),
+            const SizedBox(height: 10),
+
+            isMobile
+            /// 📱 MOBILE (en dos líneas)
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRowHorizontal(
+                  'Pregunta:',
+                  client.preguntaPalabraClave ?? 'No definida',
+                ),
+                const SizedBox(height: 5),
+                _buildInfoRowHorizontal(
+                  'Respuesta:',
+                  client.palabraClave ?? 'No definida',
+                ),
+              ],
+            )
+
+            /// 💻 PC (en una sola línea con ;)
+                : Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Pregunta: ${client.preguntaPalabraClave ?? 'No definida'}  ;  '
+                        'Respuesta: ${client.palabraClave ?? 'No definida'}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _encabezadoSeccion(Client client) {
     return LayoutBuilder(

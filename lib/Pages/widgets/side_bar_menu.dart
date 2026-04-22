@@ -174,7 +174,7 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('registro_porteria_page'),
                 ),
 
-              if (role == 'Master')
+              if (_canSee(role, 'prices_page'))
                 DrawerListTitle(
                   title: "Configuraciones",
                   icon: Icons.settings,

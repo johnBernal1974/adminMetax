@@ -66,6 +66,13 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   final Map<String, _DriverAvailable> _availableDrivers = {};
 
+  final Map<String, _DriverWorking> _workingDrivers = {};
+
+  String? _panelType; // 'emergency', 'working', 'available'
+  bool _showPanel = false;
+  double _mapPaddingLeft = 0;
+
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +89,13 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
     _blinkTimer?.cancel();
     _alarmPlayer.dispose();
     super.dispose();
+  }
+
+  void _closePanel() {
+    setState(() {
+      _showPanel = false;
+      _mapPaddingLeft = 0;
+    });
   }
 
 
@@ -163,6 +177,11 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(
           cfg, 'assets/marker_conductores_emergencia.png');
 
+      _taxiIconWorking = await BitmapDescriptor.fromAssetImage(
+        cfg,
+        'assets/marker_conductores_working.png',
+      );
+
       if (mounted) {
         setState(() {});
         if (_lastDocs != null) {
@@ -199,6 +218,116 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
     });
   }
 
+  Widget _leftDynamicPanel() {
+    if (!_showPanel) return const SizedBox.shrink();
+
+    List list = [];
+
+    if (_panelType == 'emergency') {
+      list = _emergencies.values.toList();
+    } else if (_panelType == 'working') {
+      list = _workingDrivers.values.toList();
+    } else {
+      list = _availableDrivers.values.toList();
+    }
+
+    Color color = Colors.green;
+    String title = 'Disponibles';
+
+    if (_panelType == 'emergency') {
+      color = Colors.red;
+      title = 'Emergencias';
+    } else if (_panelType == 'working') {
+      color = Colors.orange;
+      title = 'En servicio';
+    }
+
+    return Positioned(
+      left: 0,
+      top: 0,
+      bottom: 0,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // 🔥 CLAVE
+        onVerticalDragStart: (_) {},      // 🔥 bloquea scroll hacia el mapa
+        onHorizontalDragStart: (_) {},    // 🔥 bloquea arrastre lateral
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: 320,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                blurRadius: 10,
+                color: Colors.black26,
+              )
+            ],
+          ),
+          child: Column(
+            children: [
+              /// HEADER
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.list, color: color),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _closePanel,
+                    )
+                  ],
+                ),
+              ),
+
+              /// LISTA
+              Expanded(
+                child: list.isEmpty
+                    ? Center(
+                  child: Text(
+                    'Sin datos',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                )
+                    : ListView.builder(
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final d = list[i];
+
+                    return ListTile(
+                      onTap: () {
+                        _focusDriver(d.latLng);
+                      },
+                      leading: CircleAvatar(
+                        backgroundImage: d.imageUrl.isNotEmpty
+                            ? NetworkImage(d.imageUrl)
+                            : null,
+                      ),
+                      title: Text(d.placa),
+                      subtitle: Text(d.nombre),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _rebuildMarkersFromDocs(List<QueryDocumentSnapshot> docs) async {
 
     // 🔥 asegurar que los iconos ya cargaron
@@ -210,7 +339,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
     final markers = <Marker>{};
     final currentEmergencyIds = <String>{};
     final newAvailable = <String, _DriverAvailable>{};
-
+    final newWorking = <String, _DriverWorking>{};
     final newEmergencies = <String, _EmergencyDriver>{};
 
     for (final doc in docs) {
@@ -251,6 +380,16 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       // 🟢 Disponibles
       else if (status == 'driver_available') {
         newAvailable[doc.id] = _DriverAvailable(
+          id: doc.id,
+          placa: placa,
+          nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
+          imageUrl: imageUrl,
+          latLng: latLng,
+        );
+      }
+
+      else if (status == 'driver_working') {
+        newWorking[doc.id] = _DriverWorking(
           id: doc.id,
           placa: placa,
           nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
@@ -317,6 +456,10 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       _availableDrivers
         ..clear()
         ..addAll(newAvailable);
+
+      _workingDrivers
+        ..clear()
+        ..addAll(newWorking);
     });
   }
 
@@ -414,6 +557,86 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
                 ? Center(
               child: Text(
                 'Sin disponibles',
+                style: TextStyle(color: Colors.grey.shade700),
+              ),
+            )
+                : ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (_, i) {
+                final d = list[i];
+                return ListTile(
+                  onTap: () => _focusDriver(d.latLng),
+                  leading: CircleAvatar(
+                    backgroundImage: d.imageUrl.isNotEmpty
+                        ? NetworkImage(d.imageUrl)
+                        : null,
+                  ),
+                  title: Text(d.placa),
+                  subtitle: Text(d.nombre),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _workingPanel() {
+    final list = _workingDrivers.values.toList();
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 320),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              border: Border(
+                bottom: BorderSide(color: Colors.orange.shade100),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_taxi, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text(
+                  'EN SERVICIO',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${list.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: list.isEmpty
+                ? Center(
+              child: Text(
+                'Sin conductores en servicio',
                 style: TextStyle(color: Colors.grey.shade700),
               ),
             )
@@ -647,23 +870,23 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final isMobile = w < 900; // puedes bajar a 800 si quieres
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: primary,
-        title: const Text('Conductores trabajando', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Conductores trabajando',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            final role = (context.read<OperadorProvider>().rolActual ?? '').trim();
+            final role =
+            (context.read<OperadorProvider>().rolActual ?? '').trim();
 
-            // ✅ destino según rol
             final backRoute = (role == 'operadorSeguimientoMap')
                 ? 'conductores_page'
-                : 'general_page'; // Master / operadorFull
+                : 'general_page';
 
             Navigator.pushNamedAndRemoveUntil(
               context,
@@ -672,120 +895,139 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
             );
           },
         ),
-        // En móvil mostramos un botón para abrir el panel
-        actions: [
-          if (isMobile)
-            IconButton(
-              tooltip: 'Emergencias',
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.warning_amber_rounded),
-                  if (_emergencies.isNotEmpty)
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '${_emergencies.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              onPressed: () async {
+      ),
+
+      // 🚀 MAPA FULL + TARJETAS
+      body: Stack(
+        children: [
+          /// 🗺️ MAPA CON ANIMACIÓN
+          AnimatedPadding(
+            duration: const Duration(milliseconds: 300),
+            padding: EdgeInsets.only(left: _mapPaddingLeft),
+            child: GoogleMap(
+              initialCameraPosition: _initial,
+              onMapCreated: (c) {
+                _gmap = c;
+                if (!_mapController.isCompleted) {
+                  _mapController.complete(c);
+                }
+              },
+              markers: _markers,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: true,
+              onTap: (_) async {
                 await _unlockAudioIfNeeded();
-                _scaffoldKey.currentState?.openDrawer();
+                _closeCard();
+              },
+              onCameraMove: (_) {
+                if (_showCard) _repositionCard();
               },
             ),
-        ],
-      ),
-
-      // ✅ En móvil el panel es Drawer
-      drawer: isMobile ? Drawer(child: SafeArea(child: _leftPanel())) : null,
-
-      body: isMobile
-          ? Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: _initial,
-            onMapCreated: (c) {
-              _gmap = c;
-              if (!_mapController.isCompleted) _mapController.complete(c);
-            },
-            markers: _markers,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
-            onTap: (_) async {
-              await _unlockAudioIfNeeded();
-              _closeCard();
-            },
-            onCameraMove: (_) {
-              if (_showCard) _repositionCard();
-            },
           ),
+
+          /// 🔝 TARJETAS
+          _topCards(),
+
+          /// 📂 PANEL
+          _leftDynamicPanel(),
+
+          /// 📌 CARD
           _driverCard(),
         ],
-      )
-          : Row(
-        children: [
-          // ✅ PC: panel fijo a la izquierda
-          _leftPanel(),
-          _availablePanel(),
-
-          Expanded(
-            child: Stack(
-              children: [
-                GoogleMap(
-                  initialCameraPosition: _initial,
-                  onMapCreated: (c) {
-                    _gmap = c;
-                    if (!_mapController.isCompleted) _mapController.complete(c);
-                  },
-                  markers: _markers,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: true,
-                  onTap: (_) async {
-                    await _unlockAudioIfNeeded();
-                    _closeCard();
-                  },
-                  onCameraMove: (_) {
-                    if (_showCard) _repositionCard();
-                  },
-                ),
-                _driverCard(),
-              ],
-            ),
-          ),
-        ],
       ),
-
-      // ✅ (Opcional) Botón flotante en móvil para abrir panel más rápido
-      floatingActionButton: isMobile
-          ? FloatingActionButton.extended(
-        backgroundColor: Colors.red,
-        onPressed: () async {
-          await _unlockAudioIfNeeded();
-          _scaffoldKey.currentState?.openDrawer();
-        },
-        icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-        label: Text(
-          'Emergencias (${_emergencies.length})',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-        ),
-      )
-          : null,
     );
+  }
+
+  Widget _topCards() {
+    return Positioned(
+      top: 10,
+      left: 10,
+      right: 10,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _statusCard(
+              'Emergencias',
+              _emergencies.length,
+              Colors.red,
+              Icons.warning,
+                  () => _openList('emergency'),
+            ),
+            const SizedBox(width: 10),
+            _statusCard(
+              'En servicio',
+              _workingDrivers.length,
+              Colors.orange,
+              Icons.local_taxi,
+                  () => _openList('working'),
+            ),
+            const SizedBox(width: 10),
+            _statusCard(
+              'Disponibles',
+              _availableDrivers.length,
+              Colors.green,
+              Icons.check_circle,
+                  () => _openList('available'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusCard(
+      String title,
+      int count,
+      Color color,
+      IconData icon,
+      VoidCallback onTap,
+      ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [
+            BoxShadow(
+              blurRadius: 10,
+              color: Colors.black12,
+              offset: Offset(0, 4),
+            )
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openList(String type) {
+    setState(() {
+      _panelType = type;
+      _showPanel = true;
+      _mapPaddingLeft = 320; // 🔥 mismo ancho del panel
+    });
   }
 
 }
@@ -814,6 +1056,22 @@ class _DriverAvailable {
   final LatLng latLng;
 
   _DriverAvailable({
+    required this.id,
+    required this.placa,
+    required this.nombre,
+    required this.imageUrl,
+    required this.latLng,
+  });
+}
+
+class _DriverWorking {
+  final String id;
+  final String placa;
+  final String nombre;
+  final String imageUrl;
+  final LatLng latLng;
+
+  _DriverWorking({
     required this.id,
     required this.placa,
     required this.nombre,
