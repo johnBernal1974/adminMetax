@@ -1788,39 +1788,39 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     return Column(
       children: [
         SizedBox(
-          height: 40, // Altura del botón
+          height: 40,
           child: ElevatedButton.icon(
             onPressed: () {
               _showConfirmationDialogBloquearusuario(context, "¿Está seguro de bloquear este conductor?", true);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.red, // Color de fondo del botón
+              backgroundColor: Colors.red,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: const Icon(Icons.block, color: Colors.white), // Icono de Correo
+            icon: const Icon(Icons.block, color: Colors.white),
             label: const Text('BLOQUEAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
+
         const SizedBox(height: 30),
+
         SizedBox(
-          height: 40, // Altura del botón
+          height: 40,
           child: ElevatedButton.icon(
             onPressed: () {
               validarAntesDeActivar(context);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.green, // Color de fondo del botón
+              backgroundColor: Colors.green,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: const TextStyle(fontSize: 16),
             ),
-            icon: const Icon(Icons.check_circle, color: Colors.white), // Icono de Correo
+            icon: const Icon(Icons.check_circle, color: Colors.white),
             label: const Text('ACTIVAR', style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
@@ -1833,7 +1833,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             onPressed: () async {
               try {
 
-                /// 🔥 LOADING
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -1862,10 +1861,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
                 print("RESPUESTA TEST: ${response.data}");
 
-                /// 🔥 CERRAR LOADING
                 if (context.mounted) Navigator.pop(context);
 
-                /// 🔥 ÉXITO
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1875,7 +1872,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
               } catch (e) {
 
-                /// 🔥 CERRAR LOADING SI FALLA
                 if (context.mounted) Navigator.pop(context);
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1885,22 +1881,89 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                 );
               }
             },
-
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.green, // 🔥 mejor color (acción real)
+              backgroundColor: Colors.green,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-
-            icon: const Icon(Icons.send, color: Colors.white), // 🔥 más lógico
+            icon: const Icon(Icons.send, color: Colors.white),
             label: const Text(
               'ACTIVACION DE CONDUCTORES PENDIENTE POR NOTIFICAR',
               style: TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
-        )
+        ),
+
+        /// 🟠 NUEVO BOTÓN (SOLO AGREGADO)
+        const SizedBox(height: 30),
+
+        SizedBox(
+          height: 40,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              try {
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 15),
+                        Text("Enviando solicitud..."),
+                      ],
+                    ),
+                  ),
+                );
+
+                final telefono = widget.driver.the07Celular;
+                final nombre = widget.driver.the01Nombres;
+
+                final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+                await functions
+                    .httpsCallable('enviarCorreccionDocumentos')
+                    .call({
+                  "telefono": telefono,
+                  "nombre": nombre,
+                });
+
+                if (context.mounted) Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("📲 Solicitud de corrección enviada"),
+                  ),
+                );
+
+              } catch (e) {
+
+                if (context.mounted) Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("❌ Error: $e"),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.warning, color: Colors.white),
+            label: const Text(
+              'SOLICITAR CORRECCIÓN',
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -2447,6 +2510,118 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         );
       },
     );
+  }
+
+  bool tieneErrores(Driver driver, List vehiculos) {
+
+    /// 🔴 DRIVER
+    if (driver.the29FotoPerfil == "rechazada" ||
+        driver.the25CedulaDelanteraFoto == "rechazada" ||
+        driver.the26CedulaTraseraFoto == "rechazada") {
+      return true;
+    }
+
+    /// 🔴 VEHÍCULOS
+    for (var v in vehiculos) {
+
+      if (v["estado_documentos"] == "rechazado") return true;
+
+      if (v["27_Tarjeta_Propiedad_Delantera_foto"] == "rechazada") return true;
+
+      if (v["28_Tarjeta_Propiedad_Trasera_foto"] == "rechazada") return true;
+    }
+
+    return false;
+  }
+
+  Widget alertaCorreccionWidget(Driver driver) {
+    return Positioned(
+      top: 20,
+      right: 20,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 280,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              const Text(
+                "⚠️ Documentos por corregir",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              const Text(
+                "Este conductor tiene documentos rechazados.",
+                style: TextStyle(fontSize: 12),
+              ),
+
+              const SizedBox(height: 10),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await enviarCorreccion(driver);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                  child: const Text("Informar corrección"),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> enviarCorreccion(Driver driver) async {
+    try {
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 15),
+              Text("Enviando aviso..."),
+            ],
+          ),
+        ),
+      );
+
+      await _functions.httpsCallable('enviarCorreccionDocumentos').call({
+        "telefono": driver.the07Celular,
+        "nombre": driver.the01Nombres,
+      });
+
+      if (context.mounted) Navigator.pop(context);
+
+      _showSnackBar(context, "📲 Corrección informada");
+
+    } catch (e) {
+
+      if (context.mounted) Navigator.pop(context);
+
+      _showSnackBar(context, "❌ Error: $e");
+    }
   }
 
   void _showConfirmationDialogBloquearusuario(BuildContext context, String message, bool isBloquear) {
