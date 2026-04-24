@@ -24,6 +24,8 @@ class RoutePermissions {
     'porterias_page': {'operadorFull'},
 
     'prices_page': {'operadorFull'},
+
+    'whatsapp_metax_page': {'operadorFull'},
   };
 
   static bool canRoleAccess(String role, String routeName) {

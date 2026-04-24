@@ -1825,26 +1825,82 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           ),
         ),
 
+        const SizedBox(height: 30),
+
         SizedBox(
           height: 40,
           child: ElevatedButton.icon(
-            onPressed: () {
-              enviarNotificacionTest();
+            onPressed: () async {
+              try {
+
+                /// 🔥 LOADING
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 15),
+                        Text("Enviando activación..."),
+                      ],
+                    ),
+                  ),
+                );
+
+                final telefono = widget.driver.the07Celular;
+                final nombre = widget.driver.the01Nombres;
+
+                final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+                final response = await functions
+                    .httpsCallable('enviarPlantillaActivacion')
+                    .call({
+                  "telefono": telefono,
+                  "nombre": nombre,
+                });
+
+                print("RESPUESTA TEST: ${response.data}");
+
+                /// 🔥 CERRAR LOADING
+                if (context.mounted) Navigator.pop(context);
+
+                /// 🔥 ÉXITO
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("✅ Activación enviada correctamente"),
+                  ),
+                );
+
+              } catch (e) {
+
+                /// 🔥 CERRAR LOADING SI FALLA
+                if (context.mounted) Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("❌ Error: $e"),
+                  ),
+                );
+              }
             },
+
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.blue,
+              backgroundColor: Colors.green, // 🔥 mejor color (acción real)
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            icon: const Icon(Icons.notifications, color: Colors.white),
+
+            icon: const Icon(Icons.send, color: Colors.white), // 🔥 más lógico
             label: const Text(
-              'TEST NOTIFICACIÓN',
+              'ACTIVACION DE CONDUCTORES PENDIENTE POR NOTIFICAR',
               style: TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
-        ),
+        )
       ],
     );
   }
@@ -2196,6 +2252,22 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   Future<void> activarConductorEnFirestore() async {
     try {
+
+      /// 🔥 LOADING
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 15),
+              Text("Activando y enviando mensaje..."),
+            ],
+          ),
+        ),
+      );
+
       final vehiculosSnapshot = await FirebaseFirestore.instance
           .collection("Drivers")
           .doc(widget.driver.id)
@@ -2211,6 +2283,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       final vehiculoDoc = vehiculosSnapshot.docs.first;
       final vehiculoData = vehiculoDoc.data();
 
+      /// 🔥 1. ACTIVAR EN FIRESTORE
       final data = {
         "Verificacion_Status": "activado",
         "11_Esta_activado": true,
@@ -2226,28 +2299,30 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
       await _driverProvider.update(data, widget.driver.id);
 
-      // 🔥🔥🔥 AQUÍ VA LA NOTIFICACIÓN 🔥🔥🔥
-      try {
-        await _functions
-            .httpsCallable('notificarActivacionDriver')
-            .call({
-          'driverId': widget.driver.id,
-        });
+      /// 🔥 2. ENVIAR WHATSAPP (PLANTILLA)
+      final telefono = widget.driver.the07Celular; // 👈 TU CAMPO
+      final nombre = widget.driver.the01Nombres;
 
-        print("✅ Notificación enviada");
-      } catch (e) {
-        print("⚠️ Error enviando notificación: $e");
-      }
+      await _functions.httpsCallable('enviarPlantillaActivacion').call({
+        "telefono": telefono,
+        "nombre": nombre,
+      });
 
+      /// 🔥 CERRAR LOADING
+      if (context.mounted) Navigator.pop(context);
+
+      /// 🔥 ÉXITO
       if (!context.mounted) return;
-      _showSnackBar(context, 'Conductor activado correctamente');
+      _showSnackBar(context, '✅ Conductor activado y mensaje enviado');
 
     } catch (e) {
-      if (!context.mounted) return;
-      _showSnackBar(context, 'Error: ${e.toString()}');
+
+      /// 🔥 CERRAR LOADING SI FALLA
+      if (context.mounted) Navigator.pop(context);
+
+      _showSnackBar(context, '❌ Error: ${e.toString()}');
     }
   }
-
 
   bool tieneVehiculoAprobado(List vehiculos) {
     return vehiculos.any((v) => v["estado_documentos"] == "aprobado");
@@ -2366,12 +2441,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   widget.driver.the38EstaBloqueado = false;
                   widget.driver.verificacionStatus = "activado";
                 });
-
-                if (!kIsWeb) {
-                  _openWhatsAppActivacion(context);
-                } else {
-                  _openWhatsAppWebActivacion(context);
-                }
               },
             ),
           ],
@@ -3189,21 +3258,6 @@ El equipo de Metax''';
       ],
     );
   }
-
-  Future<void> enviarNotificacionTest() async {
-    try {
-      await _functions
-          .httpsCallable('notificarActivacionDriver')
-          .call({
-        'driverId': widget.driver.id,
-      });
-
-      _showSnackBar(context, '✅ Notificación enviada');
-    } catch (e) {
-      _showSnackBar(context, '❌ Error: $e');
-    }
-  }
-
 }
 // class para calcular la fecha real de vencimiento
 enum VigenciaEstado { sinFecha, vencido, porVencer, vigente }
@@ -3636,6 +3690,26 @@ class ComentariosAdminWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> enviarActivacion(String telefono, String nombre) async {
+
+    final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+    try {
+
+      final response = await functions
+          .httpsCallable('enviarPlantillaActivacion')
+          .call({
+        "telefono": telefono,
+        "nombre": nombre,
+      });
+
+      print("ACTIVACIÓN ENVIADA: ${response.data}");
+
+    } catch (e) {
+      print("ERROR ACTIVACIÓN: $e");
+    }
   }
 }
 

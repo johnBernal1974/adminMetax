@@ -115,6 +115,12 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.emoji_people,
                   press: () => _go('usuarios_page'),
                 ),
+              if (_canSee(role, 'whatsapp_metax_page'))
+                DrawerListTitle(
+                  title: "WhatsApp MetaX",
+                  icon: Icons.message,
+                  press: () => _go('whatsapp_metax_page'),
+                ),
 
               if (_canSee(role, 'recarga_info_page'))
                 DrawerListTitle(

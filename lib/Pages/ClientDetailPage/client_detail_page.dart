@@ -230,15 +230,35 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
                 : Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Pregunta: ${client.preguntaPalabraClave ?? 'No definida'}  ;  '
-                        'Respuesta: ${client.palabraClave ?? 'No definida'}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Pregunta: '),
+
+                        TextSpan(
+                          text: client.preguntaPalabraClave ?? 'No definida',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+
+                        const TextSpan(text: '  ;  Respuesta: '),
+
+                        TextSpan(
+                          text: client.palabraClave ?? 'No definida',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                )
               ],
             ),
 
@@ -1272,7 +1292,7 @@ El equipo de Metax''';
           style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
         ),
         const SizedBox(height: 3),
-        Text(value, style: const TextStyle(fontSize: 12)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
       ],
     );
 

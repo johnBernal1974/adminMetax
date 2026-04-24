@@ -25,6 +25,7 @@ import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'Pages/porterias/porterias_page.dart';
 import 'Pages/porterias/registro_porterias_page.dart';
+import 'Pages/whatsApp_page/whatsApp_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -155,6 +156,7 @@ class MyApp extends StatelessWidget {
           if (name == 'porterias_page') return _guardedRoute(const PorteriasPage(), settings);
           if (name == 'vehiculos_page') return _guardedRoute(const VehiculosAdminPage(), settings);
           if (name == 'detalle_vehiculo_page') return _guardedRoute(const VehiculoDetailAdminPage(), settings);
+          if (name == 'whatsapp_metax_page') return _guardedRoute(const WhatsAppMetaXPage(), settings);
 
           // =========================
           // DEFAULT

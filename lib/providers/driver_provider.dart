@@ -162,30 +162,36 @@ class DriverProvider with ChangeNotifier {
         .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
-    /// 🔥 FILTRAR SOLO LOS QUE TIENEN CORREGIDA
-    final activadosConCorregida = snapshotActivados.docs.where((doc) {
-      final data = doc.data();
-
-      return data["29_Foto_perfil"] == "corregida" ||
-          data["25_Cedula_Delantera_foto"] == "corregida" ||
-          data["26_Cedula_Trasera_foto"] == "corregida";
-    }).toList();
+    // /// 🔥 FILTRAR SOLO LOS QUE TIENEN CORREGIDA
+    // final activadosConCorregida = snapshotActivados.docs.where((doc) {
+    //   final data = doc.data();
+    //
+    //   return data["29_Foto_perfil"] == "corregida" ||
+    //       data["25_Cedula_Delantera_foto"] == "corregida" ||
+    //       data["26_Cedula_Trasera_foto"] == "corregida";
+    // }).toList();
 
     /// 🔥 UNIR TODO
     final allDocs = [
       ...snapshotBase.docs,
-      ...activadosConCorregida,
+      ...snapshotActivados.docs, // 🔥 TODOS los activados
     ];
 
-    /// 🔥 ORDEN FINAL (CLAVE 🔥)
-    allDocs.sort((a, b) {
-      final fechaA = a["10_Fecha_Registro_Timestamp"] as Timestamp?;
-      final fechaB = b["10_Fecha_Registro_Timestamp"] as Timestamp?;
+    /// 🔥 FUNCIÓN SEGURA PARA CONVERTIR FECHAS
+    DateTime parseFecha(dynamic rawFecha) {
+      if (rawFecha is Timestamp) {
+        return rawFecha.toDate();
+      } else if (rawFecha is String) {
+        return DateTime.tryParse(rawFecha) ?? DateTime(2000);
+      } else {
+        return DateTime(2000);
+      }
+    }
 
-      /// 🔥 si alguno no tiene fecha, lo mandamos abajo
-      if (fechaA == null && fechaB == null) return 0;
-      if (fechaA == null) return 1;
-      if (fechaB == null) return -1;
+    /// 🔥 ORDEN FINAL (YA NO ROMPE NUNCA)
+    allDocs.sort((a, b) {
+      final fechaA = parseFecha(a["10_Fecha_Registro_Timestamp"]);
+      final fechaB = parseFecha(b["10_Fecha_Registro_Timestamp"]);
 
       return fechaB.compareTo(fechaA);
     });
@@ -201,46 +207,40 @@ class DriverProvider with ChangeNotifier {
   Future<void> buscarDriver(String query) async {
     print("🔍 BUSCANDO: $query");
 
-    if (query.isEmpty) {
+    if (query.trim().isEmpty) {
       await fetchDriversInicial();
       return;
     }
 
+    final q = query.trim().toLowerCase();
+
+    /// 🔥 1. TRAER TODOS LOS DRIVERS (ya los tienes en memoria)
+    final allDrivers = List<Driver>.from(drivers);
+
+    /// 🔥 2. FILTRO LOCAL (NOMBRE, APELLIDO, CELULAR, DOC)
+    final filtrados = allDrivers.where((driver) {
+      final nombre = (driver.the01Nombres ?? "").toLowerCase();
+      final apellido = (driver.the02Apellidos ?? "").toLowerCase();
+      final celular = (driver.the07Celular ?? "").toLowerCase();
+      final documento = (driver.the03NumeroDocumento ?? "").toLowerCase();
+
+      return nombre.contains(q) ||
+          apellido.contains(q) ||
+          celular.contains(q) ||
+          documento.contains(q);
+    }).toList();
+
+    /// 🔥 3. SI ENCUENTRA ALGO → DEVUELVE
+    if (filtrados.isNotEmpty) {
+      drivers.clear();
+      drivers.addAll(filtrados);
+      notifyListeners();
+      return;
+    }
+
+    /// 🔥 4. SI NO → BUSCAR POR PLACA (Firestore)
     final queryFormatted = query.trim().toUpperCase();
 
-    /// 🔍 1. Buscar por documento
-    final snapshot = await FirebaseFirestore.instance
-        .collection("Drivers")
-        .where("03_Numero_Documento", isEqualTo: query)
-        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
-        .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      drivers.clear();
-      drivers.addAll(
-        snapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
-      );
-      notifyListeners();
-      return;
-    }
-
-    /// 🔍 2. Buscar por celular
-    final snapshotCel = await FirebaseFirestore.instance
-        .collection("Drivers")
-        .where("07_Celular", isEqualTo: query)
-        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
-        .get();
-
-    if (snapshotCel.docs.isNotEmpty) {
-      drivers.clear();
-      drivers.addAll(
-        snapshotCel.docs.map((e) => Driver.fromJson(e.data())).toList(),
-      );
-      notifyListeners();
-      return;
-    }
-
-    /// 🔍 3. Buscar por placa
     final vehiculosSnapshot = await FirebaseFirestore.instance
         .collectionGroup("vehiculos")
         .where("18_Placa", isEqualTo: queryFormatted)
@@ -256,19 +256,6 @@ class DriverProvider with ChangeNotifier {
           .collection("Drivers")
           .where(FieldPath.documentId, whereIn: driverIds)
           .get();
-
-      final docs = driversSnapshot.docs;
-
-      /// 🔥 ORDENAR MANUAL (porque aquí no puedes usar orderBy con whereIn fácil)
-      docs.sort((a, b) {
-        final fechaA = a["10_Fecha_Registro_Timestamp"] as Timestamp?;
-        final fechaB = b["10_Fecha_Registro_Timestamp"] as Timestamp?;
-
-        if (fechaA == null) return 1;
-        if (fechaB == null) return -1;
-
-        return fechaB.compareTo(fechaA);
-      });
 
       drivers.clear();
       drivers.addAll(
