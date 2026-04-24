@@ -104,6 +104,7 @@ flutter:
   assets:
     - assets/
     - assets/audio/emergencia_tone.mp3
+    - assets/audio/notificacion_whatsApp.mp3
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

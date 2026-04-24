@@ -30,6 +30,8 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
   String? ultimoMensajeId;
   String? ultimoNumeroInicial;
 
+  bool audioHabilitado = false;
+
 
   @override
   void initState() {
@@ -76,6 +78,23 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
         }
       }
     });
+  }
+
+  Future<void> habilitarAudio() async {
+    if (audioHabilitado) return;
+
+    try {
+      await _player.setAsset('audio/notificacion_whatsApp.mp3');
+      await _player.setVolume(1.0);
+      await _player.play();   // 🔥 esto “desbloquea” el audio
+      await _player.stop();   // lo detienes inmediatamente
+
+      audioHabilitado = true;
+
+      print("🔊 Audio habilitado correctamente");
+    } catch (e) {
+      print("❌ Error habilitando audio: $e");
+    }
   }
 
   @override
@@ -179,6 +198,9 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       ),
       child: ListTile(
         onTap: () async {
+
+          await habilitarAudio();
+
           if (selectedNumero != numeroRaw) {
 
             final dataUsuario = await obtenerUsuario(numeroRaw);
@@ -318,10 +340,15 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
   Future<void> reproducirSonido() async {
     try {
-      await _player.setAsset('audio/notificacion_whatsApp.mp3');
-      _player.play();
+      print("🔊 Intentando reproducir sonido");
+
+      await _player.setAsset('assets/audio/notificacion_whatsApp.mp3');
+      await _player.play();
+
+      print("✅ Sonido reproducido");
+
     } catch (e) {
-      print("Error sonido: $e");
+      print("❌ Error sonido: $e");
     }
   }
 
@@ -485,6 +512,45 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                                 fontSize: 15,
                               ),
                             ),
+                            const SizedBox(height: 4),
+
+                            /// 🔥 TIPO USUARIO (PRO)
+                            if (usuarioInfo != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: usuarioInfo!['tipo'] == 'Conductor'
+                                      ? Colors.deepPurple.shade100
+                                      : Colors.blue.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  usuarioInfo!['tipo'],
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: usuarioInfo!['tipo'] == 'Conductor'
+                                        ? Colors.deepPurple
+                                        : Colors.blue,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  "No registrado",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
 
                             const SizedBox(height: 2),
 
