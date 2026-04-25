@@ -193,6 +193,13 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.directions_car,
                   press: () => _go('vehiculos_page'),
                 ),
+
+              if (role == 'Master')
+                DrawerListTitle(
+                  title: "Campañas",
+                  icon: Icons.campaign,
+                  press: () => _go('campanas_whatsapp_page'),
+                ),
             ],
 
             const Divider(height: 10, color: Colors.white24),

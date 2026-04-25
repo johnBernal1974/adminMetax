@@ -12,6 +12,7 @@ class RoutePermissions {
 
     'historial_viajes_page': {'operadorFull'},
     'detalle_vehiculo_page': {'operadorFull'},
+    'campanas_whatsapp_page': {'operadorFull'},
 
     // mapa
     'map_drivers_admin_page': {'operadorFull', 'operadorSeguimientoMap'},

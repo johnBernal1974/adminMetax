@@ -1,5 +1,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -928,14 +929,56 @@ El equipo de Metax''';
                   "status": "activado",
                   "requiere_revision": false, // 🔥 CLAVE
                 });
+                /// 🔥 ENVIAR ACTIVACIÓN POR WHATSAPP
+                try {
+
+                  if(context.mounted){
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const AlertDialog(
+                        content: Row(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(width: 15),
+                            Text("Enviando activación..."),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+                  final response = await functions
+                      .httpsCallable('enviarPlantillaActivacionCliente')
+                      .call({
+                    "telefono": client.celular,
+                    "nombre": client.nombres,
+                  });
+
+                  print("✅ RESPUESTA CLIENTE: ${response.data}");
+
+                  if (context.mounted) Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("✅ Activación enviada por WhatsApp"),
+                    ),
+                  );
+
+                } catch (e) {
+
+                  if (context.mounted) Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("❌ Error enviando WhatsApp: $e"),
+                    ),
+                  );
+                }
 
                 Navigator.pop(context);
-
-                if (!kIsWeb) {
-                  _openWhatsAppActivacion(context);
-                } else {
-                  _openWhatsAppWebActivacion(context);
-                }
               },
             ),
         ],
@@ -1088,7 +1131,7 @@ El equipo de Metax''';
     );
   }
 
-  void _showConfirmationFotoPerfil(BuildContext context, String message, String isBloquear) {
+  void _showConfirmationFotoPerfil(BuildContext context, String message, String estado) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1097,13 +1140,78 @@ El equipo de Metax''';
           actions: <Widget>[
             TextButton(
               child: const Text("Sí"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
-                _saveField("foto_perfil_estado", isBloquear, () {});
+              onPressed: () async {
+
+                Navigator.of(context).pop();
+
+                /// 🔥 1. GUARDAR ESTADO
+                _saveField("foto_perfil_estado", estado, () {});
 
                 setState(() {
-                  widget.client.fotoPerfilEstado = isBloquear;
-                });// Llama al método para guardar el campo
+                  widget.client.fotoPerfilEstado = estado;
+                });
+
+
+                /// 🔥 2. SOLO SI ES RECHAZADA → ENVIAR WHATSAPP
+                if (estado == "rechazada") {
+
+                  BuildContext? dialogContext; // 🔥 AQUÍ (FUERA del try)
+
+                  try {
+
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) {
+                        dialogContext = ctx; // 🔥 guardamos el contexto real
+                        return const AlertDialog(
+                          content: Row(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(width: 15),
+                              Text("Notificando al usuario..."),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+
+                    final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+                    final response = await functions
+                        .httpsCallable('enviarRecordatorioFotoPerfil')
+                        .call({
+                      "telefono": widget.client.celular,
+                      "nombre": widget.client.nombres,
+                    });
+
+                    print("📲 RECORDATORIO ENVIADO: ${response.data}");
+
+                    /// 🔥 CERRAR DIALOG
+                    if (dialogContext != null) {
+                      Navigator.of(dialogContext!).pop();
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("📲 Usuario notificado correctamente"),
+                      ),
+                    );
+
+                  } catch (e) {
+
+                    /// 🔥 CERRAR SI HAY ERROR TAMBIÉN
+                    if (dialogContext != null) {
+                      Navigator.of(dialogContext!).pop();
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("❌ Error enviando WhatsApp: $e"),
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ],

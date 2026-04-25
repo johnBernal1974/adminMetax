@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -148,6 +149,61 @@ class _GeneralPageState extends State<GeneralPage> {
               ),
               const SizedBox(height: 10),
               const ExportarUsuariosButton(),
+              const SizedBox(height: 10),
+
+              // ElevatedButton.icon(
+              //   onPressed: () async {
+              //
+              //     final confirm = await showDialog(
+              //       context: context,
+              //       builder: (_) => AlertDialog(
+              //         title: const Text("Confirmar envío"),
+              //         content: const Text("¿Enviar mensaje a todos los conductores?"),
+              //         actions: [
+              //           TextButton(
+              //             onPressed: () => Navigator.pop(context, false),
+              //             child: const Text("No"),
+              //           ),
+              //           TextButton(
+              //             onPressed: () => Navigator.pop(context, true),
+              //             child: const Text("Sí"),
+              //           ),
+              //         ],
+              //       ),
+              //     );
+              //
+              //     if (confirm != true) return;
+              //
+              //     /// 🔥 AQUÍ VA TU FUNCTION
+              //     try {
+              //
+              //       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+              //
+              //       final response = await functions
+              //           .httpsCallable('enviarMensajeMasivoConductores')
+              //           .call();
+              //
+              //       final enviados = response.data['enviados'];
+              //       final errores = response.data['errores'];
+              //
+              //       ScaffoldMessenger.of(context).showSnackBar(
+              //         SnackBar(
+              //           content: Text("✅ Enviados: $enviados | ❌ Errores: $errores"),
+              //         ),
+              //       );
+              //
+              //     } catch (e) {
+              //
+              //       ScaffoldMessenger.of(context).showSnackBar(
+              //         SnackBar(
+              //           content: Text("❌ Error: $e"),
+              //         ),
+              //       );
+              //     }
+              //   },
+              //   icon: const Icon(Icons.campaign),
+              //   label: const Text("Enviar mensaje a conductores"),
+              // ),
 
 
               Wrap(

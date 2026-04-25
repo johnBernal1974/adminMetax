@@ -22,6 +22,7 @@ import 'Pages/SingUp_page/View/singUp_page.dart';
 import 'Pages/Splash/splash.dart';
 import 'Pages/UsuariosPage/usuarios_page.dart';
 import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
+import 'Pages/campañas_whasApp/campañas_whasApp.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'Pages/porterias/porterias_page.dart';
 import 'Pages/porterias/registro_porterias_page.dart';
@@ -157,6 +158,8 @@ class MyApp extends StatelessWidget {
           if (name == 'vehiculos_page') return _guardedRoute(const VehiculosAdminPage(), settings);
           if (name == 'detalle_vehiculo_page') return _guardedRoute(const VehiculoDetailAdminPage(), settings);
           if (name == 'whatsapp_metax_page') return _guardedRoute(const WhatsAppMetaXPage(), settings);
+          if (name == 'campanas_whatsapp_page') {return _guardedRoute(const CampanasWhatsAppPage(), settings);
+          }
 
           // =========================
           // DEFAULT
