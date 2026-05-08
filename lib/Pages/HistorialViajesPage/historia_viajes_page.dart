@@ -334,7 +334,47 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                 DataCell(
                   SizedBox(
                     width: 250,
-                    child: Text(
+
+                    child: (data['nombreConjunto'] != null &&
+                        data['nombreConjunto'].toString().trim().isNotEmpty)
+
+                    /// 🔥 VIAJE PORTERIA
+                        ? RichText(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black,
+                        ),
+
+                        children: [
+
+                          TextSpan(
+                            text: 'PORTERIA',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          TextSpan(
+                            text: ' - Servicio por ',
+                          ),
+
+                          TextSpan(
+                            text: '(Taxímetro)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                        ],
+                      ),
+                    )
+
+                    /// 🔥 VIAJE NORMAL
+                        : Text(
                       data['to'] ?? '',
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -347,7 +387,10 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                 DataCell(
                   FutureBuilder<List<String>>(
                     future: Future.wait([
-                      _getClientName(idClient),
+                      _getClientName(
+                        idClient,
+                        nombreConjunto: data['nombreConjunto'],
+                      ),
                       _getDriverName(idDriver),
                     ]),
                     builder: (context, snap) {
@@ -389,9 +432,25 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                   ),
                 ),
                 DataCell(
-                  Text(
+
+                  (data['nombreConjunto'] != null &&
+                      data['nombreConjunto'].toString().trim().isNotEmpty)
+
+                  /// 🔥 VIAJE PORTERIA
+                      ? const Text(
+                    'Cobrado por taxímetro',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  )
+
+                  /// 🔥 VIAJE NORMAL
+                      : Text(
                     '\$${numberFormat.format((data['tarifa'] ?? 0))}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -757,16 +816,60 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
   }
 
 
-  Future<String> _getClientName(String clientId) async {
+  Future<String> _getClientName(
+      dynamic clientIdValue, {
+        String? nombreConjunto,
+      }) async {
+
     try {
-      final clientDoc = await _firestore.collection('Clients').doc(clientId).get();
-      if (clientDoc.exists) {
-        final clientData = clientDoc.data();
-        return '${clientData?['01_Nombres']} ${clientData?['02_Apellidos']}';
+
+      /// 🔥 SI ES PORTERIA
+      if (nombreConjunto != null &&
+          nombreConjunto.toString().trim().isNotEmpty) {
+
+        return nombreConjunto.toString();
+      }
+
+      String clientId = '';
+
+      if (clientIdValue is DocumentReference) {
+
+        clientId = clientIdValue.id;
+
+      } else if (clientIdValue is String) {
+
+        clientId = clientIdValue.contains('/')
+            ? clientIdValue.split('/').last
+            : clientIdValue;
+
       } else {
+
+        clientId = clientIdValue.toString();
+
+      }
+
+      if (clientId.trim().isEmpty) {
         return 'Cliente no encontrado';
       }
+
+      final clientDoc =
+      await _firestore.collection('Clients').doc(clientId).get();
+
+      if (clientDoc.exists) {
+
+        final clientData = clientDoc.data();
+
+        return
+          '${clientData?['01_Nombres'] ?? ''} ${clientData?['02_Apellidos'] ?? ''}'
+              .trim();
+      }
+
+      return 'Cliente no encontrado';
+
     } catch (e) {
+
+      print('ERROR CLIENTE: $e');
+
       return 'Error al obtener cliente';
     }
   }

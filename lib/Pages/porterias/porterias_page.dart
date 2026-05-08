@@ -160,7 +160,7 @@ class _PorteriasPageState extends State<PorteriasPage> {
       scrollDirection: Axis.horizontal,
       child: DataTable(
 
-        columnSpacing: 50,
+        columnSpacing: 25,
 
         columns: const [
 
@@ -182,35 +182,56 @@ class _PorteriasPageState extends State<PorteriasPage> {
           final activa = data['activa'] ?? true;
 
           return DataRow(
+            onSelectChanged: (_) {
+
+              Navigator.pushNamed(
+                context,
+                'editar_porteria_page',
+                arguments: {
+                  "id": id,
+                  "data": data,
+                },
+              );
+
+            },
 
             cells: [
 
               DataCell(Text(data['nombreConjunto'] ?? "")),
 
               DataCell(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                SizedBox(
+                  width: 300,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
 
-                    Text(
-                      data['nombrePorteria'] ?? "",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                      Text(
+                        data['nombrePorteria'] ?? "",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 2),
+                      const SizedBox(height: 2),
 
-                    Text(
-                      data['direccion'] ?? "",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black,
+                      Text(
+                        data['direccion'] ?? "",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
 
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
@@ -231,13 +252,17 @@ class _PorteriasPageState extends State<PorteriasPage> {
                 Row(
                   children: [
 
+                    /// 🔥 HISTORIAL
                     IconButton(
-                      icon: const Icon(Icons.edit),
+                      tooltip: "Ver historial",
+
+                      icon: const Icon(Icons.history),
+
                       onPressed: () {
 
                         Navigator.pushNamed(
                           context,
-                          'editar_porteria_page',
+                          'historial_porteria_page',
                           arguments: {
                             "id": id,
                             "data": data,
@@ -247,10 +272,16 @@ class _PorteriasPageState extends State<PorteriasPage> {
                       },
                     ),
 
+                    /// 🔥 ACTIVAR / DESACTIVAR
                     IconButton(
+                      tooltip: activa
+                          ? "Desactivar portería"
+                          : "Activar portería",
+
                       icon: Icon(
                         activa ? Icons.block : Icons.check,
                       ),
+
                       onPressed: () async {
 
                         await FirebaseFirestore.instance
@@ -265,7 +296,7 @@ class _PorteriasPageState extends State<PorteriasPage> {
 
                   ],
                 ),
-              )
+              ),
 
             ],
 
@@ -345,12 +376,40 @@ class _PorteriasPageState extends State<PorteriasPage> {
 
                 const SizedBox(height: 10),
 
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
 
+                    /// 🔥 HISTORIAL
+                    ElevatedButton.icon(
+
+                      icon: const Icon(Icons.history),
+
+                      label: const Text("Historial"),
+
+                      onPressed: () {
+
+                        Navigator.pushNamed(
+                          context,
+                          'historial_porteria_page',
+                          arguments: {
+                            "id": id,
+                            "data": data,
+                          },
+                        );
+
+                      },
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    /// 🔥 EDITAR
                     ElevatedButton.icon(
                       icon: const Icon(Icons.edit),
+
                       label: const Text("Editar"),
+
                       onPressed: () {
 
                         Navigator.pushNamed(
@@ -367,17 +426,21 @@ class _PorteriasPageState extends State<PorteriasPage> {
 
                     const SizedBox(width: 10),
 
+                    /// 🔥 ACTIVAR / DESACTIVAR
                     ElevatedButton.icon(
+
                       icon: Icon(
                         activa
                             ? Icons.block
                             : Icons.check,
                       ),
+
                       label: Text(
                         activa
                             ? "Desactivar"
                             : "Activar",
                       ),
+
                       onPressed: () async {
 
                         await FirebaseFirestore.instance
@@ -391,7 +454,7 @@ class _PorteriasPageState extends State<PorteriasPage> {
                     )
 
                   ],
-                )
+                ),
 
               ],
             ),

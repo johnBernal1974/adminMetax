@@ -25,6 +25,7 @@ import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
 import 'Pages/campañas_whasApp/campañas_whasApp.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'Pages/porterias/editar_porteria_page.dart';
+import 'Pages/porterias/historial_porteria_page.dart';
 import 'Pages/porterias/porterias_page.dart';
 import 'Pages/porterias/registro_porterias_page.dart';
 import 'Pages/whatsApp_page/whatsApp_page.dart';
@@ -158,10 +159,15 @@ class MyApp extends StatelessWidget {
           if (name == 'porterias_page') return _guardedRoute(const PorteriasPage(), settings);
           if (name == 'editar_porteria_page') { return _guardedRoute(const EditarPorteriaPage(), settings);
           }
+          if (name == 'historial_porteria_page') {return _guardedRoute( const HistorialPorteriaPage(), settings,
+            );
+          }
+
           if (name == 'vehiculos_page') return _guardedRoute(const VehiculosAdminPage(), settings);
           if (name == 'detalle_vehiculo_page') return _guardedRoute(const VehiculoDetailAdminPage(), settings);
           if (name == 'whatsapp_metax_page') return _guardedRoute(const WhatsAppMetaXPage(), settings);
           if (name == 'campanas_whatsapp_page') {return _guardedRoute(const CampanasWhatsAppPage(), settings);
+
           }
 
           // =========================
