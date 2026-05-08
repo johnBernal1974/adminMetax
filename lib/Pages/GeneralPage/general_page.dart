@@ -15,6 +15,8 @@ import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import 'dart:html' as html;
 
+import '../travel_status_admin_widget.dart';
+
 class GeneralPage extends StatefulWidget {
   const GeneralPage({Key? key}) : super(key: key);
 
@@ -186,7 +188,6 @@ class _GeneralPageState extends State<GeneralPage> {
                 color: Colors.grey,
                 height: 3,
               ),
-
               const SizedBox(height: 20),
 
               isMobileOrTablet

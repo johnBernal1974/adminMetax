@@ -718,7 +718,15 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
     final nombre = map['nombre'];
     final foto = map['foto'];
-    final unread = map['unread'] ?? false;
+    final unreadRaw = map['unread'];
+
+    final int unread =
+
+    unreadRaw is bool
+
+        ? (unreadRaw ? 1 : 0)
+
+        : (unreadRaw as int? ?? 0);
 
     final isSelected = selectedNumero == numeroRaw;
 
@@ -833,7 +841,10 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                     ? nombre
                     : numero,
                 style: TextStyle(
-                  fontWeight: (isSelected || unread)
+                  fontWeight:
+
+                  (isSelected || ((unread ?? 0) > 0))
+
                       ? FontWeight.bold
                       : FontWeight.w500,
                   fontSize: 14,
@@ -843,7 +854,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
             ),
 
             /// 🔴 BADGE (solo uno, limpio)
-            if (unread)
+            if ((unread ?? 0) > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 margin: const EdgeInsets.only(right: 6),
@@ -851,9 +862,9 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                   color: Colors.green,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  "1",
-                  style: TextStyle(
+                child:Text(
+                  "$unread",
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -876,8 +887,19 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontWeight: unread ? FontWeight.w600 : FontWeight.normal,
-            color: unread ? Colors.black : Colors.grey[700],
+            fontWeight:
+
+            ((unread ?? 0) > 0)
+
+                ? FontWeight.w600
+                : FontWeight.normal,
+
+            color:
+
+            ((unread ?? 0) > 0)
+
+                ? Colors.black
+                : Colors.grey[700],
           ),
         ),
       ),
@@ -887,7 +909,8 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
   Future<Map<String, dynamic>?> obtenerUsuario(String numero) async {
 
     /// 🔥 NORMALIZAR
-    String numeroBusqueda = numero;
+    String numeroBusqueda =
+    normalizarNumero(numero);
     if (numeroBusqueda.startsWith('57')) {
       numeroBusqueda = numeroBusqueda.substring(2);
     }
@@ -904,7 +927,11 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
       final driver = await FirebaseFirestore.instance
           .collection("Drivers")
-          .where("07_Celular", isEqualTo: numeroBusqueda)
+          .where(
+        "07_Celular",
+        isEqualTo:
+        numeroBusqueda.replaceFirst('57', ''),
+      )
           .limit(1)
           .get();
 
@@ -2013,7 +2040,8 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       return;
     }
 
-    final telefono = selectedNumero;
+    final telefono =
+    normalizarNumero(selectedNumero!);
 
     try {
       /// 🔥 1. TRAER NOMBRE DESDE LA CONVERSACIÓN
@@ -2040,20 +2068,36 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
           .httpsCallable('enviarInicioConversacion');
 
       /// 🔥 2. ENVÍA A WHATSAPP
-      await callable.call({
+      /// 🔥 2. ENVÍA A WHATSAPP
+      final response = await callable.call({
+
         "telefono": telefono,
+
         "nombre": nombre,
       });
+
+      final wamid =
+      response.data['messages'][0]['id'];
 
       /// 🔥 3. GUARDA EN FIRESTORE
       await FirebaseFirestore.instance
           .collection('whatsapp_messages_metax')
           .add({
+
         "conversationId": telefono,
+
         "text": mensajeReal,
+
         "from_me": true,
+
         "timestamp": Timestamp.now(),
+
         "tipo": "template",
+
+        "status": "sent",
+
+        /// 🔥 NECESARIO PARA ✔✔ Y AZUL
+        "wamid": wamid,
       });
 
       /// 🔥 4. ACTUALIZA LA CONVERSACIÓN
@@ -2066,7 +2110,17 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
         "nombre": nombreCompleto,
 
-        "foto": usuarioInfo?['data']?['29_Foto_perfil'],
+        "foto":
+
+        usuarioInfo?['data']?['29_Foto_perfil']
+
+            ??
+
+            usuarioInfo?['data']?['foto_perfil_url']
+
+            ??
+
+            '',
 
         "tipo": usuarioInfo?['tipo'],
 
@@ -2074,7 +2128,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
         "lastMessageAt": Timestamp.now(),
 
-        "unread": false,
+        "unread": 0,
 
       }, SetOptions(merge: true));
 
@@ -2100,5 +2154,19 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
     } finally {
       enviandoPlantilla = false;
     }
+  }
+
+  String normalizarNumero(String numero) {
+
+    numero = numero
+        .replaceAll(" ", "")
+        .replaceAll("+", "");
+
+    /// 🔥 SI NO TIENE 57 → AGREGARLO
+    if (!numero.startsWith("57")) {
+      numero = "57$numero";
+    }
+
+    return numero;
   }
 }

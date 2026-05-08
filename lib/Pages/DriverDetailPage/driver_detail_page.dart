@@ -1633,11 +1633,166 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         GestureDetector(
-          onTap: () {
-            if(isMobile){
-              _openWhatsApp(context);
+          onTap: () async {
+
+            try {
+
+              showDialog(
+
+                context: context,
+                barrierDismissible: false,
+
+                builder: (_) {
+
+                  return const AlertDialog(
+
+                    content: Row(
+
+                      children: [
+
+                        CircularProgressIndicator(),
+
+                        SizedBox(width: 15),
+
+                        Text(
+                          "Enviando mensaje...",
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+
+              final telefono =
+                  widget.driver.the07Celular;
+
+              final nombre =
+                  "${widget.driver.the01Nombres} ${widget.driver.the02Apellidos}";
+
+              /// 🔥 ASEGURAR CONVERSACIÓN
+              await FirebaseFirestore.instance
+                  .collection(
+                  'whatsapp_conversations_metax')
+                  .doc("57$telefono")
+                  .set({
+
+                "conversationId": "57$telefono",
+
+                "nombre": nombre,
+
+                "foto":
+                widget.driver.image,
+
+                "tipo": "Conductor",
+
+                "lastMessageAt":
+                Timestamp.now(),
+
+              }, SetOptions(merge: true));
+
+              /// 🔥 ENVIAR PLANTILLA
+              final callable =
+              FirebaseFunctions.instanceFor(
+                region: 'us-central1',
+              ).httpsCallable(
+                'enviarInicioConversacion',
+              );
+
+              final response = await callable.call({
+
+                "telefono": "57$telefono",
+
+                "nombre":
+                widget.driver.the01Nombres,
+
+              });
+
+              final wamid =
+              response.data['messages'][0]['id'];
+
+              /// 🔥 MENSAJE
+              final mensaje =
+
+                  "Hola ${widget.driver.the01Nombres}, este mensaje corresponde a una gestión relacionada con tu cuenta de conductor en Meta X.\n\n¿Nos puedes atender un momento?\n\nEquipo de Meta X";
+
+              /// 🔥 GUARDAR MENSAJE
+              await FirebaseFirestore.instance
+                  .collection(
+                  'whatsapp_messages_metax')
+                  .add({
+
+                "conversationId":
+                "57$telefono",
+
+                "text":
+                mensaje,
+
+                "from_me": true,
+
+                "timestamp":
+                Timestamp.now(),
+
+                "tipo": "template",
+
+                "status": "sent",
+
+                "wamid": wamid,
+              });
+
+              /// 🔥 ACTUALIZAR CONVERSACIÓN
+              await FirebaseFirestore.instance
+                  .collection(
+                  'whatsapp_conversations_metax')
+                  .doc("57$telefono")
+                  .update({
+
+                "lastMessage":
+                mensaje,
+
+                "lastMessageAt":
+                Timestamp.now(),
+
+                "unread": 0,
+              });
+
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(
+
+                const SnackBar(
+
+                  backgroundColor:
+                  Colors.green,
+
+                  content: Text(
+                    "✅ Plantilla enviada correctamente",
+                  ),
+                ),
+              );
+
+            } catch (e) {
+
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(
+
+                SnackBar(
+
+                  backgroundColor:
+                  Colors.red,
+
+                  content: Text(
+                    "❌ Error enviando plantilla: $e",
+                  ),
+                ),
+              );
             }
-            _openWhatsAppWeb(context);
           },
           child: Image.asset(
             'assets/icono_whatsapp.png', // Ruta de la imagen de WhatsApp
