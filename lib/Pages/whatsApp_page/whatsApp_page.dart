@@ -42,6 +42,11 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
   final Map<String, Map<String, dynamic>?> cacheUsuarios = {};
 
+  String textoBusqueda = '';
+
+  List<Map<String, dynamic>> resultadosExternos = [];
+  bool buscandoExternos = false;
+
 
   @override
   void initState() {
@@ -104,6 +109,140 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
           reproducirSonido();
         }
       }
+    });
+  }
+
+  Future<void> buscarUsuariosExternos(
+      String texto,
+      ) async {
+
+    if (texto.trim().isEmpty) {
+
+      setState(() {
+        resultadosExternos = [];
+      });
+
+      return;
+    }
+
+    setState(() {
+      buscandoExternos = true;
+    });
+
+    final resultados = <Map<String, dynamic>>[];
+
+    try {
+
+      /// 🔥 CLIENTES
+      final clients = await FirebaseFirestore.instance
+          .collection('Clients')
+          .get();
+
+      for (final doc in clients.docs) {
+
+        final data = doc.data();
+
+        final nombre =
+        "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}"
+            .toLowerCase();
+
+        String celular =
+        (data['07_Celular'] ?? '')
+            .toString();
+
+        /// 🔥 NORMALIZAR
+        celular = celular
+            .replaceAll(' ', '')
+            .replaceAll('+', '');
+
+        if (celular.startsWith('57')) {
+          celular = celular.substring(2);
+        }
+
+        final coincide =
+            nombre.contains(texto.toLowerCase()) ||
+
+                celular.contains(
+                  texto
+                      .replaceAll(' ', '')
+                      .replaceAll('+', ''),
+                );
+
+        if (coincide) {
+
+          resultados.add({
+            "tipo": "Cliente",
+            "nombre":
+            "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}",
+            "numero": celular,
+            "foto":
+            data['29_Foto_perfil'] ??
+                data['foto_perfil_url'],
+          });
+        }
+      }
+
+      /// 🔥 CONDUCTORES
+      final drivers = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .get();
+
+      for (final doc in drivers.docs) {
+
+        final data = doc.data();
+
+        final nombre =
+        "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}"
+            .toLowerCase();
+
+        String celular =
+        (data['07_Celular'] ?? '')
+            .toString();
+
+        /// 🔥 NORMALIZAR
+        celular = celular
+            .replaceAll(' ', '')
+            .replaceAll('+', '');
+
+        if (celular.startsWith('57')) {
+          celular = celular.substring(2);
+        }
+
+        final coincide =
+            nombre.contains(texto.toLowerCase()) ||
+
+                celular.contains(
+                  texto
+                      .replaceAll(' ', '')
+                      .replaceAll('+', ''),
+                );
+
+        if (coincide) {
+
+          resultados.add({
+            "tipo": "Conductor",
+            "nombre":
+            "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}",
+            "numero": celular,
+            "foto":
+            data['29_Foto_perfil'],
+          });
+        }
+      }
+
+      setState(() {
+        resultadosExternos = resultados;
+        print("🔥 RESULTADOS EXTERNOS: ${resultados.length}");
+      });
+
+    } catch (e) {
+
+      print("ERROR BUSQUEDA EXTERNA: $e");
+
+    }
+
+    setState(() {
+      buscandoExternos = false;
     });
   }
 
@@ -182,41 +321,364 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
   }
 
   Widget _buildListaConversaciones() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: conversacionesStream,
-      builder: (context, snapshot) {
 
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
+    return Column(
+      children: [
 
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        /// 🔥 BUSCADOR
+        Container(
+          padding: const EdgeInsets.all(10),
+          color: Colors.white,
 
-        final docs = snapshot.data?.docs ?? [];
+          child: TextField(
 
-        if (docs.isEmpty) {
-          return const Center(child: Text("No hay mensajes aún"));
-        }
+            onChanged: (value) {
 
-        return ListView.builder(
-          cacheExtent: 1200,
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
+              setState(() {
 
-            final doc = docs[index];
-            // final map = doc.data() as Map<String, dynamic>;
-            //
-            // final numero = map['conversationId'] ?? '';
-            //
-            // /// 🔥 PRECARGA SILENCIOSA (NO AFECTA UI)
-            // obtenerUsuario(numero);
+                textoBusqueda =
+                    value.toLowerCase().trim();
 
-            return _buildItemConversacion(doc);
-          },
-        );
-      },
+              });
+
+              buscarUsuariosExternos(textoBusqueda);
+
+            },
+
+            decoration: InputDecoration(
+              hintText: "Buscar conversación...",
+              prefixIcon: const Icon(Icons.search),
+
+              filled: true,
+              fillColor: Colors.grey.shade100,
+
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+
+        /// 🔥 LISTA
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: conversacionesStream,
+
+            builder: (context, snapshot) {
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    "Error: ${snapshot.error}",
+                  ),
+                );
+              }
+
+              if (snapshot.connectionState ==
+                  ConnectionState.waiting &&
+                  !snapshot.hasData) {
+
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              final docs =
+                  snapshot.data?.docs ?? [];
+
+              final coincidencias = <QueryDocumentSnapshot>[];
+              final restantes = <QueryDocumentSnapshot>[];
+
+              for (final doc in docs) {
+
+                final data =
+                doc.data() as Map<String, dynamic>;
+
+                final nombre =
+                (data['nombre'] ?? '')
+                    .toString()
+                    .toLowerCase();
+
+                final numero =
+                (data['conversationId'] ?? '')
+                    .toString()
+                    .toLowerCase();
+
+                final coincide =
+                    textoBusqueda.isNotEmpty &&
+                        (
+                            nombre.contains(textoBusqueda) ||
+                                numero.contains(textoBusqueda)
+                        );
+
+                if (coincide) {
+
+                  coincidencias.add(doc);
+
+                } else {
+
+                  restantes.add(doc);
+
+                }
+              }
+
+              /// 🔥 RESULTADOS ARRIBA
+              final List<dynamic> conversacionesOrdenadas = [
+
+                /// 🔥 CHATS ENCONTRADOS
+                ...coincidencias,
+
+                if (coincidencias.isNotEmpty)
+
+                  <String, dynamic>{
+                    "type": "divider_chats"
+                  },
+
+                /// 🔥 USUARIOS EXTERNOS
+                if (resultadosExternos.isNotEmpty)
+
+                  <String, dynamic>{
+                    "type": "divider_externos"
+                  },
+
+                ...resultadosExternos,
+
+                /// 🔥 RESTO DE CHATS
+                ...restantes,
+
+              ];
+
+              if (conversacionesOrdenadas.isEmpty) {
+
+                return const Center(
+                  child: Text(
+                    "No se encontraron resultados",
+                  ),
+                );
+
+              }
+
+              return ListView.builder(
+
+                cacheExtent: 1200,
+
+                itemCount: conversacionesOrdenadas.length,
+
+                itemBuilder: (context, index) {
+
+                  final item =
+                  conversacionesOrdenadas[index];
+
+                  /// 🔥 LINEA SEPARADORA
+                  if (item is Map &&
+                      item['type'] == 'divider_chats') {
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 14,
+                      ),
+
+                      child: Row(
+                        children: [
+
+                          Expanded(
+                            child: Divider(
+                              color: Colors.blue.withOpacity(0.4),
+                              thickness: 1.2,
+                            ),
+                          ),
+
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
+
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+
+                            child: const Text(
+                              "Resultado",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+
+                          Expanded(
+                            child: Divider(
+                              color: Colors.blue.withOpacity(0.4),
+                              thickness: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  /// 🔥 DIVIDER EXTERNOS
+                  if (item is Map &&
+                      item['type'] == 'divider_externos') {
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
+
+                      child: Row(
+                        children: [
+
+                          Expanded(
+                            child: Divider(
+                              color: Colors.green.withOpacity(0.4),
+                              thickness: 1.2,
+                            ),
+                          ),
+
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
+
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+
+                            child: const Text(
+                              "Usuarios encontrados",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ),
+
+                          Expanded(
+                            child: Divider(
+                              color: Colors.green.withOpacity(0.4),
+                              thickness: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  /// 🔥 RESULTADO EXTERNO
+                  if (item is Map &&
+                      item['type'] == null) {
+
+                    return _buildResultadoExterno(
+                      Map<String, dynamic>.from(item),
+                    );
+
+                  }
+
+                  final doc =
+                  item as QueryDocumentSnapshot;
+
+                  return _buildItemConversacion(doc);;
+
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultadoExterno(
+      Map<String, dynamic> data,
+      ) {
+
+    final nombre = data['nombre'] ?? '';
+    final numero = data['numero'] ?? '';
+    final foto = data['foto'];
+    final tipo = data['tipo'] ?? '';
+
+    return Container(
+      color: Colors.green.withOpacity(0.03),
+
+      child: ListTile(
+
+        leading: CircleAvatar(
+          backgroundImage:
+          (foto != null &&
+              foto.toString().isNotEmpty)
+
+              ? CachedNetworkImageProvider(
+            foto.toString(),
+          )
+
+              : null,
+
+          child: (foto == null ||
+              foto.toString().isEmpty)
+
+              ? const Icon(Icons.person)
+
+              : null,
+        ),
+
+        title: Text(
+          nombre,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        subtitle: Text(
+          "$tipo • ${formatearNumero(numero)}",
+        ),
+
+        trailing: const Icon(
+          Icons.chat,
+          color: Colors.green,
+        ),
+
+        onTap: () async {
+
+          setState(() {
+
+            selectedNumero = numero;
+
+            textoBusqueda = '';
+
+            /// 🔥 CARGAR INFO TEMPORAL
+            usuarioInfo = {
+              "tipo": tipo,
+              "data": {
+                "01_Nombres": nombre,
+                "29_Foto_perfil": foto,
+              }
+            };
+
+            /// 🔥 COMO NO HAY CHAT AUN
+            chatActivo = false;
+
+          });
+
+        },
+      ),
     );
   }
 
@@ -277,9 +739,16 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
             });
 
             setState(() {
+
               selectedNumero = numeroRaw;
-              usuarioInfo = null; // 👈 IMPORTANTE
+
+              usuarioInfo = null;
+
               loadingUsuario = false;
+
+              /// 🔥 LIMPIAR BUSQUEDA
+              textoBusqueda = '';
+
             });
           }
         },
@@ -565,6 +1034,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       return const Center(child: Text("Selecciona una conversación"));
     }
 
+
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('whatsapp_conversations_metax')
@@ -574,9 +1044,39 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
         final data = snapshot.data?.data() as Map<String, dynamic>?;
 
-        final nombre = data?['nombre'] ?? formatearNumero(selectedNumero!);
-        final foto = data?['foto'];
-        final tipo = data?['tipo'] ?? "No registrado";
+        final nombre =
+
+            data?['nombre']
+
+                ??
+
+                usuarioInfo?['data']?['01_Nombres']
+
+                ??
+
+                formatearNumero(selectedNumero!);
+
+        final foto =
+
+            data?['foto']
+
+                ??
+
+                usuarioInfo?['data']?['29_Foto_perfil'];
+
+        final tipo =
+
+            data?['tipo']
+
+                ??
+
+                usuarioInfo?['tipo']
+
+                ??
+
+                "No registrado";
+
+        final esConductor = tipo == "Conductor";
 
         return Column(
           children: [
@@ -887,7 +1387,9 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
               ),
             ),
 
+
             /// 🔥 BOTONES RÁPIDOS (LOS QUE TENÍAS)
+            if (esConductor)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -936,6 +1438,42 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                         "Descarga la app de Meta X para usuarios aquí:\n\nhttps://play.google.com/store/apps/details?id=com.app_taxis.apptaxis&hl=es_CO"
                     );
                   }),
+
+                  /// 💬 MENSAJE MOTIVACIONAL
+                  _botonRapido(
+                    "Motivar conductor",
+                    Icons.favorite,
+                    onTap: () {
+
+                      final nombreCompleto = usuarioInfo?['data']?['01_Nombres']
+                          ?.toString()
+                          .trim() ?? '';
+
+                      final nombre = nombreCompleto.isNotEmpty
+                          ? nombreCompleto.split(' ').first
+                          : 'Compañero';
+
+                      final mensaje =
+                          "Hola $nombre, muy buenos días 👋\n\n"
+
+                          "Queremos agradecerte sinceramente por el compromiso y el apoyo que le estás dando a Meta X.\n\n"
+
+                          "La plataforma ya está en operación y en nuestra primera semana ya hemos superado los 50 servicios aceptados 🚕. Poco a poco cada vez más usuarios están conociendo la app y ya varios compañeros han comenzado a realizar viajes.\n\n"
+
+                          "Actualmente seguimos realizando trabajo en campo, promociones y difusión para que el número de solicitudes aumente progresivamente y cada vez haya más movimiento para todos.\n\n"
+
+                          "Sabemos que al inicio este proceso requiere paciencia, pero estamos trabajando constantemente para que Meta X siga creciendo y fortaleciéndose junto a ustedes.\n\n"
+
+                          "De verdad, muchas gracias por creer en este proyecto y por seguir haciendo parte de esta comunidad.\n\n"
+
+                          "Atentamente,\n"
+                          "Mónica\n"
+                          "Equipo Meta X";
+
+                      enviarMensajeDirecto(mensaje);
+
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1431,10 +1969,23 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       await FirebaseFirestore.instance
           .collection('whatsapp_conversations_metax')
           .doc(telefono)
-          .update({
+          .set({
+
+        "conversationId": telefono,
+
+        "nombre": nombreCompleto,
+
+        "foto": usuarioInfo?['data']?['29_Foto_perfil'],
+
+        "tipo": usuarioInfo?['tipo'],
+
         "lastMessage": mensajeReal,
+
         "lastMessageAt": Timestamp.now(),
-      });
+
+        "unread": false,
+
+      }, SetOptions(merge: true));
 
       if (!mounted) return;
 
