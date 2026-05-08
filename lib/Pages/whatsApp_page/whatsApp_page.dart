@@ -1,3 +1,4 @@
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -6,10 +7,14 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../common/main_layout.dart';
-import 'dart:html' as html;
+import 'dart:html' as web_html;
 
+import '../../models/conductor_model.dart';
+import '../../models/usuario_model.dart';
 import '../../widget/audio_player_widget.dart';
 import '../../widget/video_player_widget.dart';
+import '../ClientDetailPage/client_detail_page.dart';
+import '../DriverDetailPage/driver_detail_page.dart';
 
 class WhatsAppMetaXPage extends StatefulWidget {
   const WhatsAppMetaXPage({super.key});
@@ -118,6 +123,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
     if (texto.trim().isEmpty) {
 
+      if (!mounted) return;
       setState(() {
         resultadosExternos = [];
       });
@@ -125,6 +131,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       buscandoExternos = true;
     });
@@ -171,6 +178,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
         if (coincide) {
 
           resultados.add({
+            "id": doc.id,
             "tipo": "Cliente",
             "nombre":
             "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}",
@@ -220,6 +228,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
         if (coincide) {
 
           resultados.add({
+            "id": doc.id,
             "tipo": "Conductor",
             "nombre":
             "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}",
@@ -229,6 +238,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
           });
         }
       }
+      if (!mounted) return;
 
       setState(() {
         resultadosExternos = resultados;
@@ -261,6 +271,8 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
     final diferencia = ahora.difference(ultimaFecha);
 
     print("⏱ Diferencia horas: ${diferencia.inHours}");
+
+    if (!mounted) return;
 
     setState(() {
       chatActivo = diferencia.inHours < 24;
@@ -738,11 +750,16 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
               "unread": false,
             });
 
+            final dataUsuario =
+            await obtenerUsuario(numeroRaw);
+
+            if (!mounted) return;
+
             setState(() {
 
               selectedNumero = numeroRaw;
 
-              usuarioInfo = null;
+              usuarioInfo = dataUsuario;
 
               loadingUsuario = false;
 
@@ -894,7 +911,10 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       if (driver.docs.isNotEmpty) {
         final data = {
           "tipo": "Conductor",
-          "data": driver.docs.first.data(),
+          "data": {
+            ...driver.docs.first.data(),
+            "id": driver.docs.first.id,
+          },
         };
 
         cacheUsuarios[numeroBusqueda] = data; // 🔥 GUARDAR CACHE
@@ -910,7 +930,10 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       if (client.docs.isNotEmpty) {
         final data = {
           "tipo": "Cliente",
-          "data": client.docs.first.data(),
+          "data": {
+            ...client.docs.first.data(),
+            "id": client.docs.first.id,
+          },
         };
 
         cacheUsuarios[numeroBusqueda] = data; // 🔥 GUARDAR CACHE
@@ -1244,11 +1267,79 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                       ],
                     ),
 
-                  if (!isMobile)
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      onPressed: () {},
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+
+                      /// 🔥 ABRIR PERFIL
+                      IconButton(
+                        tooltip: "Abrir perfil",
+                        icon: const Icon(Icons.open_in_new),
+
+                        onPressed: () async {
+
+                          if (selectedNumero == null) return;
+
+                          final tipoUsuario =
+                          usuarioInfo?['tipo'];
+
+                          final userData =
+                          usuarioInfo?['data'];
+
+                          if (tipoUsuario == null ||
+                              userData == null) {
+                            return;
+                          }
+
+                          /// 🔥 CONDUCTOR
+                          if (tipoUsuario == "Conductor") {
+
+                            final driver =
+                            Driver.fromJson({
+                              ...userData,
+                              "id": userData["id"] ?? "",
+                            });
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    DriverDetailPage(
+                                      driver: driver,
+                                    ),
+                              ),
+                            );
+                          }
+
+                          /// 🔥 CLIENTE
+                          else if (tipoUsuario == "Cliente") {
+
+                            final client =
+                            Client.fromJson({
+                              ...userData,
+                              "id": userData["id"] ?? "",
+                            });
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ClientDetailPage(
+                                      client: client,
+                                    ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+
+                      if (!isMobile)
+                        IconButton(
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () {},
+                        ),
+                    ],
+                  )
                 ],
               ),
             ),
