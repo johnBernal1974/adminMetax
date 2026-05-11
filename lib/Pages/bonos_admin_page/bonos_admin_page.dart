@@ -14,10 +14,7 @@ class BonosAdminPage extends StatefulWidget {
 class _BonosAdminPageState
     extends State<BonosAdminPage> {
 
-  bool loading = true;
 
-  List<Map<String, dynamic>>
-  conductores = [];
 
   bool isDesktop(BuildContext context) {
 
@@ -26,125 +23,7 @@ class _BonosAdminPageState
         .width >= 1200;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    cargarBonos();
-  }
 
-  Future<void> cargarBonos() async {
-
-    setState(() {
-      loading = true;
-    });
-
-    final snap =
-    await FirebaseFirestore.instance
-
-        .collection('TravelHistory')
-
-        .where(
-      'tarifaDescuento',
-      isGreaterThan: 0,
-    )
-
-        .where(
-      'bonoPagado',
-      isEqualTo: false,
-    )
-
-        .get();
-
-    final Map<String,
-        Map<String, dynamic>>
-    agrupados = {};
-
-    for (final doc in snap.docs) {
-
-      final data = doc.data();
-      print(data);
-
-      final idDriver =
-      (data['idDriver'] ?? '')
-          .toString();
-
-      if (idDriver.isEmpty) {
-        continue;
-      }
-
-      final bono =
-
-          (data['tarifaDescuento']
-          as num?)
-
-              ?.toDouble()
-
-              ?? 0;
-
-      if (!agrupados
-          .containsKey(idDriver)) {
-
-        final driverDoc =
-
-        await FirebaseFirestore.instance
-
-            .collection('Drivers')
-
-            .doc(idDriver)
-
-            .get();
-
-        final driverData =
-        driverDoc.data();
-
-        agrupados[idDriver] = {
-
-          'idDriver': idDriver,
-
-          'nombre':
-
-          '${driverData?['01_Nombres'] ?? ''} '
-
-              '${driverData?['02_Apellidos'] ?? ''}',
-
-          'celular':
-
-          driverData?['07_Celular']
-              ?? '',
-
-          'total': 0.0,
-
-          'cantidad': 0,
-        };
-      }
-
-      agrupados[idDriver]!['total']
-      += bono;
-
-      agrupados[idDriver]!['cantidad']
-      += 1;
-    }
-
-    conductores =
-        agrupados.values.toList();
-
-    conductores.sort((a, b) {
-
-      final totalA =
-      (a['total'] as double);
-
-      final totalB =
-      (b['total'] as double);
-
-      return totalB.compareTo(
-        totalA,
-      );
-    });
-
-    setState(() {
-      loading = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,28 +93,131 @@ class _BonosAdminPageState
 
                   child:
 
-                  loading
+                  StreamBuilder<
 
-                      ? const Center(
+                      QuerySnapshot<Map<String, dynamic>>>(
 
-                    child:
-                    CircularProgressIndicator(),
-                  )
+                    stream:
 
-                      : conductores.isEmpty
+                    FirebaseFirestore.instance
 
-                      ? const Center(
+                        .collection('TravelHistory')
 
-                    child: Text(
-                      'No hay bonos pendientes',
-                    ),
-                  )
+                        .where(
+                      'tarifaDescuento',
+                      isGreaterThan: 0,
+                    )
 
-                      : isDesktop(context)
+                        .where(
+                      'bonoPagado',
+                      isEqualTo: false,
+                    )
 
-                      ? _buildTable()
+                        .snapshots(),
 
-                      : _buildCards(),
+                    builder:
+                        (context, snapshot) {
+
+                      if (!snapshot.hasData) {
+
+                        return const Center(
+                          child:
+                          CircularProgressIndicator(),
+                        );
+                      }
+
+                      final docs =
+                          snapshot.data!.docs;
+
+                      final Map<String,
+                          Map<String, dynamic>>
+                      agrupados = {};
+
+                      for (final doc in docs) {
+
+                        final data = doc.data();
+
+                        final idDriver =
+
+                        (data['idDriver'] ?? '')
+                            .toString();
+
+                        if (idDriver.isEmpty) {
+                          continue;
+                        }
+
+                        final bono =
+
+                            (data['tarifaDescuento']
+                            as num?)
+
+                                ?.toDouble()
+
+                                ?? 0;
+
+                        if (!agrupados
+                            .containsKey(idDriver)) {
+
+                          agrupados[idDriver] = {
+
+                            'idDriver': idDriver,
+
+                            'nombre':
+                            'Conductor',
+
+                            'celular': '',
+
+                            'total': 0.0,
+
+                            'cantidad': 0,
+                          };
+                        }
+
+                        agrupados[idDriver]!['total']
+                        += bono;
+
+                        agrupados[idDriver]!['cantidad']
+                        += 1;
+                      }
+
+                      final conductores =
+
+                      agrupados.values.toList();
+
+                      conductores.sort((a, b) {
+
+                        final totalA =
+                        (a['total'] as double);
+
+                        final totalB =
+                        (b['total'] as double);
+
+                        return totalB.compareTo(
+                          totalA,
+                        );
+                      });
+
+                      if (conductores.isEmpty) {
+
+                        return const Center(
+
+                          child: Text(
+                            'No hay bonos pendientes',
+                          ),
+                        );
+                      }
+
+                      return isDesktop(context)
+
+                          ? _buildTable(
+                        conductores,
+                      )
+
+                          : _buildCards(
+                        conductores,
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -245,7 +227,10 @@ class _BonosAdminPageState
     );
   }
 
-  Widget _buildTable() {
+  Widget _buildTable(
+      List<Map<String, dynamic>>
+      conductores,
+      ) {
 
     return SingleChildScrollView(
 
@@ -328,8 +313,6 @@ class _BonosAdminPageState
 
                 arguments: item,
               );
-
-              await cargarBonos();
             },
 
             cells: [
@@ -386,7 +369,10 @@ class _BonosAdminPageState
     );
   }
 
-  Widget _buildCards() {
+  Widget _buildCards(
+      List<Map<String, dynamic>>
+      conductores,
+      ) {
 
     return ListView.builder(
 
@@ -501,7 +487,6 @@ class _BonosAdminPageState
                         arguments: item,
                       );
 
-                      await cargarBonos();
                     },
 
                     icon: const Icon(
