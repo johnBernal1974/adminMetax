@@ -22,6 +22,9 @@ import 'Pages/SingUp_page/View/singUp_page.dart';
 import 'Pages/Splash/splash.dart';
 import 'Pages/UsuariosPage/usuarios_page.dart';
 import 'Pages/adminMapDriversPage/adminMapDriversPage.dart';
+import 'Pages/bonos_admin_page/bonos_admin_page.dart';
+import 'Pages/bonos_admin_page/detalle_bonos_page.dart';
+import 'Pages/bonos_admin_page/historial_bonos_page.dart';
 import 'Pages/campañas_whasApp/campañas_whasApp.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'Pages/porterias/editar_porteria_page.dart';
@@ -160,6 +163,23 @@ class MyApp extends StatelessWidget {
           if (name == 'editar_porteria_page') { return _guardedRoute(const EditarPorteriaPage(), settings);
           }
           if (name == 'historial_porteria_page') {return _guardedRoute( const HistorialPorteriaPage(), settings,
+            );
+          }
+
+          if (name == 'bonos_admin_page') { return _guardedRoute( const BonosAdminPage(), settings,
+            );
+          }
+
+          if (name == 'detalle_bonos_driver') { return _guardedRoute( const DetalleBonosDriverPage(), settings,
+            );
+          }
+          if (name == 'historial_bonos_page') {
+
+            return _guardedRoute(
+
+              const HistorialBonosPage(),
+
+              settings,
             );
           }
 

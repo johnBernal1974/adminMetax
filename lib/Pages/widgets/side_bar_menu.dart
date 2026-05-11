@@ -128,6 +128,18 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.payments_outlined,
                   press: () => _go('recarga_info_page'),
                 ),
+              if (_canSee(role, 'bonos_admin_page'))
+                DrawerListTitle(
+                  title: "Bonos Conductores",
+                  icon: Icons.card_giftcard,
+                  press: () => _go('bonos_admin_page'),
+                ),
+              if (_canSee(role, 'historial_bonos_page'))
+                DrawerListTitle(
+                  title: "Historial Bonos",
+                  icon: Icons.history,
+                  press: () => _go('historial_bonos_page'),
+                ),
 
               if (_canSee(role, 'historial_viajes_page'))
                 DrawerListTitle(
@@ -135,6 +147,7 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.list_alt_outlined,
                   press: () => _go('historial_viajes_page'),
                 ),
+
 
               if (_canSee(role, 'porterias_page'))
                 DrawerListTitle(

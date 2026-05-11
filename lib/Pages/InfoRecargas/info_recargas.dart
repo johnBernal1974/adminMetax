@@ -233,6 +233,16 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                       Map<String, List<QueryDocumentSnapshot>> transaccionesPorSemana = {};
                       Map<String, int> totalPorSemana = {};
                       int totalGlobal = 0;
+
+                      Map<String, int>
+                      totalBonosPorSemana = {};
+
+                      Map<String, int>
+                      cantidadBonosPorSemana = {};
+
+                      int totalBonosGlobal = 0;
+
+                      int cantidadBonosGlobal = 0;
                   
                       for (var transaction in transacciones) {
                         var fecha = (transaction["createdAt"] as Timestamp).toDate();
@@ -249,9 +259,60 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                         transaccionesPorSemana[semana]!.add(transaction);
                   
                         // Solo sumar las transacciones aprobadas al total semanal y global
-                        if (transaction["status"] == "APPROVED") {
-                          totalPorSemana[semana] = (totalPorSemana[semana] ?? 0) + (transaction["amount"] as num).toInt();
-                          totalGlobal += (transaction["amount"] as num).toInt();
+
+                        final paymentMethod =
+
+                            transaction["paymentMethod"]
+                                ?? "";
+
+                        final amount =
+
+                        (transaction["amount"]
+                        as num)
+
+                            .toInt();
+
+                        /// 🔥 BONOS
+                        if (paymentMethod ==
+                            "BONO_METAX_ADMIN" ||
+
+                            paymentMethod ==
+                                "BONO_METAX") {
+
+                          totalBonosPorSemana[semana] =
+
+                              (totalBonosPorSemana[
+                              semana] ?? 0)
+
+                                  + amount;
+
+                          cantidadBonosPorSemana[
+                          semana] =
+
+                              (cantidadBonosPorSemana[
+                              semana] ?? 0)
+
+                                  + 1;
+
+                          totalBonosGlobal +=
+                              amount;
+
+                          cantidadBonosGlobal++;
+
+                        }
+
+                        /// 🔥 RECARGAS REALES
+                        else if (transaction["status"]
+                            == "APPROVED") {
+
+                          totalPorSemana[semana] =
+
+                              (totalPorSemana[
+                              semana] ?? 0)
+
+                                  + amount;
+
+                          totalGlobal += amount;
                         }
                       }
                   
@@ -260,31 +321,176 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
                   
                       return Column(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: gris, width: 3)
-                            ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  "Valor Total de Transacciones (Aprobadas)",
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                          Wrap(
+
+                            spacing: 15,
+                            runSpacing: 15,
+
+                            children: [
+
+                              /// 🔥 RECARGAS
+                              Container(
+
+                                padding:
+                                const EdgeInsets.symmetric(
+
+                                  horizontal: 20,
+                                  vertical: 10,
                                 ),
-                                Text(
-                                  "\$${NumberFormat("#,###", "es_CO").format(totalGlobal)}",
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
+
+                                decoration: BoxDecoration(
+
+                                  borderRadius:
+                                  BorderRadius.circular(12),
+
+                                  border: Border.all(
+
+                                    color: gris,
+                                    width: 3,
+                                  ),
                                 ),
-                              ],
-                            ),
+
+                                child: Column(
+
+                                  children: [
+
+                                    const Text(
+
+                                      "Valor Total "
+                                          "Transacciones",
+
+                                      style: TextStyle(
+
+                                        fontSize: 12,
+
+                                        fontWeight:
+                                        FontWeight.bold,
+
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+
+                                    Text(
+
+                                      "\$${NumberFormat("#,###", "es_CO").format(totalGlobal)}",
+
+                                      style: const TextStyle(
+
+                                        fontSize: 18,
+
+                                        fontWeight:
+                                        FontWeight.w900,
+
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              /// 🔥 BONOS
+                              Container(
+
+                                padding:
+                                const EdgeInsets.symmetric(
+
+                                  horizontal: 20,
+                                  vertical: 10,
+                                ),
+
+                                decoration: BoxDecoration(
+
+                                  color:
+                                  Colors.orange
+                                      .withOpacity(0.06),
+
+                                  borderRadius:
+                                  BorderRadius.circular(12),
+
+                                  border: Border.all(
+
+                                    color: Colors.orange,
+                                    width: 2,
+                                  ),
+                                ),
+
+                                child: Column(
+
+                                  children: [
+
+                                    const Text(
+
+                                      "Bonos entregados",
+
+                                      style: TextStyle(
+
+                                        fontSize: 12,
+
+                                        fontWeight:
+                                        FontWeight.bold,
+
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+
+                                    Text(
+
+                                      "\$${NumberFormat("#,###", "es_CO").format(totalBonosGlobal)}",
+
+                                      style: const TextStyle(
+
+                                        fontSize: 18,
+
+                                        fontWeight:
+                                        FontWeight.w900,
+
+                                        color: Colors.black,
+                                      ),
+                                    ),
+
+                                    Text(
+
+                                      "$cantidadBonosGlobal bonos",
+
+                                      style: const TextStyle(
+
+                                        fontSize: 11,
+
+                                        fontWeight:
+                                        FontWeight.w700,
+
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                   
                           const SizedBox(height: 20),
-                  
                           esMovil
-                              ? _buildMobileView(transaccionesPorSemana, totalPorSemana)
-                              : _buildDesktopView(transaccionesPorSemana, totalPorSemana),
+                              ? _buildMobileView(
+
+                            transaccionesPorSemana,
+
+                            totalPorSemana,
+
+                            totalBonosPorSemana,
+
+                            cantidadBonosPorSemana,
+                          )
+
+                              : _buildDesktopView(
+
+                            transaccionesPorSemana,
+
+                            totalPorSemana,
+
+                            totalBonosPorSemana,
+
+                            cantidadBonosPorSemana,
+                          ),
                         ],
                       );
                     },
@@ -316,7 +522,21 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
   }
 
   /// **🔹 Construye la Vista en Móvil (Tarjetas)**
-  Widget _buildMobileView(Map<String, List<QueryDocumentSnapshot>> transaccionesPorSemana, Map<String, int> totalPorSemana) {
+  Widget _buildMobileView(
+
+      Map<String,
+          List<QueryDocumentSnapshot>>
+      transaccionesPorSemana,
+
+      Map<String, int>
+      totalPorSemana,
+
+      Map<String, int>
+      totalBonosPorSemana,
+
+      Map<String, int>
+      cantidadBonosPorSemana,
+      ) {
     return Expanded(
       child: ListView(
         children: transaccionesPorSemana.entries.map((entry) {
@@ -326,9 +546,170 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.black),
+              Column(
+
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+
+                children: [
+
+                  Text(
+
+                    semana,
+
+                    style: const TextStyle(
+
+                      fontSize: 14,
+
+                      fontWeight:
+                      FontWeight.w900,
+
+                      color: Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Wrap(
+
+                    spacing: 10,
+                    runSpacing: 10,
+
+                    children: [
+
+                      /// 🔥 RECARGAS
+                      Container(
+
+                        padding:
+                        const EdgeInsets.symmetric(
+
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+
+                        decoration: BoxDecoration(
+
+                          color:
+                          Colors.green
+                              .withOpacity(0.06),
+
+                          borderRadius:
+                          BorderRadius.circular(
+                            10,
+                          ),
+                        ),
+
+                        child: Column(
+
+                          children: [
+
+                            const Text(
+
+                              'Recargas',
+
+                              style: TextStyle(
+
+                                fontSize: 11,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.green,
+                              ),
+                            ),
+
+                            Text(
+
+                              '\$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}',
+
+                              style:
+                              const TextStyle(
+
+                                fontWeight:
+                                FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      /// 🔥 BONOS
+                      Container(
+
+                        padding:
+                        const EdgeInsets.symmetric(
+
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+
+                        decoration: BoxDecoration(
+
+                          color:
+                          Colors.orange
+                              .withOpacity(0.08),
+
+                          borderRadius:
+                          BorderRadius.circular(
+                            10,
+                          ),
+                        ),
+
+                        child: Column(
+
+                          children: [
+
+                            const Text(
+
+                              'Bonos',
+
+                              style: TextStyle(
+
+                                fontSize: 11,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.orange,
+                              ),
+                            ),
+
+                            Text(
+
+                              '\$${NumberFormat("#,###", "es_CO").format(totalBonosPorSemana[semana] ?? 0)}',
+
+                              style:
+                              const TextStyle(
+
+                                fontWeight:
+                                FontWeight.w900,
+                              ),
+                            ),
+
+                            Text(
+
+                              '${cantidadBonosPorSemana[semana] ?? 0} bonos',
+
+                              style:
+                              const TextStyle(
+
+                                fontSize: 10,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               ...transacciones.map((transaction) => _buildTransactionCard(transaction)).toList(),
@@ -341,7 +722,21 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
   }
 
   /// **🔹 Construye la Vista en PC (Tabla)**
-  Widget _buildDesktopView(Map<String, List<QueryDocumentSnapshot>> transaccionesPorSemana, Map<String, int> totalPorSemana) {
+  Widget _buildDesktopView(
+
+      Map<String,
+          List<QueryDocumentSnapshot>>
+      transaccionesPorSemana,
+
+      Map<String, int>
+      totalPorSemana,
+
+      Map<String, int>
+      totalBonosPorSemana,
+
+      Map<String, int>
+      cantidadBonosPorSemana,
+      ) {
     return Expanded(
       child: ListView(
         children: transaccionesPorSemana.entries.map((entry) {
@@ -351,9 +746,174 @@ class _AdminTransaccionesPageState extends State<AdminTransaccionesPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "$semana - Total: \$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.black),
+              Column(
+
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+
+                children: [
+
+                  Text(
+
+                    semana,
+
+                    style: const TextStyle(
+
+                      fontSize: 16,
+
+                      fontWeight:
+                      FontWeight.w900,
+
+                      color: Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Wrap(
+
+                    spacing: 12,
+                    runSpacing: 12,
+
+                    children: [
+
+                      /// 🔥 RECARGAS
+                      Container(
+
+                        padding:
+                        const EdgeInsets.symmetric(
+
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+
+                        decoration: BoxDecoration(
+
+                          color:
+                          Colors.green
+                              .withOpacity(0.06),
+
+                          borderRadius:
+                          BorderRadius.circular(
+                            12,
+                          ),
+                        ),
+
+                        child: Column(
+
+                          children: [
+
+                            const Text(
+
+                              'Recargas',
+
+                              style: TextStyle(
+
+                                fontSize: 12,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.green,
+                              ),
+                            ),
+
+                            Text(
+
+                              '\$${NumberFormat("#,###", "es_CO").format(totalPorSemana[semana] ?? 0)}',
+
+                              style:
+                              const TextStyle(
+
+                                fontWeight:
+                                FontWeight.w900,
+
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      /// 🔥 BONOS
+                      Container(
+
+                        padding:
+                        const EdgeInsets.symmetric(
+
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+
+                        decoration: BoxDecoration(
+
+                          color:
+                          Colors.orange
+                              .withOpacity(0.08),
+
+                          borderRadius:
+                          BorderRadius.circular(
+                            12,
+                          ),
+                        ),
+
+                        child: Column(
+
+                          children: [
+
+                            const Text(
+
+                              'Bonos',
+
+                              style: TextStyle(
+
+                                fontSize: 12,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.orange,
+                              ),
+                            ),
+
+                            Text(
+
+                              '\$${NumberFormat("#,###", "es_CO").format(totalBonosPorSemana[semana] ?? 0)}',
+
+                              style:
+                              const TextStyle(
+
+                                fontWeight:
+                                FontWeight.w900,
+
+                                fontSize: 16,
+                              ),
+                            ),
+
+                            Text(
+
+                              '${cantidadBonosPorSemana[semana] ?? 0} bonos',
+
+                              style:
+                              const TextStyle(
+
+                                fontSize: 11,
+
+                                fontWeight:
+                                FontWeight.w700,
+
+                                color:
+                                Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
 

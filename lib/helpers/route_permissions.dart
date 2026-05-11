@@ -27,6 +27,9 @@ class RoutePermissions {
     'editar_porteria_page': {'operadorFull', 'operador_bases'},
 
     'prices_page': {'operadorFull'},
+    'bonos_admin_page': {'operadorFull'},
+    'detalle_bonos_driver': {'operadorFull'},
+    'historial_bonos_page': {'operadorFull'},
 
     // 🔥 WhatsApp MetaX
     'whatsapp_metax_page': {'operadorFull', 'operador1'},
