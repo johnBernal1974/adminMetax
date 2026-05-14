@@ -14,13 +14,62 @@ class BonosAdminPage extends StatefulWidget {
 class _BonosAdminPageState
     extends State<BonosAdminPage> {
 
-
+  final Map<String, Map<String, dynamic>>
+  _cacheDrivers = {};
 
   bool isDesktop(BuildContext context) {
 
     return MediaQuery.of(context)
         .size
         .width >= 1200;
+  }
+
+  Future<Map<String, dynamic>>
+  _getDriverData(
+      String idDriver,
+      ) async {
+
+    if (_cacheDrivers
+        .containsKey(idDriver)) {
+
+      return _cacheDrivers[idDriver]!;
+    }
+
+    final snap =
+
+    await FirebaseFirestore.instance
+
+        .collection('Drivers')
+
+        .doc(idDriver)
+
+        .get();
+
+    final data =
+        snap.data() ?? {};
+
+    _cacheDrivers[idDriver] = {
+
+      'nombre':
+
+      '${data['01_Nombres'] ?? ''} '
+          '${data['02_Apellidos'] ?? ''}'
+          .trim()
+          .isEmpty
+
+          ? 'Conductor'
+
+          : '${data['01_Nombres'] ?? ''} '
+          '${data['02_Apellidos'] ?? ''}'
+          .trim(),
+
+      'celular':
+
+      data['07_Celular']
+          ?? '',
+    };
+
+    return _cacheDrivers[idDriver]!;
   }
 
 
@@ -142,6 +191,29 @@ class _BonosAdminPageState
                         (data['idDriver'] ?? '')
                             .toString();
 
+                        if (idDriver.isNotEmpty &&
+                            !_cacheDrivers
+                                .containsKey(idDriver)) {
+
+                          _getDriverData(idDriver)
+                              .then((_) {
+
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          });
+                        }
+                      }
+
+                      for (final doc in docs) {
+
+                        final data = doc.data();
+
+                        final idDriver =
+
+                        (data['idDriver'] ?? '')
+                            .toString();
+
                         if (idDriver.isEmpty) {
                           continue;
                         }
@@ -163,9 +235,18 @@ class _BonosAdminPageState
                             'idDriver': idDriver,
 
                             'nombre':
-                            'Conductor',
 
-                            'celular': '',
+                            _cacheDrivers[idDriver]
+                            ?['nombre']
+
+                                ?? 'Conductor',
+
+                            'celular':
+
+                            _cacheDrivers[idDriver]
+                            ?['celular']
+
+                                ?? '',
 
                             'total': 0.0,
 

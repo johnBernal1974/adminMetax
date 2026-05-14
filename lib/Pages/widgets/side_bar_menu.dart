@@ -213,6 +213,13 @@ class _SideBarState extends State<SideBar> {
                   icon: Icons.campaign,
                   press: () => _go('campanas_whatsapp_page'),
                 ),
+
+              if (_canSee(role, 'campanas_whatsapp_clientes_page'))
+                DrawerListTitle(
+                  title: "Campañas Clientes",
+                  icon: Icons.people_alt_outlined,
+                  press: () => _go('campanas_whatsapp_clientes_page'),
+                ),
             ],
 
             const Divider(height: 10, color: Colors.white24),

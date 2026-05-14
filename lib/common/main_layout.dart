@@ -296,6 +296,146 @@ class _MainLayoutState
             },
           ),
 
+          /// 🔥 BONOS PENDIENTES
+          StreamBuilder<QuerySnapshot>(
+
+            stream: FirebaseFirestore.instance
+
+                .collection('TravelHistory')
+
+                .where(
+              'tarifaDescuento',
+              isGreaterThan: 0,
+            )
+
+                .where(
+              'bonoPagado',
+              isEqualTo: false,
+            )
+
+                .snapshots(),
+
+            builder: (context, snapshot) {
+
+              final cantidadBonos =
+
+                  snapshot.data
+                      ?.docs
+                      .length
+
+                      ?? 0;
+
+              final hayBonos =
+                  cantidadBonos > 0;
+
+              return Padding(
+
+                padding:
+                const EdgeInsets.only(
+                  right: 12,
+                ),
+
+                child: InkWell(
+
+                  borderRadius:
+                  BorderRadius.circular(30),
+
+                  onTap: () {
+
+                    Navigator.pushNamed(
+                      context,
+                      'bonos_admin_page',
+                    );
+                  },
+
+                  child: AnimatedContainer(
+
+                    duration:
+                    const Duration(
+                      milliseconds: 400,
+                    ),
+
+                    padding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+
+                    decoration: BoxDecoration(
+
+                      color:
+
+                      hayBonos
+
+                          ? (
+
+                          blink
+
+                              ? Colors.orange
+                              .shade700
+
+                              : Colors.orange
+                              .shade400
+
+                      )
+
+                          : Colors.grey
+                          .shade500,
+
+                      borderRadius:
+                      BorderRadius.circular(
+                        30,
+                      ),
+                    ),
+
+                    child: Row(
+
+                      children: [
+
+                        const Icon(
+
+                          Icons
+                              .card_giftcard,
+
+                          color:
+                          Colors.white,
+
+                          size: 18,
+                        ),
+
+                        if (hayBonos)
+
+                          Padding(
+
+                            padding:
+                            const EdgeInsets.only(
+                              left: 6,
+                            ),
+
+                            child: Text(
+
+                              cantidadBonos
+                                  .toString(),
+
+                              style:
+                              const TextStyle(
+
+                                color:
+                                Colors.white,
+
+                                fontWeight:
+                                FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
           /// 🔥 OPERADOR
           Consumer<OperadorProvider>(
 

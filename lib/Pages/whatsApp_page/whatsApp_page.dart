@@ -1508,93 +1508,276 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
             /// 🔥 BOTONES RÁPIDOS (LOS QUE TENÍAS)
             if (esConductor)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              color: Colors.grey.shade100,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                color: Colors.grey.shade100,
 
-                  /// 📘 TUTORIALES
-                  PopupMenuButton<String>(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+
+                  child: PopupMenuButton<String>(
+
                     onSelected: (value) {
-                      enviarMensajePlantilla(value);
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: "Conectarse y desconectarse",
-                        child: Text("Conectarse y desconectarse"),
-                      ),
-                      const PopupMenuItem(
-                        value: "Aceptar un servicio",
-                        child: Text("Aceptar un servicio"),
-                      ),
-                      const PopupMenuItem(
-                        value: "Como recargar",
-                        child: Text("Cómo recargar"),
-                      ),
-                      const PopupMenuItem(
-                        value: "Como inscribir un nuevo vehiculo",
-                        child: Text("Inscribir vehículo"),
-                      ),
-                    ],
-                    child: _botonRapido("Tutoriales", Icons.menu_book),
-                  ),
 
-                  /// 📲 APP CONDUCTORES
-                  _botonRapido("App Conductores", Icons.directions_car, onTap: () {
-                    enviarMensajeDirecto(
-                        "Descarga la app de Meta X para conductores aquí:\n\nhttps://play.google.com/store/apps/details?id=com.apptaxxic.apptaxisc&hl=es_CO"
-                    );
-                  }),
-
-                  /// 📲 APP CLIENTES
-                  _botonRapido("App Clientes", Icons.person, onTap: () {
-                    enviarMensajeDirecto(
-                        "Descarga la app de Meta X para usuarios aquí:\n\nhttps://play.google.com/store/apps/details?id=com.app_taxis.apptaxis&hl=es_CO"
-                    );
-                  }),
-
-                  /// 💬 MENSAJE MOTIVACIONAL
-                  _botonRapido(
-                    "Motivar conductor",
-                    Icons.favorite,
-                    onTap: () {
-
-                      final nombreCompleto = usuarioInfo?['data']?['01_Nombres']
-                          ?.toString()
-                          .trim() ?? '';
+                      final nombreCompleto =
+                          usuarioInfo?['data']?['01_Nombres']
+                              ?.toString()
+                              .trim() ?? '';
 
                       final nombre = nombreCompleto.isNotEmpty
                           ? nombreCompleto.split(' ').first
                           : 'Compañero';
 
-                      final mensaje =
-                          "Hola $nombre, muy buenos días 👋\n\n"
+                      switch (value) {
 
-                          "Queremos agradecerte sinceramente por el compromiso y el apoyo que le estás dando a Meta X.\n\n"
+                      /// 🔥 SALUDO
+                        case "saludo":
 
-                          "La plataforma ya está en operación y en nuestra primera semana ya hemos superado los 50 servicios aceptados 🚕. Poco a poco cada vez más usuarios están conociendo la app y ya varios compañeros han comenzado a realizar viajes.\n\n"
+                          enviarMensajeDirecto(
+                              "Hola $nombre 👋\n\n"
+                                  "Mi nombre es Mónica, del equipo Meta X.\n\n"
+                                  "Dime en qué te puedo ayudar el día de hoy 😊"
+                          );
 
-                          "Actualmente seguimos realizando trabajo en campo, promociones y difusión para que el número de solicitudes aumente progresivamente y cada vez haya más movimiento para todos.\n\n"
+                          break;
 
-                          "Sabemos que al inicio este proceso requiere paciencia, pero estamos trabajando constantemente para que Meta X siga creciendo y fortaleciéndose junto a ustedes.\n\n"
+                      /// 🔥 COMISIONES
+                        case "comision":
 
-                          "De verdad, muchas gracias por creer en este proyecto y por seguir haciendo parte de esta comunidad.\n\n"
+                          enviarMensajeDirecto(
 
-                          "Atentamente,\n"
-                          "Mónica\n"
-                          "Equipo Meta X";
+                              "Hola $nombre 👋\n\n"
 
-                      enviarMensajeDirecto(mensaje);
+                                  "En Meta X manejamos una de las comisiones más bajas de la ciudad 🚕\n\n"
 
+                                  "• Viajes normales (usuarios particulares):\n"
+                                  "La comisión es únicamente del 7% del valor del servicio, que se descuenta de tu saldo de recarga.\n\n"
+
+                                  "• Servicios de portería o conjuntos:\n"
+                                  "La comisión es fija y solamente de \$490 pesos.\n\n"
+
+                                  "Nuestro objetivo es que el conductor gane más y tenga mejores oportunidades de trabajo 💸\n\n"
+
+                                  "Equipo Meta X"
+                          );
+
+                          break;
+
+                      /// 🔥 APP CONDUCTORES
+                        case "app_conductores":
+
+                          enviarMensajeDirecto(
+                              "Descarga la app de Meta X para conductores aquí:\n\n"
+                                  "https://play.google.com/store/apps/details?id=com.apptaxxic.apptaxisc&hl=es_CO"
+                          );
+
+                          break;
+
+                      /// 🔥 APP CLIENTES
+                        case "app_clientes":
+
+                          enviarMensajeDirecto(
+                              "Descarga la app de Meta X para usuarios aquí:\n\n"
+                                  "https://play.google.com/store/apps/details?id=com.app_taxis.apptaxis&hl=es_CO"
+                          );
+
+                          break;
+
+                      /// 🔥 MOTIVACIÓN
+                        case "motivar":
+
+                          enviarMensajeDirecto(
+
+                              "Hola $nombre, muy buenos días 👋\n\n"
+
+                                  "Queremos agradecerte sinceramente por el compromiso y el apoyo que le estás dando a Meta X.\n\n"
+
+                                  "La plataforma ya está en operación y en nuestra primera semana ya hemos superado los 50 servicios aceptados 🚕.\n\n"
+
+                                  "Poco a poco cada vez más usuarios están conociendo la app y varios compañeros ya han comenzado a realizar viajes.\n\n"
+
+                                  "Seguimos trabajando constantemente para que Meta X siga creciendo junto a ustedes.\n\n"
+
+                                  "Muchas gracias por creer en este proyecto.\n\n"
+
+                                  "Atentamente,\n"
+                                  "Mónica\n"
+                                  "Equipo Meta X"
+                          );
+
+                          break;
+
+                      /// 🔥 SOLICITAR NEQUI
+                        case "nequi":
+
+                          enviarMensajeDirecto(
+
+                              "Hola $nombre 👋\n\n"
+
+                                  "Para realizar la transferencia de tu bono Meta X, por favor envíanos:\n\n"
+
+                                  "• Número Nequi\n"
+                                  "• Nombre completo del titular de la cuenta\n\n"
+
+                                  "En cuanto validemos la información te estaremos notificando el pago 💸\n\n"
+
+                                  "Equipo Meta X"
+                          );
+
+                          break;
+
+                      /// 🔥 TUTORIALES
+                        case "tutorial_conexion":
+
+                          enviarMensajeDirecto(
+                              "🔌 *Cómo conectarte y desconectarte*\n\n"
+                                  "https://youtube.com/shorts/8kq5iWSqOZ0?feature=share"
+                          );
+
+                          break;
+
+                        case "tutorial_servicio":
+
+                          enviarMensajeDirecto(
+                              "🚕 *Cómo aceptar un servicio*\n\n"
+                                  "https://youtu.be/KevVY_nEkD4"
+                          );
+
+                          break;
+
+                        case "tutorial_recarga":
+
+                          enviarMensajeDirecto(
+                              "💳 *Cómo recargar saldo*\n\n"
+                                  "https://youtube.com/shorts/SEei5W92ez4?feature=share"
+                          );
+
+                          break;
+
+                        case "tutorial_vehiculo":
+
+                          enviarMensajeDirecto(
+                              "🚗 *Cómo inscribir un vehículo*\n\n"
+                                  "https://youtu.be/748akd2TYG8"
+                          );
+
+                          break;
+                      }
                     },
+
+                    itemBuilder: (context) => [
+
+                      const PopupMenuItem(
+                        value: "saludo",
+                        child: Text("👋 Saludo inicial"),
+                      ),
+
+                      const PopupMenuDivider(),
+
+                      const PopupMenuItem(
+                        value: "comision",
+                        child: Text("💰 Comisión MetaX"),
+                      ),
+                      const PopupMenuDivider(),
+
+                      const PopupMenuItem(
+                        value: "app_conductores",
+                        child: Text("📲 App Conductores"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "app_clientes",
+                        child: Text("📲 App Clientes"),
+                      ),
+
+                      const PopupMenuDivider(),
+
+                      const PopupMenuItem(
+                        value: "motivar",
+                        child: Text("❤️ Motivar conductor"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "nequi",
+                        child: Text("💸 Solicitar número de Nequi"),
+                      ),
+
+                      const PopupMenuDivider(),
+
+                      const PopupMenuItem(
+                        value: "tutorial_conexion",
+                        child: Text("🔌 Tutorial conectarse y desconectarse"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "tutorial_servicio",
+                        child: Text("🚕 Tutorial aceptar un servicio"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "tutorial_recarga",
+                        child: Text("💳 Tutorial como recargar"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "tutorial_vehiculo",
+                        child: Text("🚗 Tutorial añadir vehículo"),
+                      ),
+                    ],
+
+                    child: Container(
+
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+
+                      decoration: BoxDecoration(
+
+                        color: Colors.white,
+
+                        borderRadius: BorderRadius.circular(30),
+
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                        ),
+                      ),
+
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+
+                          Icon(
+                            Icons.flash_on,
+                            size: 18,
+                            color: Colors.orange,
+                          ),
+
+                          SizedBox(width: 8),
+
+                          Text(
+                            "Acciones rápidas",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          SizedBox(width: 6),
+
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         );
       },
@@ -1685,42 +1868,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
     });
   }
 
-  void enviarMensajePlantilla(String tipo) {
-    String mensaje = "";
 
-    switch (tipo) {
-
-      case "Conectarse y desconectarse":
-        mensaje =
-        "🔌 *Cómo conectarte y desconectarte*\n\n"
-            "Mira este tutorial:\n"
-            "https://youtube.com/shorts/8kq5iWSqOZ0?feature=share";
-        break;
-
-      case "Aceptar un servicio":
-        mensaje =
-        "🚕 *Cómo aceptar un servicio*\n\n"
-            "Sigue este paso a paso:\n"
-            "https://youtu.be/KevVY_nEkD4";
-        break;
-
-      case "Como recargar":
-        mensaje =
-        "💳 *Cómo recargar saldo*\n\n"
-            "Mira cómo hacerlo aquí:\n"
-            "https://youtube.com/shorts/SEei5W92ez4?feature=share";
-        break;
-
-      case "Como inscribir un nuevo vehiculo":
-        mensaje =
-        "🚗 *Cómo inscribir un vehículo*\n\n"
-            "Mira este tutorial:\n"
-            "https://youtu.be/748akd2TYG8";
-        break;
-    }
-
-    enviarMensajeDirecto(mensaje);
-  }
 
   String formatearFecha(DateTime? fecha) {
     if (fecha == null) return '';

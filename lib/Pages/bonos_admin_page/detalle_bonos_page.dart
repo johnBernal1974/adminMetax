@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../common/main_layout.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class DetalleBonosDriverPage extends StatefulWidget {
   const DetalleBonosDriverPage({super.key});
@@ -264,7 +265,10 @@ class _DetalleBonosDriverPageState
 
                             Text(
 
-                              driverData['nombre'],
+                              (driverData['nombre'] ??
+                                  driverData['nombres'] ??
+                                  'Conductor')
+                                  .toString(),
 
                               style:
                               const TextStyle(
@@ -614,8 +618,13 @@ class _DetalleBonosDriverPageState
               children: [
 
                 _rowDato(
+
                   'Conductor',
-                  driverData['nombre'],
+
+                  (driverData['nombre'] ??
+                      driverData['nombres'] ??
+                      'Sin nombre')
+                      .toString(),
                 ),
 
                 _rowDato(
@@ -663,6 +672,148 @@ class _DetalleBonosDriverPageState
                 'Cerrar',
               ),
             ),
+
+            SizedBox(
+
+              width: double.infinity,
+
+              child: ElevatedButton.icon(
+
+                onPressed: () async {
+
+                  try {
+
+                    final callable = FirebaseFunctions.instance
+                        .httpsCallable(
+                      'enviarPlantillaBonoPendiente',
+                    );
+
+                    final telefono =
+                    driverData['celular']
+                        .toString()
+                        .trim();
+
+                    final nombre =
+                    (driverData['nombre'] ??
+                        driverData['nombres'] ??
+                        'Conductor')
+                        .toString();
+
+                    final ruta =
+                        '${data['from']} → ${data['to']}';
+
+                    final valorBono =
+
+                        (data['tarifaDescuento']
+                        as num?)
+
+                            ?.toInt()
+
+                            ?? 0;
+
+                    await callable.call({
+
+                      "telefono":
+                      "57$telefono",
+
+                      "nombre":
+                      nombre,
+
+                      "numeroViaje":
+                      numeroViaje,
+
+                      "ruta":
+                      ruta,
+
+                      "valorBono":
+                      valorBono.toString(),
+                    });
+
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+
+                      const SnackBar(
+
+                        backgroundColor:
+                        Colors.green,
+
+                        content: Text(
+
+                          'Plantilla enviada correctamente 🚕',
+
+                          style: TextStyle(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    );
+
+                  } catch (e) {
+
+                    debugPrint(
+                      'ERROR ENVIANDO PLANTILLA: $e',
+                    );
+
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+
+                      SnackBar(
+
+                        backgroundColor:
+                        Colors.red,
+
+                        content: Text(
+                          'Error: $e',
+                        ),
+                      ),
+                    );
+                  }
+                },
+
+                icon: const Icon(
+                  Icons.send,
+                  color: Colors.white,
+                ),
+
+                label: const Text(
+
+                  'Preguntar tipo de pago del bono',
+
+                  style: TextStyle(
+
+                    color: Colors.black,
+
+                    fontWeight:
+                    FontWeight.w700,
+                  ),
+                ),
+
+                style: ElevatedButton.styleFrom(
+
+                  backgroundColor:
+                  const Color(0xFF25D366),
+
+                  padding:
+                  const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+
+                  shape:
+                  RoundedRectangleBorder(
+
+                    borderRadius:
+                    BorderRadius.circular(
+                      14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
 
             Row(
 
@@ -804,38 +955,18 @@ class _DetalleBonosDriverPageState
 
           .doc(travelHistoryId);
 
-      final driverHistoryQuery =
+      /// 🔥 HISTORY DEL DRIVER
+      final driverHistoryRef =
 
-      await FirebaseFirestore.instance
+      FirebaseFirestore.instance
 
-          .collectionGroup('history')
+          .collection('Drivers')
 
-          .where(
+          .doc(idDriver)
 
-        'numeroViaje',
+          .collection('history')
 
-        isEqualTo:
-        numeroViaje,
-      )
-
-          .limit(1)
-
-          .get();
-
-      DocumentReference?
-      driverHistoryRef;
-
-      if (driverHistoryQuery
-          .docs
-          .isNotEmpty) {
-
-        driverHistoryRef =
-
-            driverHistoryQuery
-                .docs
-                .first
-                .reference;
-      }
+          .doc(travelHistoryId);
 
       final recargaRef =
 
@@ -929,29 +1060,26 @@ class _DetalleBonosDriverPageState
         });
 
         /// 🔥 DRIVER HISTORY
-        if (driverHistoryRef != null) {
+        tx.update(driverHistoryRef, {
 
-          tx.update(driverHistoryRef, {
+          'bonoPagado': true,
 
-            'bonoPagado': true,
+          'bonoPagadoAt':
+          FieldValue.serverTimestamp(),
 
-            'bonoPagadoAt':
-            FieldValue.serverTimestamp(),
+          'bonoMetodo':
+          'SALDO_METAX',
 
-            'bonoMetodo':
-            'SALDO_METAX',
+          'bonoPagadoPor':
+          FirebaseAuth.instance.currentUser?.uid,
 
-            'bonoPagadoPor':
-            FirebaseAuth.instance.currentUser?.uid,
+          'bonoTransaccionId':
+          recargaRef.id,
 
-            'bonoTransaccionId':
-            recargaRef.id,
+          'bonoObservacion':
 
-            'bonoObservacion':
-
-            'Bono transferido al saldo MetaX desde administración',
-          });
-        }
+          'Bono transferido al saldo MetaX desde administración',
+        });
 
         /// 🔥 RECARGA
         tx.set(recargaRef, {
@@ -1096,6 +1224,7 @@ class _DetalleBonosDriverPageState
 
       for (final doc in query.docs) {
 
+        /// 🔥 GLOBAL HISTORY
         batch.update(
 
           doc.reference,
@@ -1121,6 +1250,54 @@ class _DetalleBonosDriverPageState
             'Pago realizado manualmente desde admin',
           },
         );
+
+        /// 🔥 DRIVER HISTORY
+        /// 🔥 DRIVER HISTORY
+
+        final idDriver =
+        (data['idDriver'] ?? '')
+            .toString();
+
+        if (idDriver.isNotEmpty) {
+
+          final driverHistoryRef =
+
+          FirebaseFirestore.instance
+
+              .collection('Drivers')
+
+              .doc(idDriver)
+
+              .collection('history')
+
+              .doc(doc.id);
+
+          batch.update(
+
+            driverHistoryRef,
+
+            {
+
+              'bonoPagado': true,
+
+              'bonoMetodo':
+              'NEQUI',
+
+              'bonoPagadoAt':
+              FieldValue.serverTimestamp(),
+
+              'bonoPagadoPor':
+              operadorId,
+
+              'bonoTransaccionId':
+              transaccionId,
+
+              'bonoObservacion':
+
+              'Pago realizado manualmente desde admin',
+            },
+          );
+        }
       }
 
       await batch.commit();

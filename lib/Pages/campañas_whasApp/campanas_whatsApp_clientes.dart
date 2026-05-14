@@ -9,18 +9,18 @@ import 'package:intl/intl.dart';
 
 import '../../common/main_layout.dart';
 
-class CampanasWhatsAppPage extends StatefulWidget {
-  const CampanasWhatsAppPage({super.key});
+class CampanasWhatsAppClientesPage extends StatefulWidget {
+  const CampanasWhatsAppClientesPage({super.key});
 
   @override
-  State<CampanasWhatsAppPage> createState() => _CampanasWhatsAppPageState();
+  State<CampanasWhatsAppClientesPage> createState() => _CampanasWhatsAppClientesPageState();
 }
 
-class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
+class _CampanasWhatsAppClientesPageState extends State<CampanasWhatsAppClientesPage> {
 
   final TextEditingController nombreController = TextEditingController();
 
-  String plantillaSeleccionada = "motivacion_conductores_seguir";
+  String plantillaSeleccionada = "promo_primer_viaje_7000";
 
   Future<void> enviarCampana() async {
     final nombre = nombreController.text.trim();
@@ -35,7 +35,7 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
     try {
 
       final url = Uri.parse(
-        'https://us-central1-apptaxi-e641d.cloudfunctions.net/enviarCampanaConductores',
+        'https://us-central1-apptaxi-e641d.cloudfunctions.net/enviarCampanaClientes',
       );
 
       final response = await http.post(
@@ -67,7 +67,7 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      pageTitle: "Campañas WhatsApp",
+      pageTitle: "Campañas WhatsApp Clientes",
       content: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -75,7 +75,7 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
           children: [
 
             const Text(
-              "Crear campaña",
+              "Crear campaña para Clientes",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
@@ -94,23 +94,15 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
             DropdownButtonFormField<String>(
               value: plantillaSeleccionada,
               items: const [
-                DropdownMenuItem(
-                  value: "expansion_conductores_2026_04",
-                  child: Text("Expansión conductores"),
-                ),
-                DropdownMenuItem(
-                  value: "actualizar_app_conductores",
-                  child: Text("Actualizar app conductores"),
-                ),
-                DropdownMenuItem(
-                  value: "motivacion_conductores_seguir",
-                  child: Text("Motivación conductores (seguir)"),
-                ),
-                DropdownMenuItem(
-                  value: "video_bonos_promocionales",
-                  child: Text("Video bonos promocionales"),
-                ),
 
+                DropdownMenuItem(
+
+                  value: "promo_primer_viaje_7000",
+
+                  child: Text(
+                    "Promo primer viaje \$7.000",
+                  ),
+                ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -129,8 +121,8 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
               onPressed: enviarCampana,
               icon: const Icon(Icons.campaign, color: Colors.black),
               label: const Text("Enviar campaña", style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold
               ),),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
@@ -149,7 +141,7 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
             Expanded(
               child: StreamBuilder(
                 stream: FirebaseFirestore.instance
-                    .collection('campañas_whatsapp')
+                    .collection('campañas_whatsapp_clientes')
                     .orderBy('fecha', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
