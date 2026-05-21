@@ -1056,7 +1056,7 @@ class _DetalleBonosDriverPageState
 
           'bonoObservacion':
 
-          'Bono transferido al saldo MetaX desde administración',
+          'Transferido al saldo',
         });
 
         /// 🔥 DRIVER HISTORY
@@ -1078,7 +1078,7 @@ class _DetalleBonosDriverPageState
 
           'bonoObservacion':
 
-          'Bono transferido al saldo MetaX desde administración',
+          'Transferido al saldo',
         });
 
         /// 🔥 RECARGA
@@ -1130,9 +1130,7 @@ class _DetalleBonosDriverPageState
 
           'descripcion':
 
-          'Bono MetaX '
-              'pasado a saldo '
-              'desde admin',
+          'Transferido al saldo',
         });
       });
 
@@ -1247,7 +1245,7 @@ class _DetalleBonosDriverPageState
 
             'bonoObservacion':
 
-            'Pago realizado manualmente desde admin',
+            'Pagado por Nequi',
           },
         );
 
@@ -1294,7 +1292,7 @@ class _DetalleBonosDriverPageState
 
               'bonoObservacion':
 
-              'Pago realizado manualmente desde admin',
+              'Pagado por Nequi',
             },
           );
         }

@@ -51,12 +51,17 @@ class Driver {
   bool cedulatraseraTomada;
   String licenciaCategoria;
   String licenciaVigencia;
+
+  String soatVigencia;
+  String tecnoVigencia;
+
   bool fotoPerfilTomada;
 
   String vehiculoActivoId;
   String placaActiva;
 
   String? the10FechaRegistroString;
+
 
   Driver({
     required this.id,
@@ -102,6 +107,8 @@ class Driver {
     required this.cedulatraseraTomada,
     required this.licenciaCategoria,
     required this.licenciaVigencia,
+    required this.soatVigencia,
+    required this.tecnoVigencia,
     required this.fotoPerfilTomada,
     required this.vehiculoActivoId,
     required this.placaActiva,
@@ -163,6 +170,11 @@ class Driver {
       cedulatraseraTomada: json["cedula_trasera_tomada"] ?? false,
       licenciaCategoria: json["licencia_categoria"] ?? '',
       licenciaVigencia: json["licencia_vigencia"] ?? '',
+      soatVigencia:
+      json["soat_vigencia"] ?? '',
+
+      tecnoVigencia:
+      json["tecno_vigencia"] ?? '',
       fotoPerfilTomada: json["foto_perfil_tomada"] ?? false,
       vehiculoActivoId: json["vehiculoActivoId"] ?? '',
       placaActiva: json["placaActiva"] ?? '',
@@ -213,8 +225,15 @@ class Driver {
     "cedula_trasera_tomada": cedulatraseraTomada,
     "licencia_categoria": licenciaCategoria,
     "licencia_vigencia": licenciaVigencia,
+    "soat_vigencia":
+    soatVigencia,
+
+    "tecno_vigencia":
+    tecnoVigencia,
     "foto_perfil_tomada": fotoPerfilTomada,
     "vehiculoActivoId": vehiculoActivoId,
     "placaActiva": placaActiva,
+
+
   };
 }

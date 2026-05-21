@@ -6,6 +6,9 @@ import '../../common/main_layout.dart';
 class BonosAdminPage extends StatefulWidget {
   const BonosAdminPage({super.key});
 
+
+
+
   @override
   State<BonosAdminPage> createState() =>
       _BonosAdminPageState();
@@ -13,6 +16,10 @@ class BonosAdminPage extends StatefulWidget {
 
 class _BonosAdminPageState
     extends State<BonosAdminPage> {
+
+  final ScrollController
+  _tableController =
+  ScrollController();
 
   final Map<String, Map<String, dynamic>>
   _cacheDrivers = {};
@@ -313,141 +320,195 @@ class _BonosAdminPageState
       conductores,
       ) {
 
-    return SingleChildScrollView(
+    return Scrollbar(
 
-      scrollDirection: Axis.horizontal,
+      controller:
+      _tableController,
 
-      child: DataTable(
+      thumbVisibility: true,
 
-        columns: const [
+      child: SingleChildScrollView(
 
-          DataColumn(
+        controller:
+        _tableController,
 
-            label: Text(
+        scrollDirection:
+        Axis.vertical,
 
-              'Conductor',
+        child: SingleChildScrollView(
 
-              style: TextStyle(
+          scrollDirection:
+          Axis.horizontal,
 
-                fontWeight:
-                FontWeight.w900,
-              ),
-            ),
-          ),
+          child: DataTable(
 
-          DataColumn(
+            headingRowHeight: 42,
 
-            label: Text(
+            dataRowMinHeight: 44,
 
-              'Bonos pendientes',
+            dataRowMaxHeight: 48,
 
-              style: TextStyle(
+            horizontalMargin: 14,
 
-                fontWeight:
-                FontWeight.w900,
-              ),
-            ),
-          ),
+            columnSpacing: 30,
 
-          DataColumn(
+            columns: const [
 
-            label: Text(
+              DataColumn(
 
-              'Valor total',
+                label: Text(
 
-              style: TextStyle(
+                  'Conductor',
 
-                fontWeight:
-                FontWeight.w900,
-              ),
-            ),
-          ),
-
-          DataColumn(
-
-            label: Text(
-
-              'Acción',
-
-              style: TextStyle(
-
-                fontWeight:
-                FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-
-        rows:
-
-        conductores.map((item) {
-
-          return DataRow(
-
-            onSelectChanged: (_) async {
-
-              await Navigator.pushNamed(
-
-                context,
-
-                'detalle_bonos_driver',
-
-                arguments: item,
-              );
-            },
-
-            cells: [
-
-              DataCell(
-
-                Text(
-
-                  item['nombre'],
-
-                  style:
-                  const TextStyle(
-
-                    fontWeight:
-                    FontWeight.w700,
-                  ),
-                ),
-              ),
-
-              DataCell(
-
-                Text(
-
-                  '${item['cantidad']}',
-                ),
-              ),
-
-              DataCell(
-
-                Text(
-
-                  '\$ ${item['total'].toInt()}',
-
-                  style:
-                  const TextStyle(
+                  style: TextStyle(
 
                     fontWeight:
                     FontWeight.w900,
+
+                    fontSize: 12,
                   ),
                 ),
               ),
 
-              const DataCell(
+              DataColumn(
 
-                Icon(
-                  Icons.visibility,
+                label: Text(
+
+                  'Bonos pendientes',
+
+                  style: TextStyle(
+
+                    fontWeight:
+                    FontWeight.w900,
+
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+
+              DataColumn(
+
+                label: Text(
+
+                  'Valor total',
+
+                  style: TextStyle(
+
+                    fontWeight:
+                    FontWeight.w900,
+
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+
+              DataColumn(
+
+                label: Text(
+
+                  'Acción',
+
+                  style: TextStyle(
+
+                    fontWeight:
+                    FontWeight.w900,
+
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
-          );
 
-        }).toList(),
+            rows:
+
+            conductores.map((item) {
+
+              return DataRow(
+
+                onSelectChanged: (_) async {
+
+                  await Navigator.pushNamed(
+
+                    context,
+
+                    'detalle_bonos_driver',
+
+                    arguments: item,
+                  );
+                },
+
+                cells: [
+
+                  DataCell(
+
+                    Text(
+
+                      item['nombre'],
+
+                      style:
+                      const TextStyle(
+
+                        fontWeight:
+                        FontWeight.w700,
+
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
+                  DataCell(
+
+                    Text(
+
+                      '${item['cantidad']}',
+
+                      style:
+                      const TextStyle(
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
+                  DataCell(
+
+                    Text(
+
+                      '\$ ${item['total'].toInt()}',
+
+                      style:
+                      const TextStyle(
+
+                        fontWeight:
+                        FontWeight.w900,
+
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
+                  const DataCell(
+
+                    Icon(
+                      Icons.visibility,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              );
+
+            }).toList(),
+          ),
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+
+    _tableController.dispose();
+
+    super.dispose();
   }
 
   Widget _buildCards(

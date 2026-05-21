@@ -104,6 +104,11 @@ class _LoginPageState extends State<LoginPage> {
 
                           // ✅ Carga rol/activo del operador logueado
                           await operadorProvider.fetchOperadorActual();
+                          print("ROL: ${operadorProvider.rolActual}");
+                          print("ACTIVE: ${operadorProvider.activoActual}");
+                          await Future.delayed(
+                            const Duration(milliseconds: 200),
+                          );
                           if (!context.mounted) return;
 
                           final role = (operadorProvider.rolActual ?? '').trim();
@@ -234,6 +239,9 @@ class _LoginPageState extends State<LoginPage> {
 
       case 'operadorFull':
         return 'general_page';
+
+      case 'contador':
+        return 'bonos_admin_page';
 
       case 'operador1':
         return 'general_page';

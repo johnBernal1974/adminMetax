@@ -37,13 +37,61 @@ class DriverProvider with ChangeNotifier {
 
       print("Docs en Firestore: ${querySnapshot.docs.length}");
 
-      _drivers = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
+      List<Driver> tempDrivers = [];
 
-        data["id"] = doc.id; // 🔥 SOLUCIÓN
+      for (var doc in querySnapshot.docs) {
 
-        return Driver.fromJson(data);
-      }).toList();
+        final data =
+        doc.data() as Map<String, dynamic>;
+
+        data["id"] = doc.id;
+        print(data["vehiculoActivoId"]);
+
+        /// 🚕 VEHÍCULO ACTIVO
+        final vehiculoId =
+            data["18_Placa"] ?? '';
+
+        try {
+
+          if (vehiculoId.isNotEmpty) {
+
+            final vehiculoDoc =
+            await FirebaseFirestore.instance
+
+                .collection("Drivers")
+                .doc(doc.id)
+                .collection("vehiculos")
+                .doc(vehiculoId)
+                .get();
+
+            if (vehiculoDoc.exists) {
+
+              final vehiculo =
+              vehiculoDoc.data()!;
+
+              data["soat_vigencia"] =
+
+                  vehiculo["21_Vigencia_Soat"] ?? '';
+
+              data["tecno_vigencia"] =
+
+                  vehiculo["23_Vigencia_Tecno"] ?? '';
+            }
+          }
+
+        } catch (e) {
+
+          print(
+            'ERROR VEHICULO ${doc.id}: $e',
+          );
+        }
+
+        tempDrivers.add(
+          Driver.fromJson(data),
+        );
+      }
+
+      _drivers = tempDrivers;
 
       print("Drivers parseados: ${_drivers.length}");
 
@@ -162,14 +210,7 @@ class DriverProvider with ChangeNotifier {
         .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
-    // /// 🔥 FILTRAR SOLO LOS QUE TIENEN CORREGIDA
-    // final activadosConCorregida = snapshotActivados.docs.where((doc) {
-    //   final data = doc.data();
-    //
-    //   return data["29_Foto_perfil"] == "corregida" ||
-    //       data["25_Cedula_Delantera_foto"] == "corregida" ||
-    //       data["26_Cedula_Trasera_foto"] == "corregida";
-    // }).toList();
+
 
     /// 🔥 UNIR TODO
     final allDocs = [
@@ -197,12 +238,55 @@ class DriverProvider with ChangeNotifier {
     });
 
     drivers.clear();
-    drivers.addAll(
-      allDocs.map((e) => Driver.fromJson(e.data())).toList(),
-    );
+    List<Driver> tempDrivers = [];
+
+    for (var e in allDocs) {
+
+      final data = e.data();
+
+      data["id"] = e.id;
+
+      final vehiculoId =
+          data["18_Placa"] ?? '';
+
+      if (vehiculoId.isNotEmpty) {
+
+        final vehiculoDoc =
+        await FirebaseFirestore.instance
+
+            .collection("Drivers")
+            .doc(e.id)
+            .collection("vehiculos")
+            .doc(vehiculoId)
+            .get();
+
+        if (vehiculoDoc.exists) {
+
+          final vehiculo =
+          vehiculoDoc.data()!;
+
+          data["soat_vigencia"] =
+
+              vehiculo["21_Vigencia_Soat"] ?? '';
+
+          data["tecno_vigencia"] =
+
+              vehiculo["23_Vigencia_Tecno"] ?? '';
+        }
+      }
+
+      tempDrivers.add(
+        Driver.fromJson(data),
+      );
+    }
+
+    drivers.clear();
+    drivers.addAll(tempDrivers);
 
     notifyListeners();
   }
+
+
 
   Future<void> buscarDriver(String query) async {
     print("🔍 BUSCANDO: $query");

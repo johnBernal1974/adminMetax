@@ -39,15 +39,37 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
   int getPrioridad(Driver driver) {
-    final estado = driver.verificacionStatus;
 
-    if (estado == "procesando") return 0;
-    if (estado == "registrado") return 1;
+    /// 🔥 1. BLOQUEADOS
+    if (driver.the38EstaBloqueado == true) {
+      return 0;
+    }
 
-    if (tieneCorregida(driver)) return 2;
-    if (tieneRechazada(driver)) return 3;
+    /// 🔥 2. CORREGIDOS
+    if (tieneCorregida(driver)) {
+      return 1;
+    }
 
-    return 4; // otros (activado, bloqueado)
+    final estado = (driver.verificacionStatus ?? "")
+        .toLowerCase()
+        .trim();
+
+    /// 🔥 3. REGISTRADOS
+    if (estado == "registrado") {
+      return 2;
+    }
+
+    /// 🔥 4. RECHAZADOS
+    if (tieneRechazada(driver)) {
+      return 3;
+    }
+
+    /// 🔥 5. PROCESANDO
+    if (estado == "procesando") {
+      return 4;
+    }
+
+    return 5;
   }
 
   bool tienePendiente(Driver driver) {
@@ -124,6 +146,11 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
       final estadoVehiculo = driversEstadoVehiculo[driver.id];
 
+      /// 🔥 PRIORIDAD MÁXIMA → BLOQUEADO MANUAL
+      if (driver.the38EstaBloqueado == true) {
+        return Colors.red;
+      }
+
       /// 🔥 PRIORIDAD 1: CORREGIDA (driver o vehículo)
       if (tieneCorregida(driver) || estadoVehiculo == "corregida") {
         return Colors.purple;
@@ -137,12 +164,16 @@ class _ConductoresPageState extends State<ConductoresPage> {
       switch (driver?.verificacionStatus) {
         case "registrado":
           return Colors.blueGrey;
+
         case "procesando":
           return Colors.blueAccent;
+
         case "activado":
           return Colors.green;
+
         case "bloqueado":
           return Colors.red.shade900;
+
         default:
           return Colors.grey;
       }
@@ -171,25 +202,25 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
     }).toList();
 
-    filteredConductores.sort((a, b) {
-      int prioridadA = getPrioridad(a);
-      int prioridadB = getPrioridad(b);
-
-      /// 1️⃣ PRIORIDAD
-      if (prioridadA != prioridadB) {
-        return prioridadA.compareTo(prioridadB);
-      }
-
-      /// 2️⃣ FECHA
-      final fechaA = a.the10FechaRegistroTimestamp;
-      final fechaB = b.the10FechaRegistroTimestamp;
-
-      if (fechaA == null && fechaB == null) return 0;
-      if (fechaA == null) return 1;
-      if (fechaB == null) return -1;
-
-      return fechaB.compareTo(fechaA);
-    });
+    // filteredConductores.sort((a, b) {
+    //   int prioridadA = getPrioridad(a);
+    //   int prioridadB = getPrioridad(b);
+    //
+    //   /// 1️⃣ PRIORIDAD
+    //   if (prioridadA != prioridadB) {
+    //     return prioridadA.compareTo(prioridadB);
+    //   }
+    //
+    //   /// 2️⃣ FECHA
+    //   final fechaA = a.the10FechaRegistroTimestamp;
+    //   final fechaB = b.the10FechaRegistroTimestamp;
+    //
+    //   if (fechaA == null && fechaB == null) return 0;
+    //   if (fechaA == null) return 1;
+    //   if (fechaB == null) return -1;
+    //
+    //   return fechaB.compareTo(fechaA);
+    // });
 
 
     totalDrivers = filteredConductores.length;
@@ -212,21 +243,38 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 margin: const EdgeInsets.all(7),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    if (constraints.maxWidth <= 600) {
-                      return _buildMobileLayout(
-                        context,
-                        driverProvider,
-                        filteredConductores,
-                        getStatusColor,
-                      );
-                    } else {
-                      return _buildDesktopLayout(
-                        context,
-                        driverProvider,
-                        filteredConductores,
-                        getStatusColor,
-                      );
-                    }
+
+                    final contenido =
+
+                    constraints.maxWidth <= 600
+
+                        ? _buildMobileLayout(
+                      context,
+                      driverProvider,
+                      filteredConductores,
+                      getStatusColor,
+                    )
+
+                        : _buildDesktopLayout(
+                      context,
+                      driverProvider,
+                      filteredConductores,
+                      getStatusColor,
+                    );
+
+                    return Column(
+
+                      children: [
+
+                        _alertasDocumentos(
+                          filteredConductores,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        contenido,
+                      ],
+                    );
                   },
                 ),
               ),
@@ -235,6 +283,219 @@ class _ConductoresPageState extends State<ConductoresPage> {
         ],
       ),
       pageTitle: 'Conductores',
+    );
+  }
+
+  List ordenarPorFecha(List lista) {
+
+    lista.sort((a, b) {
+
+      final fechaA = a.the10FechaRegistroTimestamp;
+      final fechaB = b.the10FechaRegistroTimestamp;
+
+      if (fechaA == null && fechaB == null) return 0;
+      if (fechaA == null) return 1;
+      if (fechaB == null) return -1;
+
+      return fechaB.compareTo(fechaA);
+    });
+
+    return lista;
+  }
+
+  Widget _alertasDocumentos(
+      List<dynamic> filteredConductores,
+      ) {
+
+    final vencidos = filteredConductores.where((driver) {
+
+      final estado =
+      _vigenciaGlobalDriver(driver);
+
+      return estado ==
+          _VigEstado.vencido;
+
+    }).toList();
+
+    if (vencidos.isEmpty) {
+
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+
+      width: double.infinity,
+
+      margin: const EdgeInsets.only(bottom: 14),
+
+      padding: const EdgeInsets.all(14),
+
+      decoration: BoxDecoration(
+
+        color: Colors.red.withOpacity(0.06),
+
+        borderRadius:
+        BorderRadius.circular(18),
+
+        border: Border.all(
+
+          color:
+          Colors.red.withOpacity(0.18),
+        ),
+      ),
+
+      child: Column(
+
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+
+        children: [
+
+          Row(
+
+            children: [
+
+              const Icon(
+
+                Icons.warning_amber_rounded,
+
+                color: Colors.red,
+              ),
+
+              const SizedBox(width: 8),
+
+              Text(
+
+                '${vencidos.length} conductores '
+                    'con documentos vencidos',
+
+                style: const TextStyle(
+
+                  fontWeight:
+                  FontWeight.w900,
+
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          ...vencidos.map((driver) {
+
+            return GestureDetector(
+
+              onTap: () {
+
+                Navigator.push(
+
+                  context,
+
+                  MaterialPageRoute(
+
+                    builder: (context) =>
+
+                        DriverDetailPage(
+                          driver: driver,
+                        ),
+                  ),
+                );
+              },
+
+              child: Container(
+
+                margin:
+                const EdgeInsets.only(
+                  bottom: 10,
+                ),
+
+                padding:
+                const EdgeInsets.all(12),
+
+                decoration: BoxDecoration(
+
+                  color:
+                  Theme.of(context)
+                      .cardColor,
+
+                  borderRadius:
+                  BorderRadius.circular(14),
+                ),
+
+                child: Row(
+
+                  children: [
+
+                    Container(
+
+                      width: 10,
+
+                      height: 10,
+
+                      decoration: const BoxDecoration(
+
+                        color: Colors.red,
+
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+
+                      child: Column(
+
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+
+                        children: [
+
+                          Text(
+
+                            '${driver.the01Nombres} '
+                                '${driver.the02Apellidos}',
+
+                            style: const TextStyle(
+
+                              fontWeight:
+                              FontWeight.w800,
+                            ),
+                          ),
+
+                          const SizedBox(height: 3),
+
+                          Text(
+
+                            documentosVencidosTexto(driver),
+
+                            style: const TextStyle(
+
+                              color: Colors.red,
+
+                              fontSize: 12,
+
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Icon(
+
+                      Icons.arrow_forward_ios_rounded,
+
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
     );
   }
 
@@ -448,70 +709,143 @@ class _ConductoresPageState extends State<ConductoresPage> {
         const SizedBox(height: 10),
 
         /// 🔥 CONTENIDO PRINCIPAL
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        Builder(
+          builder: (_) {
 
-            /// ✅ MODO ACTIVADOS/BLOQUEADOS
-            if (mostrarSoloActivosBloqueados) ...[
-              const SizedBox(height: 10),
-              const Text(
-                "Conductores activos y bloqueados",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              _buildDriverTable(filteredConductores, getStatusColor),
-            ]
+            /// 🔵 REGISTRADOS
+            final registrados = ordenarPorFecha(
+              filteredConductores.where((d) {
 
-            /// ✅ MODO PENDIENTES (con prioridad)
-            else ...[
+                final estado = (d.verificacionStatus ?? "")
+                    .toLowerCase()
+                    .trim();
 
-              /// 🔥 PRIORIDAD
-              if (filteredConductores.any((d) => getPrioridad(d) < 2)) ...[
-                const SizedBox(height: 10),
-                const Text(
-                  "🚨 Prioridad (requieren atención)",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                return estado == "registrado" &&
+                    !tieneCorregida(d) &&
+                    !tieneRechazada(d);
+
+              }).toList(),
+            );
+
+            /// 🟣 CORREGIDOS
+            final corregidos = ordenarPorFecha(
+              filteredConductores.where((d) {
+
+                return tieneCorregida(d);
+
+              }).toList(),
+            );
+
+            /// 🟠 RECHAZADOS
+            final rechazados = ordenarPorFecha(
+              filteredConductores.where((d) {
+
+                return tieneRechazada(d) &&
+                    !tieneCorregida(d);
+
+              }).toList(),
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                /// ✅ ACTIVADOS/BLOQUEADOS
+                if (mostrarSoloActivosBloqueados) ...[
+
+                  const SizedBox(height: 10),
+
+                  const Text(
+                    "Conductores activos y bloqueados",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const Divider(),
-                _buildDriverTable(
-                  filteredConductores
-                      .where((d) => getPrioridad(d) < 2)
-                      .toList(),
-                  getStatusColor,
-                ),
-              ],
 
-              /// 🔹 RESTO (IMPORTANTE 🔥)
-              if (filteredConductores.any((d) => getPrioridad(d) >= 2)) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  "Conductores",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  const Divider(),
+
+                  _buildDriverTable(
+                    ordenarPorFecha(filteredConductores),
+                    getStatusColor,
                   ),
-                ),
-                const Divider(),
-                _buildDriverTable(
-                  filteredConductores
-                      .where((d) => getPrioridad(d) >= 2)
-                      .toList(),
-                  getStatusColor,
-                ),
+                ]
+
+                /// ✅ PENDIENTES
+                else ...[
+
+                  /// 🔵 REGISTRADOS
+                  if (registrados.isNotEmpty) ...[
+
+                    const SizedBox(height: 10),
+
+                    const Text(
+                      "🆕 Registrados",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const Divider(),
+
+                    _buildDriverTable(
+                      registrados,
+                      getStatusColor,
+                    ),
+                  ],
+
+                  /// 🟣 CORREGIDOS
+                  if (corregidos.isNotEmpty) ...[
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      "🛠️ Corregidos",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const Divider(),
+
+                    _buildDriverTable(
+                      corregidos,
+                      getStatusColor,
+                    ),
+                  ],
+
+                  /// 🟠 RECHAZADOS
+                  if (rechazados.isNotEmpty) ...[
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      "🚫 Rechazados",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const Divider(),
+
+                    _buildDriverTable(
+                      rechazados,
+                      getStatusColor,
+                    ),
+                  ],
+                ],
               ],
-            ],
-          ],
+            );
+          },
         )
       ],
     );
   }
+
+
 
   Widget _buildSearchField() {
     return SizedBox(
@@ -797,7 +1131,19 @@ String _tooltipVig(_VigEstado e) {
 }
 
 _VigEstado _vigenciaGlobalDriver(driver) {
-  return _VigEstado.sinFecha;
+
+  final estados = <_VigEstado>[];
+
+  /// 🚕 LICENCIA
+  final licenciaVence = _venceDiaAntes(
+    driver.licenciaVigencia,
+  );
+
+  estados.add(
+    _estadoVig(licenciaVence),
+  );
+
+  return _peorEstado(estados);
 }
 
 
@@ -815,6 +1161,60 @@ String vigenciaEstadoTexto(driver) {
     case _VigEstado.sinFecha:
       return "sinFecha";
   }
+}
+String documentosVencidosTexto(driver) {
+
+  List<String> vencidos = [];
+
+  /// 🚕 LICENCIA
+  final licencia =
+  _estadoVig(
+    _venceDiaAntes(
+      driver.licenciaVigencia,
+    ),
+  );
+
+  if (licencia ==
+      _VigEstado.vencido) {
+
+    vencidos.add(
+      'Licencia',
+    );
+  }
+
+  /// 🚕 SOAT
+  final soat =
+  _estadoVig(
+    _venceDiaAntes(
+      driver.soatVigencia,
+    ),
+  );
+
+  if (soat ==
+      _VigEstado.vencido) {
+
+    vencidos.add(
+      'SOAT',
+    );
+  }
+
+  /// 🚕 TECNO
+  final tecno =
+  _estadoVig(
+    _venceDiaAntes(
+      driver.tecnoVigencia,
+    ),
+  );
+
+  if (tecno ==
+      _VigEstado.vencido) {
+
+    vencidos.add(
+      'Tecnomecánica',
+    );
+  }
+
+  return vencidos.join(' • ');
 }
 
 DateTime? parseFechaColombia(String input) {

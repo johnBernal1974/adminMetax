@@ -5,6 +5,15 @@ import 'package:intl/intl.dart';
 import '../../common/main_layout.dart';
 import '../../src/color.dart';
 
+import 'package:csv/csv.dart';
+
+import 'dart:convert';
+
+import 'dart:typed_data';
+
+import 'package:universal_html/html.dart'
+as html;
+
 class HistorialBonosPage extends StatefulWidget {
 
   const HistorialBonosPage({super.key});
@@ -23,6 +32,16 @@ class _HistorialBonosPageState
   List<QueryDocumentSnapshot>
   bonos = [];
 
+  Map<String,
+      List<QueryDocumentSnapshot>>
+  bonosPorSemana = {};
+
+  String semanaSeleccionada =
+      'Todas';
+
+  List<QueryDocumentSnapshot>
+  bonosFiltrados = [];
+
   int totalBonos = 0;
 
   int totalPendientes = 0;
@@ -30,6 +49,11 @@ class _HistorialBonosPageState
   int totalNequi = 0;
 
   int totalSaldoMetax = 0;
+
+  final ScrollController
+  _tableScrollController =
+  ScrollController();
+
 
   @override
   void initState() {
@@ -52,12 +76,13 @@ class _HistorialBonosPageState
           .collection('TravelHistory')
 
           .where(
-        'tarifaDescuento',
-        isGreaterThan: 0,
+        'bono_promocional',
+        isEqualTo: true,
       )
 
           .orderBy(
-        'tarifaDescuento',
+        'bonoPagadoAt',
+        descending: true,
       )
 
           .get();
@@ -118,10 +143,264 @@ class _HistorialBonosPageState
     }
 
     if (mounted) {
+      agruparBonosPorSemana();
+      filtrarBonos();
 
       setState(() {
         loading = false;
       });
+    }
+  }
+
+  void agruparBonosPorSemana() {
+
+    bonosPorSemana.clear();
+
+    for (final doc in bonos) {
+
+      final data =
+      doc.data()
+      as Map<String, dynamic>;
+
+      final Timestamp? fecha =
+
+          data['bonoPagadoAt']
+              ?? data['finalViaje'];
+
+      if (fecha == null) continue;
+
+      final date =
+      fecha.toDate();
+
+      final semana =
+
+      obtenerSemana(date);
+
+      final inicioSemana =
+
+      date.subtract(
+        Duration(
+          days: date.weekday - 1,
+        ),
+      );
+
+      final finSemana =
+
+      inicioSemana.add(
+        const Duration(days: 6),
+      );
+
+      final key =
+
+          'Semana $semana\n'
+          '${DateFormat('dd MMM', 'es_CO').format(inicioSemana)} '
+          'al '
+          '${DateFormat('dd MMM yyyy', 'es_CO').format(finSemana)}';
+
+      bonosPorSemana
+          .putIfAbsent(
+        key,
+            () => [],
+      )
+          .add(doc);
+    }
+  }
+
+  void filtrarBonos() {
+
+    if (semanaSeleccionada ==
+        'Todas') {
+
+      bonosFiltrados = bonos;
+
+      return;
+    }
+
+    bonosFiltrados =
+
+        bonosPorSemana[
+        semanaSeleccionada]
+
+            ?? [];
+  }
+
+  int obtenerSemana(DateTime date) {
+
+    final firstDay =
+    DateTime(date.year, 1, 1);
+
+    final diff =
+    date.difference(firstDay);
+
+    return
+      ((diff.inDays +
+          firstDay.weekday)
+          / 7)
+          .ceil();
+  }
+
+  Future<void> exportarCSV() async {
+
+    try {
+
+      List<List<dynamic>> rows = [];
+
+      /// HEADERS
+      rows.add([
+
+        'Fecha pago',
+
+        'Conductor',
+
+        'Placa',
+
+        'Valor bono',
+
+        'Método',
+
+        'Número viaje',
+      ]);
+
+      /// DATOS
+      for (final doc in bonosFiltrados) {
+
+        final data =
+        doc.data()
+        as Map<String, dynamic>;
+
+        final fecha =
+
+            data['bonoPagadoAt']
+                ?? data['finalViaje'];
+
+        final fechaFormat =
+
+        fecha != null
+
+            ? DateFormat(
+
+          'dd/MM/yyyy hh:mm a',
+          'es_CO',
+
+        ).format(
+          fecha.toDate(),
+        )
+
+            : '';
+
+        rows.add([
+
+          fechaFormat,
+
+          data['driver_nombre']
+              ?? '-',
+
+          data['placa']
+              ?? '-',
+
+          data['tarifaDescuento']
+              ?? 0,
+
+          data['bonoMetodo']
+              ?? '-',
+
+          data['numeroViaje']
+              ?? '-',
+        ]);
+      }
+
+      rows.add([]);
+
+      rows.add([
+        'TOTAL BONOS',
+        totalBonos,
+      ]);
+
+      rows.add([
+        'TOTAL PENDIENTES',
+        totalPendientes,
+      ]);
+
+      rows.add([
+        'TOTAL NEQUI',
+        totalNequi,
+      ]);
+
+      rows.add([
+        'TOTAL SALDO METAX',
+        totalSaldoMetax,
+      ]);
+
+      /// CONVERTIR A CSV
+      String csvData =
+
+      const ListToCsvConverter(
+        fieldDelimiter: ';',
+      )
+          .convert(rows);
+
+      final bytes =
+
+      utf8.encode(
+        '\uFEFF$csvData',
+      );
+
+      final blob = html.Blob([
+        bytes
+      ]);
+
+      final url =
+      html.Url.createObjectUrlFromBlob(
+        blob,
+      );
+
+      final nombreArchivo =
+
+      semanaSeleccionada == 'Todas'
+
+          ? 'bonos_todas_las_semanas.csv'
+
+          : '${semanaSeleccionada
+
+          .replaceAll('\n', ' ')
+          .replaceAll('/', '-')
+          .replaceAll(':', '')}.csv';
+
+      final anchor =
+      html.AnchorElement(
+        href: url,
+      )
+
+        ..setAttribute(
+
+          "download",
+
+          nombreArchivo,
+        )
+
+        ..click();
+
+      html.Url.revokeObjectUrl(url);
+
+      if (mounted) {
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+
+          const SnackBar(
+
+            content: Text(
+              '✅ CSV descargado',
+            ),
+          ),
+        );
+      }
+
+    } catch (e) {
+
+      debugPrint(
+        'ERROR EXPORT CSV: $e',
+      );
     }
   }
 
@@ -177,7 +456,10 @@ class _HistorialBonosPageState
 
           isDesktop(context)
 
-              ? 1300
+              ? MediaQuery.of(context)
+              .size
+              .width * 0.96
+
               : double.infinity,
 
           child: Padding(
@@ -187,86 +469,200 @@ class _HistorialBonosPageState
 
             child:
 
-            loading
-
-                ? const Center(
-
-              child:
-              CircularProgressIndicator(),
-            )
-
-                : bonos.isEmpty
-
-                ? const Center(
-
-              child: Text(
-                'No hay historial de bonos',
-              ),
-            )
-
-                : Column(
-
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
-
-              children: [
-
-                const Text(
-
-                  'Historial general de bonos promocionales',
-
-                  style: TextStyle(
-
-                    fontSize: 20,
-
-                    fontWeight:
-                    FontWeight.w900,
+            SingleChildScrollView(
+              child: loading
+              
+                  ? const Center(
+              
+                child:
+                CircularProgressIndicator(),
+              )
+              
+                  : bonos.isEmpty
+              
+                  ? const Center(
+              
+                child: Text(
+                  'No hay historial de bonos',
+                ),
+              )
+              
+                  : Column(
+              
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+              
+                children: [
+              
+                  const Text(
+              
+                    'Historial general de bonos promocionales',
+              
+                    style: TextStyle(
+              
+                      fontSize: 20,
+              
+                      fontWeight:
+                      FontWeight.w900,
+                    ),
                   ),
-                ),
+              
+                  const SizedBox(height: 20),
+                  Align(
 
-                const SizedBox(height: 20),
+                    alignment:
+                    Alignment.centerRight,
 
-                Wrap(
+                    child: ElevatedButton.icon(
 
-                  spacing: 14,
-                  runSpacing: 14,
+                      onPressed: exportarCSV,
 
-                  children: [
+                      style:
+                      ElevatedButton.styleFrom(
 
-                    _cardResumen(
-                      'Total bonos',
-                      totalBonos,
-                      Colors.black,
+                        backgroundColor:
+                        primary,
+                      ),
+
+                      icon: const Icon(
+
+                        Icons.download,
+
+                        color: Colors.black,
+                      ),
+
+                      label: const Text(
+
+                        'Descargar reporte',
+
+                        style: TextStyle(
+
+                          color: Colors.black,
+
+                          fontWeight:
+                          FontWeight.w900,
+                        ),
+                      ),
                     ),
+                  ),
+                  const SizedBox(height: 20),
 
-                    _cardResumen(
-                      'Pendientes',
-                      totalPendientes,
-                      Colors.orange,
-                    ),
+                  Row(
 
-                    _cardResumen(
-                      'Nequi',
-                      totalNequi,
-                      Colors.green,
-                    ),
+                    children: [
 
-                    _cardResumen(
-                      'Saldo MetaX',
-                      totalSaldoMetax,
-                      primary,
-                    ),
-                  ],
-                ),
+                      Container(
 
-                const SizedBox(height: 20),
+                        padding:
+                        const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
 
-                isDesktop(context)
+                        decoration: BoxDecoration(
 
-                    ? _buildDesktop()
+                          color: Colors.white,
 
-                    : _buildMobile(),
-              ],
+                          borderRadius:
+                          BorderRadius.circular(12),
+
+                          border: Border.all(
+                            color: gris,
+                          ),
+                        ),
+
+                        child: DropdownButtonHideUnderline(
+
+                          child: DropdownButton<String>(
+
+                            value:
+                            semanaSeleccionada,
+
+                            items: [
+
+                              const DropdownMenuItem(
+
+                                value: 'Todas',
+
+                                child: Text(
+                                  'Todas las semanas',
+                                ),
+                              ),
+
+                              ...bonosPorSemana.keys
+                                  .map((semana) {
+
+                                return DropdownMenuItem(
+
+                                  value: semana,
+
+                                  child: Text(
+                                    semana,
+                                  ),
+                                );
+                              }),
+                            ],
+
+                            onChanged: (value) {
+
+                              if (value == null) return;
+
+                              setState(() {
+
+                                semanaSeleccionada =
+                                    value;
+
+                                filtrarBonos();
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+              
+                  Wrap(
+              
+                    spacing: 14,
+                    runSpacing: 14,
+              
+                    children: [
+              
+                      _cardResumen(
+                        'Total bonos',
+                        totalBonos,
+                        Colors.black,
+                      ),
+              
+                      _cardResumen(
+                        'Pendientes',
+                        totalPendientes,
+                        Colors.orange,
+                      ),
+              
+                      _cardResumen(
+                        'Transferencias a Nequi',
+                        totalNequi,
+                        Colors.green,
+                      ),
+              
+                      _cardResumen(
+                        'Transladados al saldo ',
+                        totalSaldoMetax,
+                        primary,
+                      ),
+                    ],
+                  ),
+              
+                  const SizedBox(height: 20),
+              
+                  isDesktop(context)
+              
+                      ? _buildDesktop()
+              
+                      : _buildMobile(),
+                ],
+              ),
             ),
           ),
         ),
@@ -358,186 +754,380 @@ class _HistorialBonosPageState
 
   Widget _buildDesktop() {
 
-    return Container(
+    return ListView(
 
-      decoration: BoxDecoration(
+      shrinkWrap: true,
 
-        color: Colors.white,
+      physics:
+      const NeverScrollableScrollPhysics(),
 
-        borderRadius:
-        BorderRadius.circular(14),
+      children:
 
-        border: Border.all(
-          color: gris,
-        ),
-      ),
+      (semanaSeleccionada == 'Todas'
 
-      child: SingleChildScrollView(
+          ? bonosPorSemana.entries
 
-        scrollDirection:
-        Axis.horizontal,
+          : bonosPorSemana.entries.where(
 
-        child: DataTable(
+            (e) =>
 
-          columns: const [
+        e.key ==
+            semanaSeleccionada,
+      ))
 
-            DataColumn(
-              label: Text('Fecha'),
+          .map((entry) {
+
+        final semana =
+            entry.key;
+
+        final docs =
+            entry.value;
+
+        final fechas = docs.map((doc) {
+
+          final data =
+          doc.data()
+          as Map<String, dynamic>;
+
+          final Timestamp? fecha =
+
+              data['bonoPagadoAt']
+                  ?? data['finalViaje'];
+
+          return fecha!.toDate();
+
+        }).toList();
+
+        fechas.sort();
+
+        final inicioSemana =
+            fechas.first;
+
+        final finSemana =
+            fechas.last;
+
+        int totalSemana = 0;
+
+        for (final doc in docs) {
+
+          final data =
+          doc.data()
+          as Map<String, dynamic>;
+
+          totalSemana +=
+
+              (data['tarifaDescuento']
+              as num?)
+
+                  ?.toInt()
+
+                  ?? 0;
+        }
+
+        return Container(
+
+          margin:
+          const EdgeInsets.only(
+            bottom: 20,
+          ),
+
+          decoration: BoxDecoration(
+
+            color: Colors.white,
+
+            borderRadius:
+            BorderRadius.circular(18),
+
+            border: Border.all(
+              color: gris,
+            ),
+          ),
+
+          child: ExpansionTile(
+
+            tilePadding:
+            const EdgeInsets.symmetric(
+
+              horizontal: 20,
+              vertical: 8,
             ),
 
-            DataColumn(
-              label: Text('Viaje'),
-            ),
+            childrenPadding:
+            const EdgeInsets.all(16),
 
-            DataColumn(
-              label: Text('Valor'),
-            ),
+            title: Column(
 
-            DataColumn(
-              label: Text('Estado'),
-            ),
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
 
-            DataColumn(
-              label: Text('Método'),
-            ),
-            DataColumn(
-              label: Text('TX'),
-            ),
+              children: [
 
-            DataColumn(
-              label: Text('Observación'),
-            ),
-          ],
+                Column(
 
-          rows: bonos.map((doc) {
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
 
-            final data =
+                  children: [
 
-            doc.data()
-            as Map<String, dynamic>;
+                    Text(
 
-            final pagado =
-                data['bonoPagado']
-                    == true;
+                      semana,
 
-            return DataRow(
+                      style: const TextStyle(
 
-              cells: [
-
-                DataCell(
-
-                  Text(
-
-                    formatFecha(
-                      data['bonoPagadoAt']
-                          ?? data['createdAt'],
-                    ),
-                  ),
-                ),
-
-                DataCell(
-
-                  Text(
-                    data['numeroViaje']
-                        ?? '',
-                  ),
-                ),
-
-                DataCell(
-
-                  Text(
-
-                    '\$ ${formatMoney(data['tarifaDescuento'] ?? 0)}',
-                  ),
-                ),
-
-                DataCell(
-
-                  Container(
-
-                    padding:
-                    const EdgeInsets.symmetric(
-
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-
-                    decoration: BoxDecoration(
-
-                      color:
-
-                      pagado
-
-                          ? Colors.green
-                          .withOpacity(0.1)
-
-                          : Colors.orange
-                          .withOpacity(0.1),
-
-                      borderRadius:
-                      BorderRadius.circular(10),
-                    ),
-
-                    child: Text(
-
-                      pagado
-                          ? 'PAGADO'
-                          : 'PENDIENTE',
-
-                      style: TextStyle(
-
-                        color:
-
-                        pagado
-                            ? Colors.green
-                            : Colors.orange,
+                        fontSize: 18,
 
                         fontWeight:
                         FontWeight.w900,
                       ),
                     ),
-                  ),
-                ),
 
-                DataCell(
+                    const SizedBox(height: 4),
 
-                  Text(
+                    Text(
 
-                    data['bonoMetodo']
-                        ?? '-',
-                  ),
-                ),
-                DataCell(
+                      '${DateFormat('dd MMM', 'es_CO').format(inicioSemana)} '
+                          'al '
+                          '${DateFormat('dd MMM yyyy', 'es_CO').format(finSemana)}',
 
-                  Text(
+                      style: TextStyle(
 
-                    data['bonoTransaccionId']
-                        ?? '-',
-                  ),
-                ),
+                        fontSize: 12,
 
-                DataCell(
+                        color:
+                        Colors.grey.shade700,
 
-                  SizedBox(
-
-                    width: 240,
-
-                    child: Text(
-
-                      data['bonoObservacion']
-                          ?? '-',
-
-                      overflow:
-                      TextOverflow.ellipsis,
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                Row(
+
+                  children: [
+
+                    Text(
+
+                      '${docs.length} bonos',
+
+                      style: TextStyle(
+
+                        color:
+                        Colors.grey.shade700,
+
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    Text(
+
+                      '\$ ${formatMoney(totalSemana)}',
+
+                      style: const TextStyle(
+
+                        color: primary,
+
+                        fontWeight:
+                        FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            );
-          }).toList(),
-        ),
-      ),
+            ),
+
+            children: docs.map((doc) {
+
+              final data =
+              doc.data()
+              as Map<String, dynamic>;
+
+              final pagado =
+                  data['bonoPagado']
+                      == true;
+
+              return Container(
+
+                margin:
+                const EdgeInsets.only(
+                  bottom: 12,
+                ),
+
+                padding:
+                const EdgeInsets.all(14),
+
+                decoration: BoxDecoration(
+
+                  color:
+                  Colors.grey.shade50,
+
+                  borderRadius:
+                  BorderRadius.circular(14),
+                ),
+
+                child: Row(
+
+                  children: [
+
+                    Expanded(
+
+                      flex: 2,
+
+                      child: Text(
+
+                        data['numeroViaje']
+                            ?? '',
+
+                        style: const TextStyle(
+
+                          fontWeight:
+                          FontWeight.w900,
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+
+                      child: Text(
+
+                        data['placa']
+                            ?? '-',
+
+                        style: const TextStyle(
+
+                          fontWeight:
+                          FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+
+                      flex: 2,
+
+                      child: Text(
+
+                        data['driver_nombre']
+                            ?? '-',
+
+                        style: const TextStyle(
+
+                          fontWeight:
+                          FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+
+                      child: Text(
+
+                        formatFecha(
+
+                          data['bonoPagadoAt']
+                              ?? data['finalViaje'],
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+
+                      child: Text(
+
+                        '\$ ${formatMoney(data['tarifaDescuento'] ?? 0)}',
+
+                        style: const TextStyle(
+
+                          fontWeight:
+                          FontWeight.w900,
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+
+                      child: Text(
+
+                        data['bonoMetodo']
+                            ?? '-',
+                      ),
+                    ),
+
+                    Expanded(
+
+                      child: Container(
+
+                        padding:
+                        const EdgeInsets.symmetric(
+
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+
+                        decoration: BoxDecoration(
+
+                          color:
+
+                          pagado
+
+                              ? Colors.green
+                              .withOpacity(0.10)
+
+                              : Colors.orange
+                              .withOpacity(0.10),
+
+                          borderRadius:
+                          BorderRadius.circular(10),
+                        ),
+
+                        child: Text(
+
+                          pagado
+                              ? 'PAGADO'
+                              : 'PENDIENTE',
+
+                          textAlign:
+                          TextAlign.center,
+
+                          style: TextStyle(
+
+                            color:
+
+                            pagado
+                                ? Colors.green
+                                : Colors.orange,
+
+                            fontWeight:
+                            FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+            }).toList(),
+          ),
+        );
+
+      }).toList(),
     );
+  }
+
+  @override
+  void dispose() {
+
+    _tableScrollController.dispose();
+
+    super.dispose();
   }
 
   Widget _buildMobile() {
@@ -602,6 +1192,55 @@ class _HistorialBonosPageState
                   FontWeight.w900,
 
                   fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              Text(
+
+                data['driver_nombre']
+                    ?? '-',
+
+                style: TextStyle(
+
+                  fontSize: 13,
+
+                  fontWeight:
+                  FontWeight.w700,
+
+                  color:
+                  Colors.grey.shade800,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              Text(
+
+                'Placa: '
+                    '${data['placa'] ?? '-'}',
+
+                style: TextStyle(
+
+                  fontSize: 12,
+
+                  color:
+                  Colors.grey.shade700,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+
+                'Método: '
+                    '${data['bonoMetodo'] ?? '-'}',
+
+                style: TextStyle(
+
+                  fontSize: 12,
+
+                  color:
+                  Colors.grey.shade700,
                 ),
               ),
 

@@ -10,7 +10,7 @@ class RoutePermissions {
     // conductores
     'conductores_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1'},
 
-    'historial_viajes_page': {'operadorFull'},
+    'historial_viajes_page': {'operadorFull' , 'operador1'},
 
     'detalle_vehiculo_page': {'operadorFull', 'operador1'},
     'campanas_whatsapp_page': {'operadorFull'},
@@ -20,7 +20,7 @@ class RoutePermissions {
     'map_drivers_admin_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1'},
 
     // recargas
-    'recarga_info_page': {'operadorFull', 'adminRecargas'},
+    'recarga_info_page': {'operadorFull', 'adminRecargas' , 'contador'},
 
     /// 🔥 portería
     'registro_porteria_page': {'operadorFull', 'operador_bases'},
@@ -28,20 +28,42 @@ class RoutePermissions {
     'editar_porteria_page': {'operadorFull', 'operador_bases'},
 
     'prices_page': {'operadorFull'},
-    'bonos_admin_page': {'operadorFull'},
-    'detalle_bonos_driver': {'operadorFull'},
-    'historial_bonos_page': {'operadorFull'},
+    'bonos_admin_page': {'operadorFull', 'contador'},
+    'detalle_bonos_driver': {'operadorFull', 'contador'},
+    'historial_bonos_page': {'operadorFull', 'contador'},
 
     // 🔥 WhatsApp MetaX
     'whatsapp_metax_page': {'operadorFull', 'operador1'},
   };
 
-  static bool canRoleAccess(String role, String routeName) {
-    if (role == masterRole) return true;
+  static bool canRoleAccess(
+      String role,
+      String routeName,
+      ) {
 
-    final allowed = routePermissions[routeName];
+    final cleanRole =
+
+    role
+        .trim()
+        .toLowerCase();
+
+    if (cleanRole ==
+        masterRole.toLowerCase()) {
+
+      return true;
+    }
+
+    final allowed =
+    routePermissions[routeName];
+
     if (allowed == null) return false;
 
-    return allowed.contains(role);
+    return allowed.any(
+
+          (r) =>
+
+      r.toLowerCase() ==
+          cleanRole,
+    );
   }
 }

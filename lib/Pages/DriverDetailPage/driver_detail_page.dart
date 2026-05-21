@@ -619,6 +619,8 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (driver.the38EstaBloqueado == true)
+              _buildBloqueadoBanner(isMobile),
             Text(
               driver.id, // ✅
               style: TextStyle(fontSize: fontSize),
@@ -722,12 +724,128 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
                   _formatearNumero(driver.the32SaldoRecarga), // ✅
                 ),
 
+
                 _buildVerificationStatus(driver, fontSize),
               ],
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildBloqueadoBanner(bool isMobile) {
+
+    return Container(
+
+      width: double.infinity,
+
+      margin: const EdgeInsets.only(
+        top: 14,
+        bottom: 20,
+      ),
+
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 14 : 18,
+        vertical: isMobile ? 14 : 18,
+      ),
+
+      decoration: BoxDecoration(
+
+        color: Colors.red.withOpacity(0.08),
+
+        borderRadius: BorderRadius.circular(18),
+
+        border: Border.all(
+          color: Colors.red,
+          width: 1.5,
+        ),
+
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+
+      child: Row(
+
+        children: [
+
+          Container(
+
+            padding: const EdgeInsets.all(10),
+
+            decoration: BoxDecoration(
+
+              color: Colors.red.withOpacity(0.12),
+
+              shape: BoxShape.circle,
+            ),
+
+            child: Icon(
+
+              Icons.block_rounded,
+
+              color: Colors.red.shade700,
+
+              size: isMobile ? 28 : 34,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          Expanded(
+
+            child: Column(
+
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+
+              children: [
+
+                Text(
+
+                  'CONDUCTOR BLOQUEADO',
+
+                  style: TextStyle(
+
+                    color: Colors.red.shade800,
+
+                    fontWeight: FontWeight.w900,
+
+                    fontSize:
+                    isMobile ? 16 : 19,
+
+                    letterSpacing: 0.4,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+
+                  'Este conductor actualmente '
+                      'no puede iniciar sesión '
+                      'ni recibir servicios.',
+
+                  style: TextStyle(
+
+                    color: Colors.red.shade700,
+
+                    fontWeight: FontWeight.w600,
+
+                    fontSize:
+                    isMobile ? 12 : 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1980,77 +2098,6 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
           ),
         ),
 
-        const SizedBox(height: 30),
-
-        SizedBox(
-          height: 40,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              try {
-
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const AlertDialog(
-                    content: Row(
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(width: 15),
-                        Text("Enviando activación..."),
-                      ],
-                    ),
-                  ),
-                );
-
-                final telefono = widget.driver.the07Celular;
-                final nombre = widget.driver.the01Nombres;
-
-                final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-
-                final response = await functions
-                    .httpsCallable('enviarPlantillaActivacion')
-                    .call({
-                  "telefono": telefono,
-                  "nombre": nombre,
-                });
-
-                print("RESPUESTA TEST: ${response.data}");
-
-                if (context.mounted) Navigator.pop(context);
-
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("✅ Activación enviada correctamente"),
-                  ),
-                );
-
-              } catch (e) {
-
-                if (context.mounted) Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("❌ Error: $e"),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            icon: const Icon(Icons.send, color: Colors.white),
-            label: const Text(
-              'ACTIVACION DE CONDUCTORES PENDIENTE POR NOTIFICAR',
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ),
-
         /// 🟠 NUEVO BOTÓN (SOLO AGREGADO)
         const SizedBox(height: 30),
 
@@ -2114,7 +2161,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
             ),
             icon: const Icon(Icons.warning, color: Colors.white),
             label: const Text(
-              'SOLICITAR CORRECCIÓN',
+              'SOLICITAR CORRECCIÓN FOTO DE PERFIL',
               style: TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
@@ -2125,9 +2172,18 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
   Future<void> validarAntesDeActivar(BuildContext context) async {
 
-    /// 🔥 1. VALIDAR SI YA ESTÁ ACTIVADO
-    if (widget.driver.verificacionStatus == "activado") {
-      _showSnackBar(context, 'El conductor ya está activado');
+
+    /// 🔥 SI ESTÁ ACTIVADO Y NO BLOQUEADO
+    if (
+    widget.driver.verificacionStatus == "activado" &&
+        widget.driver.the38EstaBloqueado != true
+    ) {
+
+      _showSnackBar(
+        context,
+        'El conductor ya está activado',
+      );
+
       return;
     }
 
@@ -2548,11 +2604,9 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
 
   void bloquearUsuario(BuildContext context) {
-    String message;
 
-    // Verificar si el usuario ya está bloqueado
     if (widget.driver.the38EstaBloqueado == true) {
-      // Si ya está bloqueado, mostramos el mensaje y salimos
+
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -2563,64 +2617,65 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
               TextButton(
                 child: const Text('OK'),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Cerrar el diálogo
+                  Navigator.of(context).pop();
                 },
               ),
             ],
           );
         },
       );
-      return; // Salir del método si el conductor ya está bloqueado
+
+      return;
     }
 
-    // Verificar si el usuario tiene el status "bloqueo_AJ"
-    if (widget.driver.verificacionStatus == "bloqueo_AJ") {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Bloquear Conductor'),
-            content: const Text('Este conductor ya tiene un bloqueo administrativo'),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Cerrar el diálogo
-                },
-              ),
-            ],
-          );
-        },
-      );
-      return; // Salir del método si el conductor tiene un bloqueo administrativo
-    }
-
-    // Si el usuario no está bloqueado y no tiene bloqueo administrativo, procedemos a bloquearlo
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Bloquear Conductor'),
-          content: const Text('¿Está seguro de bloquear al conductor?'),
+          content: const Text(
+            '¿Está seguro de bloquear al conductor?',
+          ),
           actions: <Widget>[
+
             TextButton(
               child: const Text('Bloquear'),
-              onPressed: () {
-                _saveField("38_Esta_bloqueado", true); // Marcar como bloqueado
-                _saveField("11_Esta_activado", false); // Marcar como no activado
-                _saveField("Verificacion_Status", "bloqueado"); // Actualizar el estado
+              onPressed: () async {
+
+                /// 🔥 ACTUALIZAR DRIVER
+                await FirebaseFirestore.instance
+                    .collection('Drivers')
+                    .doc(widget.driver.id)
+                    .update({
+
+                  "38_Esta_bloqueado": true,
+                  "00_is_active": false,
+                  "00_is_working": false,
+
+                });
+
+                /// 🔥 ELIMINAR LOCATION
+                await FirebaseFirestore.instance
+                    .collection('Locations')
+                    .doc(widget.driver.id)
+                    .delete();
 
                 setState(() {
+
                   widget.driver.the38EstaBloqueado = true;
-                  widget.driver.verificacionStatus = "bloqueado";
+                  widget.driver.the00_is_active= false;
+                  widget.driver.the00_is_working = false;
+
                 });
-                Navigator.of(context).pop(); // Cerrar el diálogo
+
+                Navigator.of(context).pop();
               },
             ),
+
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
+                Navigator.of(context).pop();
               },
             ),
           ],

@@ -537,6 +537,7 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
                   DropdownMenuItem(value: "operador1", child: Text("Operador 1")),
                   DropdownMenuItem(value: "operador2", child: Text("Operador 2")),
                   DropdownMenuItem(value: "operador_bases", child: Text("operador_bases")),
+                  DropdownMenuItem(value: "contador", child: Text("contador")),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -597,12 +598,10 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
       message = 'El operador ya se encuentra activado';
     } else {
       // Condiciones para determinar si se puede activar el usuario
-      if (widget.operador.image.isNotEmpty) {
-        message = 'El operador ya puede ser activado';
-        canActivate = true;
-      } else {
-        message = 'Hay alguna verificación que no se ha hecho y evita activar al operador';
-      }
+      message =
+      'El operador ya puede ser activado';
+
+      canActivate = true;
     }
 
     showDialog(
@@ -616,7 +615,15 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
               TextButton(
                 child: const Text('Activar'),
                 onPressed: () {
-                  _saveField("Verificacion_Status", "activado"); // Llama al método para guardar el campo
+                  _saveField(
+                    "Verificacion_Status",
+                    "activado",
+                  );
+
+                  _saveField(
+                    "activo",
+                    true,
+                  );
 
                   setState(() {
 
@@ -667,7 +674,15 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
             TextButton(
               child: const Text('Bloquear'),
               onPressed: () {
-                _saveField("Verificacion_Status", "bloqueado" ); // Marcar como bloqueado
+                _saveField(
+                  "Verificacion_Status",
+                  "bloqueado",
+                );
+
+                _saveField(
+                  "activo",
+                  false,
+                );
                 setState(() {
                   widget.operador.verificacionStatus = "bloqueado";
                 });

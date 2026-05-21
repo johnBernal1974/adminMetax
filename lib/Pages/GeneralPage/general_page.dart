@@ -156,6 +156,7 @@ class _GeneralPageState extends State<GeneralPage> {
 
               const SizedBox(height: 10),
 
+
               /// 🔥 SOLO MASTER Y OPERADOR FULL
               if (role == 'Master' || role == 'operadorFull')
                 const ExportarUsuariosButton(),
@@ -538,4 +539,5 @@ class ExportarUsuariosButton extends StatelessWidget {
       label: const Text("Descargar usuarios"),
     );
   }
+
 }
