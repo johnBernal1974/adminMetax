@@ -114,6 +114,10 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
                   value: "prende_tu_aplicacion_conductores",
                   child: Text("Prende tu aplicación conductores"),
                 ),
+                DropdownMenuItem(
+                  value: "nuevas_funcionalidades_conductor_oscuro",
+                  child: Text("Nuevas funcionalidades conductor"),
+                ),
 
               ],
               onChanged: (value) {
