@@ -368,12 +368,12 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       final apellidos = (pos['apellidos'] ?? '').toString();
       final imageUrl = (pos['image'] ?? '').toString();
 
-      final emergencyActive = data['emergency_active'] == true;
+      final emergencyActive = pos['emergency_active'] == true;
 
       final geo = pos['geopoint'];
       if (geo is! GeoPoint) continue;
 
-      final heading = (pos['heading'] as num?)?.toDouble() ?? 0.0;
+      final heading = (data['heading'] as num?)?.toDouble() ?? 0.0;
       final latLng = LatLng(geo.latitude, geo.longitude);
 
       // ==============================

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../Pages/ConductoresPage/conductores_page.dart';
 import '../models/conductor_model.dart';
 
 class DriverProvider with ChangeNotifier {
@@ -223,19 +224,21 @@ class DriverProvider with ChangeNotifier {
       if (rawFecha is Timestamp) {
         return rawFecha.toDate();
       } else if (rawFecha is String) {
-        return DateTime.tryParse(rawFecha) ?? DateTime(2000);
+
+        return parseFechaColombia(rawFecha) ??
+            DateTime(2000);
       } else {
         return DateTime(2000);
       }
     }
 
     /// 🔥 ORDEN FINAL (YA NO ROMPE NUNCA)
-    allDocs.sort((a, b) {
-      final fechaA = parseFecha(a["10_Fecha_Registro_Timestamp"]);
-      final fechaB = parseFecha(b["10_Fecha_Registro_Timestamp"]);
-
-      return fechaB.compareTo(fechaA);
-    });
+    // allDocs.sort((a, b) {
+    //   final fechaA = parseFecha(a["10_Fecha_Registro_Timestamp"]);
+    //   final fechaB = parseFecha(b["10_Fecha_Registro_Timestamp"]);
+    //
+    //   return fechaB.compareTo(fechaA);
+    // });
 
     drivers.clear();
     List<Driver> tempDrivers = [];

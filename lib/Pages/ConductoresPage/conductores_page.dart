@@ -746,6 +746,21 @@ class _ConductoresPageState extends State<ConductoresPage> {
               }).toList(),
             );
 
+            /// 🔵 PROCESANDO
+            final procesando = ordenarPorFecha(
+              filteredConductores.where((d) {
+
+                final estado = (d.verificacionStatus ?? "")
+                    .toLowerCase()
+                    .trim();
+
+                return estado == "procesando" &&
+                    !tieneCorregida(d) &&
+                    !tieneRechazada(d);
+
+              }).toList(),
+            );
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -833,6 +848,27 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
                     _buildDriverTable(
                       rechazados,
+                      getStatusColor,
+                    ),
+                  ],
+
+                  /// 🔵 PROCESANDO
+                  if (procesando.isNotEmpty) ...[
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      "⏳ Procesando",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const Divider(),
+
+                    _buildDriverTable(
+                      procesando,
                       getStatusColor,
                     ),
                   ],

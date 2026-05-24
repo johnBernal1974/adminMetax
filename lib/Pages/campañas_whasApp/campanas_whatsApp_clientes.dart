@@ -20,7 +20,7 @@ class _CampanasWhatsAppClientesPageState extends State<CampanasWhatsAppClientesP
 
   final TextEditingController nombreController = TextEditingController();
 
-  String plantillaSeleccionada = "promo_primer_viaje_7000";
+  String plantillaSeleccionada = "primer_viaje_clientes";
 
   Future<void> enviarCampana() async {
     final nombre = nombreController.text.trim();
@@ -97,7 +97,7 @@ class _CampanasWhatsAppClientesPageState extends State<CampanasWhatsAppClientesP
 
                 DropdownMenuItem(
 
-                  value: "promo_primer_viaje_7000",
+                  value: "primer_viaje_clientes",
 
                   child: Text(
                     "Promo primer viaje \$7.000",
