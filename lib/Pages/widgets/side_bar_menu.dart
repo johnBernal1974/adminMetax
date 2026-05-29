@@ -109,6 +109,13 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('conductores_page'),
                 ),
 
+              if (_canSee(role, 'conductores_page'))
+                DrawerListTitle(
+                  title: "Estado Conductores",
+                  icon: Icons.monitor_heart_outlined,
+                  press: () => _go('drivers_activity_admin_page'),
+                ),
+
               if (_canSee(role, 'usuarios_page'))
                 DrawerListTitle(
                   title: "Usuarios",

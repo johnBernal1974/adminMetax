@@ -174,7 +174,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   Future<void> _loadIcons() async {
     try {
-      const cfg = ImageConfiguration(size: Size(40, 50), devicePixelRatio: 4.0);
+      const cfg = ImageConfiguration(size: Size(30, 40), devicePixelRatio: 4.0);
       _taxiIconNormal =
       await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores.png');
       _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(
@@ -360,7 +360,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       // 🔥 REGLA CLAVE:
       // ❌ ocultar inactivos SOLO si NO están en servicio
       if (status != 'driver_working' && actividad == "inactivo") {
-        print("⛔ Driver ${doc.id} eliminado del mapa (inactivo)");
+
         continue;
       }
 
@@ -1067,8 +1067,8 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
       final minutos = now.difference(updatedAt).inMinutes;
 
-      if (minutos <= 1) return "activo";
-      if (minutos <= 3) return "quieto";
+      if (minutos <= 5) return "activo";
+      if (minutos <= 720) return "quieto";
 
       return "inactivo";
 
@@ -1076,9 +1076,6 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       return "inactivo";
     }
   }
-
-
-
 }
 
 class _EmergencyDriver {

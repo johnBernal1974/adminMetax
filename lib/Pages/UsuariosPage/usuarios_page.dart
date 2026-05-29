@@ -58,6 +58,10 @@ class _UsuariosPageState extends State<UsuariosPage> {
         return Colors.blue;
       }
 
+      if (client.status == 'activacion_parcial') {
+        return Colors.black87;
+      }
+
       // ⚪ registrado
       if (client.status == 'registrado') {
         return Colors.grey;
@@ -84,7 +88,9 @@ class _UsuariosPageState extends State<UsuariosPage> {
           return false;
         }
       } else {
-        if (!(estado.contains("registrado") || estado.contains("procesando"))) {
+        if (!(estado.contains("registrado") ||
+            estado.contains("procesando") ||
+            estado.contains("activacion_parcial"))) {
           return false;
         }
       }
@@ -95,6 +101,41 @@ class _UsuariosPageState extends State<UsuariosPage> {
           client.celular.toLowerCase().contains(searchQuery.toLowerCase());
 
     }).toList();
+
+    filteredClientes.sort((a, b) {
+
+      // 🔥 activacion_parcial primero
+      if (a.status == 'activacion_parcial' &&
+          b.status != 'activacion_parcial') {
+        return -1;
+      }
+
+      if (a.status != 'activacion_parcial' &&
+          b.status == 'activacion_parcial') {
+        return 1;
+      }
+
+      // 🟣 corregidas después
+      bool aCorregido =
+          a.fotoPerfilEstado == 'corregida' ||
+              a.cedulaFrontalEstado == 'corregida' ||
+              a.cedulaReversoEstado == 'corregida';
+
+      bool bCorregido =
+          b.fotoPerfilEstado == 'corregida' ||
+              b.cedulaFrontalEstado == 'corregida' ||
+              b.cedulaReversoEstado == 'corregida';
+
+      if (aCorregido && !bCorregido) {
+        return -1;
+      }
+
+      if (!aCorregido && bCorregido) {
+        return 1;
+      }
+
+      return 0;
+    });
     totalClients = filteredClientes.length;
 
     int countByStatus(String status) {
@@ -106,6 +147,9 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
           case 'procesando':
             return client.status == 'procesando';
+
+          case 'activacion_parcial':
+            return client.status == 'activacion_parcial';
 
           case 'activado':
             return client.status == 'activado';

@@ -4056,15 +4056,39 @@ class ComentariosAdminWidget extends StatelessWidget {
 
                 if (controller.text.trim().isEmpty) return;
 
+                final comentario = controller.text.trim();
+
+                /// 🔥 GUARDA EL COMENTARIO
                 await FirebaseFirestore.instance
                     .collection("Drivers")
                     .doc(driverId)
                     .collection("comentarios_admin")
                     .add({
-                  "texto": controller.text.trim(),
+
+                  "texto": comentario,
+
                   "fecha": FieldValue.serverTimestamp(),
+
                   "operador": nombreOperador,
-                  "operadorId": FirebaseAuth.instance.currentUser!.uid,
+
+                  "operadorId":
+                  FirebaseAuth.instance.currentUser!.uid,
+                });
+
+                /// 🔥 ACTUALIZA ESTADO PRINCIPAL
+                await FirebaseFirestore.instance
+                    .collection("Drivers")
+                    .doc(driverId)
+                    .update({
+
+                  "revision_estado": "comentario",
+
+                  "revision_comentario": comentario,
+
+                  "revision_fecha":
+                  FieldValue.serverTimestamp(),
+
+                  "revision_por": nombreOperador,
                 });
 
                 Navigator.pop(context);

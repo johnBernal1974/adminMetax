@@ -529,15 +529,15 @@ class _OperadorDetailPageState extends State<OperadorDetailPage> {
 
                   // 🔥 ROLES DEFINIDOS
                   DropdownMenuItem(value: "Master", child: Text("Master")),
-                  DropdownMenuItem(value: "operadorFull", child: Text("Operador Full")),
+                  DropdownMenuItem(value: "operadorFull", child: Text("Operador Full")), //pato
                   DropdownMenuItem(value: "operadorSeguimientoMap", child: Text("Operador Mapa")),
                   DropdownMenuItem(value: "adminRecargas", child: Text("Admin Recargas")),
 
                   // 🆕 nuevos
-                  DropdownMenuItem(value: "operador1", child: Text("Operador 1")),
-                  DropdownMenuItem(value: "operador2", child: Text("Operador 2")),
-                  DropdownMenuItem(value: "operador_bases", child: Text("operador_bases")),
-                  DropdownMenuItem(value: "contador", child: Text("contador")),
+                  DropdownMenuItem(value: "operador1", child: Text("Operador 1")),//Lucila
+                  DropdownMenuItem(value: "operador2", child: Text("Operador 2")),// Solo mapa y whatsapp
+                  DropdownMenuItem(value: "operador_bases", child: Text("operador_bases")), //Andrea
+                  DropdownMenuItem(value: "contador", child: Text("contador")),//contador
                 ],
                 onChanged: (value) {
                   setState(() {

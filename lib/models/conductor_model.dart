@@ -62,6 +62,11 @@ class Driver {
 
   String? the10FechaRegistroString;
 
+  String revisionEstado;
+  String revisionComentario;
+  Timestamp? revisionFecha;
+  String revisionPor;
+
 
   Driver({
     required this.id,
@@ -113,6 +118,10 @@ class Driver {
     required this.vehiculoActivoId,
     required this.placaActiva,
     required this.the10FechaRegistroString,
+    required this.revisionEstado,
+    required this.revisionComentario,
+    required this.revisionFecha,
+    required this.revisionPor,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -178,6 +187,17 @@ class Driver {
       fotoPerfilTomada: json["foto_perfil_tomada"] ?? false,
       vehiculoActivoId: json["vehiculoActivoId"] ?? '',
       placaActiva: json["placaActiva"] ?? '',
+      revisionEstado:
+      json["revision_estado"] ?? '',
+
+      revisionComentario:
+      json["revision_comentario"] ?? '',
+
+      revisionFecha:
+      json["revision_fecha"],
+
+      revisionPor:
+      json["revision_por"] ?? '',
     );
   }
 
@@ -233,7 +253,10 @@ class Driver {
     "foto_perfil_tomada": fotoPerfilTomada,
     "vehiculoActivoId": vehiculoActivoId,
     "placaActiva": placaActiva,
-
+    "revision_estado": revisionEstado,
+    "revision_comentario": revisionComentario,
+    "revision_fecha": revisionFecha,
+    "revision_por": revisionPor,
 
   };
 }

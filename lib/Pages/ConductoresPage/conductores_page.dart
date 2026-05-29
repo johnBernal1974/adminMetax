@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../common/main_layout.dart';
@@ -8,6 +9,8 @@ import '../../providers/driver_provider.dart';
 import '../../src/color.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
 import 'package:intl/intl.dart';
+import 'dart:html' as html;
+import 'dart:convert';
 
 
 class ConductoresPage extends StatefulWidget {
@@ -286,9 +289,16 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  List ordenarPorFecha(List lista) {
+  List ordenarConductores(List lista) {
 
     lista.sort((a, b) {
+
+      int prioridadA = prioridadRevision(a);
+      int prioridadB = prioridadRevision(b);
+
+      if (prioridadA != prioridadB) {
+        return prioridadA.compareTo(prioridadB);
+      }
 
       final fechaA = a.the10FechaRegistroTimestamp;
       final fechaB = b.the10FechaRegistroTimestamp;
@@ -301,6 +311,30 @@ class _ConductoresPageState extends State<ConductoresPage> {
     });
 
     return lista;
+  }
+
+  int prioridadRevision(Driver driver) {
+
+    final revisado =
+        driver.revisionEstado == "revisado";
+
+    /// 🔥 CORREGIDOS
+    if (tieneCorregida(driver)) {
+      return 0;
+    }
+
+    /// 🔥 RECHAZADOS
+    if (tieneRechazada(driver)) {
+      return 1;
+    }
+
+    /// 🔥 PENDIENTES SIN REVISAR
+    if (!revisado) {
+      return 2;
+    }
+
+    /// 🔥 REVISADOS
+    return 3;
   }
 
   Widget _alertasDocumentos(
@@ -386,21 +420,33 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
             return GestureDetector(
 
-              onTap: () {
+              onTap: () async {
 
-                Navigator.push(
+                await FirebaseFirestore.instance
+                    .collection("Drivers")
+                    .doc(driver.id)
+                    .update({
 
-                  context,
+                  "revision_estado": "revisado",
+                  "revision_fecha": FieldValue.serverTimestamp(),
 
-                  MaterialPageRoute(
+                });
+                if(context.mounted){
+                  Navigator.push(
 
-                    builder: (context) =>
+                    context,
 
-                        DriverDetailPage(
-                          driver: driver,
-                        ),
-                  ),
-                );
+                    MaterialPageRoute(
+
+                      builder: (context) =>
+
+                          DriverDetailPage(
+                            driver: driver,
+                          ),
+                    ),
+                  );
+                }
+
               },
 
               child: Container(
@@ -713,7 +759,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
           builder: (_) {
 
             /// 🔵 REGISTRADOS
-            final registrados = ordenarPorFecha(
+            final registrados = ordenarConductores(
               filteredConductores.where((d) {
 
                 final estado = (d.verificacionStatus ?? "")
@@ -728,7 +774,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
             );
 
             /// 🟣 CORREGIDOS
-            final corregidos = ordenarPorFecha(
+            final corregidos = ordenarConductores(
               filteredConductores.where((d) {
 
                 return tieneCorregida(d);
@@ -737,7 +783,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
             );
 
             /// 🟠 RECHAZADOS
-            final rechazados = ordenarPorFecha(
+            final rechazados = ordenarConductores(
               filteredConductores.where((d) {
 
                 return tieneRechazada(d) &&
@@ -747,7 +793,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
             );
 
             /// 🔵 PROCESANDO
-            final procesando = ordenarPorFecha(
+            final procesando = ordenarConductores(
               filteredConductores.where((d) {
 
                 final estado = (d.verificacionStatus ?? "")
@@ -781,7 +827,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   const Divider(),
 
                   _buildDriverTable(
-                    ordenarPorFecha(filteredConductores),
+                    ordenarConductores(filteredConductores),
                     getStatusColor,
                   ),
                 ]
@@ -883,6 +929,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
 
 
+
   Widget _buildSearchField() {
     return SizedBox(
       width: 350,
@@ -936,6 +983,12 @@ class _ConductoresPageState extends State<ConductoresPage> {
             ),
             DataColumn(
               label: Text(
+                'Revisión',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
                 'Nombre',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -976,11 +1029,25 @@ class _ConductoresPageState extends State<ConductoresPage> {
           ],
           rows: filteredConductores.map((driver) {
             return DataRow(
-              onSelectChanged: (_) {
+              onSelectChanged: (_) async {
+
+                await FirebaseFirestore.instance
+                    .collection("Drivers")
+                    .doc(driver.id)
+                    .update({
+
+                  "revision_estado": "revisado",
+                  "revision_fecha": FieldValue.serverTimestamp(),
+
+                });
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => DriverDetailPage(driver: driver),
+                    builder: (context) =>
+                        DriverDetailPage(
+                          driver: driver,
+                        ),
                   ),
                 );
               },
@@ -993,6 +1060,113 @@ class _ConductoresPageState extends State<ConductoresPage> {
                       shape: BoxShape.circle,
                       color: getStatusColor(driver),
                     ),
+                  ),
+                ),
+                DataCell(
+                  Builder(
+                    builder: (_) {
+
+                      final revisado =
+                          driver.revisionEstado == "revisado";
+
+                      final comentario =
+                          (driver.revisionComentario ?? "").isNotEmpty;
+
+                      final activado =
+                          (driver.verificacionStatus ?? "")
+                              .toLowerCase()
+                              .trim() == "activado";
+
+                      /// 🟢 ACTIVADO
+                      if (activado) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            "Activado",
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        );
+                      }
+
+                      /// 🟠 COMENTARIO
+                      if (comentario) {
+                        return Tooltip(
+                          message: driver.revisionComentario ?? "",
+                          preferBelow: false,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              "Comentario",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      /// 🔵 REVISADO
+                      if (revisado) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            "Revisado",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        );
+                      }
+
+                      /// 🔴 PENDIENTE
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          "Pendiente",
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 DataCell(
@@ -1078,13 +1252,28 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 DataCell(
                   IconButton(
                     icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DriverDetailPage(driver: driver),
-                        ),
-                      );
+                    onPressed: () async {
+
+                      await FirebaseFirestore.instance
+                          .collection("Drivers")
+                          .doc(driver.id)
+                          .update({
+
+                        "revision_estado": "revisado",
+                        "revision_fecha": FieldValue.serverTimestamp(),
+
+                      });
+                      if(context.mounted){
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                DriverDetailPage(
+                                  driver: driver,
+                                ),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
@@ -1298,4 +1487,5 @@ DateTime? parseFechaColombia(String input) {
     return null;
   }
 }
+
 

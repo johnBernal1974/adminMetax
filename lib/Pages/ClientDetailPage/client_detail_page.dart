@@ -83,11 +83,15 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
 
   Color getStatusColor() {
     switch (widget.client.status) {
+
       case "registrado":
         return Colors.grey;
 
       case "procesando":
         return Colors.blue;
+
+      case "activacion_parcial":
+        return Colors.black87;
 
       case "activado":
         return Colors.green;
@@ -1486,12 +1490,17 @@ El equipo de Metax''';
     String statusText = '';
 
     switch (widget.client.status) {
+
       case "registrado":
         statusText = 'Registrado';
         break;
 
       case "procesando":
         statusText = 'En validación';
+        break;
+
+      case "activacion_parcial":
+        statusText = 'Activación parcial';
         break;
 
       case "activado":

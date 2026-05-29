@@ -27,6 +27,7 @@ import 'Pages/bonos_admin_page/detalle_bonos_page.dart';
 import 'Pages/bonos_admin_page/historial_bonos_page.dart';
 import 'Pages/campañas_whasApp/campanas_whatsApp_clientes.dart';
 import 'Pages/campañas_whasApp/campañas_whasApp.dart';
+import 'Pages/drivers_activity_admin_page.dart';
 import 'Pages/paginasExternasPage/verificacion_antecedentes_page.dart';
 import 'Pages/porterias/editar_porteria_page.dart';
 import 'Pages/porterias/historial_porteria_page.dart';
@@ -152,6 +153,7 @@ class MyApp extends StatelessWidget {
           // =========================
           if (name == 'general_page') return _guardedRoute(const GeneralPage(), settings);
           if (name == 'conductores_page') return _guardedRoute(ConductoresPage(), settings);
+          if (name == 'drivers_activity_admin_page') { return _guardedRoute( const DriversActivityAdminPage(), settings,);}
           if (name == 'usuarios_page') return _guardedRoute(const UsuariosPage(), settings);
           if (name == 'operadores_page') return _guardedRoute(const OperadoresPage(), settings);
           if (name == 'antecedentes_page') return _guardedRoute(const Paginaantecedentes(), settings);

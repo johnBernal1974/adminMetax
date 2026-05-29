@@ -436,6 +436,148 @@ class _MainLayoutState
             },
           ),
 
+          /// 🔥 ESTADO CONDUCTORES
+          StreamBuilder<DocumentSnapshot>(
+
+            stream: FirebaseFirestore.instance
+                .collection('system_metrics')
+                .doc('drivers_status')
+                .snapshots(),
+
+            builder: (context, snapshot) {
+
+              int dormidos = 0;
+
+              int sinLocation = 0;
+
+              if (snapshot.hasData &&
+                  snapshot.data!.exists) {
+
+                final data =
+                snapshot.data!.data()
+                as Map<String, dynamic>;
+
+                dormidos =
+                    data['dormidos'] ?? 0;
+
+                sinLocation =
+                    data['sinLocation'] ?? 0;
+              }
+
+              final totalProblemas =
+                  dormidos + sinLocation;
+
+              final hayProblemas =
+                  totalProblemas > 0;
+
+              return Padding(
+
+                padding:
+                const EdgeInsets.only(
+                  right: 12,
+                ),
+
+                child: InkWell(
+
+                  borderRadius:
+                  BorderRadius.circular(30),
+
+                  onTap: () {
+
+                    Navigator.pushNamed(
+                      context,
+                      'drivers_activity_admin_page',
+                    );
+                  },
+
+                  child: AnimatedContainer(
+
+                    duration:
+                    const Duration(
+                      milliseconds: 400,
+                    ),
+
+                    padding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+
+                    decoration: BoxDecoration(
+
+                      color:
+
+                      hayProblemas
+
+                          ? (
+
+                          blink
+
+                              ? Colors.purple
+                              .shade700
+
+                              : Colors.purple
+                              .shade400
+
+                      )
+
+                          : Colors.green
+                          .shade700,
+
+                      borderRadius:
+                      BorderRadius.circular(
+                        30,
+                      ),
+                    ),
+
+                    child: Row(
+
+                      children: [
+
+                        const Icon(
+
+                          Icons
+                              .monitor_heart_outlined,
+
+                          color:
+                          Colors.white,
+
+                          size: 18,
+                        ),
+
+                        if (hayProblemas)
+
+                          Padding(
+
+                            padding:
+                            const EdgeInsets.only(
+                              left: 6,
+                            ),
+
+                            child: Text(
+
+                              totalProblemas
+                                  .toString(),
+
+                              style:
+                              const TextStyle(
+
+                                color:
+                                Colors.white,
+
+                                fontWeight:
+                                FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
           /// 🔥 OPERADOR
           Consumer<OperadorProvider>(
 
