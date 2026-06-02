@@ -907,9 +907,20 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
             final role =
             (context.read<OperadorProvider>().rolActual ?? '').trim();
 
-            final backRoute = (role == 'operadorSeguimientoMap')
-                ? 'conductores_page'
-                : 'general_page';
+            String backRoute;
+
+            switch (role) {
+              case 'operadorSeguimientoMap':
+                backRoute = 'conductores_page';
+                break;
+
+              case 'operador2':
+                backRoute = 'whatsapp_metax_page';
+                break;
+
+              default:
+                backRoute = 'general_page';
+            }
 
             Navigator.pushNamedAndRemoveUntil(
               context,

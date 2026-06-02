@@ -23,7 +23,7 @@ class RoutePermissions {
     'campanas_whatsapp_clientes_page': {'operadorFull'},
 
     // mapa
-    'map_drivers_admin_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1'},
+    'map_drivers_admin_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1', 'operador2'},
 
     // recargas
     'recarga_info_page': {'operadorFull', 'adminRecargas' , 'contador'},
@@ -39,7 +39,7 @@ class RoutePermissions {
     'historial_bonos_page': {'operadorFull', 'contador'},
 
     // 🔥 WhatsApp MetaX
-    'whatsapp_metax_page': {'operadorFull', 'operador1'},
+    'whatsapp_metax_page': {'operadorFull', 'operador1', 'operador2' },
   };
 
   static bool canRoleAccess(

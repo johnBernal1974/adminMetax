@@ -13,11 +13,21 @@ class DriverProvider with ChangeNotifier {
   int travelHistoryCarroCount = 0; // Variable para contar "carro"
 
   DriverProvider() {
+
+    print(
+        "🔥🔥🔥 DriverProvider CREADO"
+    );
+
     _ref = FirebaseFirestore.instance.collection('Drivers');
-    _travelHistoryRef = FirebaseFirestore.instance.collection('TravelHistory');
-    _travelHistoryCount = 0; // Inicializamos en 0
+
+    _travelHistoryRef =
+        FirebaseFirestore.instance.collection('TravelHistory');
+
+    _travelHistoryCount = 0;
+
     fetchDrivers();
-    fetchTravelHistoryCount(); // Llamamos al método para obtener el count inicial
+
+    fetchTravelHistoryCount();
   }
 
   bool get isLoading => _loading;
@@ -32,6 +42,9 @@ class DriverProvider with ChangeNotifier {
   }
 
   Future<void> fetchDrivers() async {
+    print(
+        "🔥 fetchDrivers EJECUTADO ${DateTime.now()}"
+    );
     setLoading(true);
     try {
       QuerySnapshot querySnapshot = await _ref.get();
@@ -40,6 +53,7 @@ class DriverProvider with ChangeNotifier {
 
       List<Driver> tempDrivers = [];
 
+      int lecturasVehiculos = 0;
       for (var doc in querySnapshot.docs) {
 
         final data =
@@ -66,7 +80,7 @@ class DriverProvider with ChangeNotifier {
                 .get();
 
             if (vehiculoDoc.exists) {
-
+              lecturasVehiculos++;
               final vehiculo =
               vehiculoDoc.data()!;
 
@@ -95,6 +109,9 @@ class DriverProvider with ChangeNotifier {
       _drivers = tempDrivers;
 
       print("Drivers parseados: ${_drivers.length}");
+      print(
+          "🚗 Vehículos leídos General: $lecturasVehiculos"
+      );
 
       notifyListeners();
     } catch (error) {
@@ -103,6 +120,7 @@ class DriverProvider with ChangeNotifier {
     } finally {
       setLoading(false);
     }
+
   }
 
   List<Driver> getDriversByRole(String role) {
@@ -173,8 +191,12 @@ class DriverProvider with ChangeNotifier {
 
 
   Future<void> fetchTravelHistoryCount() async {
+    print("🔥 fetchTravelHistoryCount EJECUTADO");
     try {
       QuerySnapshot querySnapshot = await _travelHistoryRef.get();
+      print(
+          "🚕 TravelHistory docs: ${querySnapshot.docs.length}"
+      );
       _travelHistoryCount = querySnapshot.size;
 
       // Filtrar y contar los documentos con rol "moto"
@@ -204,20 +226,14 @@ class DriverProvider with ChangeNotifier {
         .orderBy("10_Fecha_Registro_Timestamp", descending: true)
         .get();
 
-    /// 2️⃣ ACTIVADOS
-    final snapshotActivados = await FirebaseFirestore.instance
-        .collection("Drivers")
-        .where("Verificacion_Status", isEqualTo: "activado")
-        .orderBy("10_Fecha_Registro_Timestamp", descending: true)
-        .get();
-
-
-
-    /// 🔥 UNIR TODO
+    /// 🔥 SOLO PENDIENTES AL INICIO
     final allDocs = [
       ...snapshotBase.docs,
-      ...snapshotActivados.docs, // 🔥 TODOS los activados
     ];
+
+    print("🚕 Registrados/Procesando: ${snapshotBase.docs.length}");
+
+    print("🚕 Total: ${allDocs.length}");
 
     /// 🔥 FUNCIÓN SEGURA PARA CONVERTIR FECHAS
     DateTime parseFecha(dynamic rawFecha) {
@@ -232,17 +248,12 @@ class DriverProvider with ChangeNotifier {
       }
     }
 
-    /// 🔥 ORDEN FINAL (YA NO ROMPE NUNCA)
-    // allDocs.sort((a, b) {
-    //   final fechaA = parseFecha(a["10_Fecha_Registro_Timestamp"]);
-    //   final fechaB = parseFecha(b["10_Fecha_Registro_Timestamp"]);
-    //
-    //   return fechaB.compareTo(fechaA);
-    // });
+
 
     drivers.clear();
     List<Driver> tempDrivers = [];
 
+    int lecturasVehiculos = 0;
     for (var e in allDocs) {
 
       final data = e.data();
@@ -264,7 +275,7 @@ class DriverProvider with ChangeNotifier {
             .get();
 
         if (vehiculoDoc.exists) {
-
+          lecturasVehiculos++;
           final vehiculo =
           vehiculoDoc.data()!;
 
@@ -282,9 +293,47 @@ class DriverProvider with ChangeNotifier {
         Driver.fromJson(data),
       );
     }
+    print(
+        "🚗 Lecturas vehículos: $lecturasVehiculos"
+    );
 
     drivers.clear();
     drivers.addAll(tempDrivers);
+
+    notifyListeners();
+  }
+
+  Future<void> fetchDriversActivos() async {
+
+    final snapshotActivados = await FirebaseFirestore.instance
+        .collection("Drivers")
+        .where(
+      "Verificacion_Status",
+      isEqualTo: "activado",
+    )
+        .orderBy(
+      "10_Fecha_Registro_Timestamp",
+      descending: true,
+    )
+        .get();
+
+    print(
+        "🟢 Activados cargados: ${snapshotActivados.docs.length}"
+    );
+
+    drivers.clear();
+
+    drivers.addAll(
+      snapshotActivados.docs.map((e) {
+
+        final data = e.data();
+
+        data["id"] = e.id;
+
+        return Driver.fromJson(data);
+
+      }).toList(),
+    );
 
     notifyListeners();
   }

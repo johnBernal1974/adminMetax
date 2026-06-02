@@ -38,7 +38,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
       Provider.of<DriverProvider>(context, listen: false)
           .fetchDriversInicial();
     });
-    cargarErroresVehiculos();
+    //cargarErroresVehiculos();
   }
 
   int getPrioridad(Driver driver) {
@@ -103,6 +103,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
     final snapshot = await FirebaseFirestore.instance
         .collectionGroup("vehiculos")
         .get();
+    print("🔥 Vehículos encontrados*******************: ${snapshot.docs.length}");
 
     Map<String, String> mapa = {};
 
@@ -192,9 +193,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
           .toString()
           .trim()
           .toLowerCase();
-
-      print("👉 estado limpio: [$estado]"); // DEBUG
-
       if (mostrarSoloActivosBloqueados) {
         return estado.contains("activado") ||
             estado.contains("bloqueado");
@@ -586,10 +584,29 @@ class _ConductoresPageState extends State<ConductoresPage> {
             const SizedBox(height: 20),
 
             ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+
+                final provider =
+                Provider.of<DriverProvider>(
+                  context,
+                  listen: false,
+                );
+
+                if (!mostrarSoloActivosBloqueados) {
+
+                  await provider.fetchDriversActivos();
+
+                } else {
+
+                  await provider.fetchDriversInicial();
+
+                }
+
                 setState(() {
+
                   mostrarSoloActivosBloqueados =
                   !mostrarSoloActivosBloqueados;
+
                 });
               },
               icon: Icon(
@@ -725,11 +742,31 @@ class _ConductoresPageState extends State<ConductoresPage> {
           children: [
             _buildSearchField(),
             ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+
+                final provider =
+                Provider.of<DriverProvider>(
+                  context,
+                  listen: false,
+                );
+
+                if (!mostrarSoloActivosBloqueados) {
+
+                  await provider.fetchDriversActivos();
+
+                } else {
+
+                  await provider.fetchDriversInicial();
+
+                }
+
                 setState(() {
+
                   mostrarSoloActivosBloqueados =
                   !mostrarSoloActivosBloqueados;
+
                 });
+
               },
               icon: Icon(
                 mostrarSoloActivosBloqueados

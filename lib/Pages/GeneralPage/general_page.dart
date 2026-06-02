@@ -31,10 +31,10 @@ class _GeneralPageState extends State<GeneralPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DriverProvider>(context, listen: false)
-          .fetchDrivers();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   Provider.of<DriverProvider>(context, listen: false)
+    //       .fetchDrivers();
+    // });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final clientProvider = Provider.of<ClientProvider>(context, listen: false);

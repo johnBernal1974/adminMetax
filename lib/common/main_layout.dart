@@ -61,12 +61,21 @@ class _MainLayoutState
   @override
   Widget build(BuildContext context) {
 
+    final role =
+    (context.read<OperadorProvider>()
+        .rolActual ??
+        '')
+        .trim();
+
+    final isMobile =
+        MediaQuery.of(context).size.width < 1100;
+
     return Scaffold(
 
       backgroundColor: blancoCards,
 
       drawer:
-      MediaQuery.of(context).size.width < 800
+      MediaQuery.of(context).size.width < 1100
           ? const SideBar()
           : null,
 
@@ -86,7 +95,12 @@ class _MainLayoutState
           color: Colors.black,
         ),
 
-        actions: [
+
+          actions: [
+
+      if (role == 'Master' ||
+      role == 'operadorFull' ||
+      role == 'contador') ...[
 
           /// 🔥 ALERTA VIAJES
           StreamBuilder<QuerySnapshot>(
@@ -215,9 +229,9 @@ class _MainLayoutState
                         milliseconds: 400),
 
                     padding:
-                    const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
+                    EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 14,
+                      vertical: isMobile ? 5 : 8,
                     ),
 
                     decoration: BoxDecoration(
@@ -261,7 +275,7 @@ class _MainLayoutState
                               .check_circle,
 
                           color: Colors.white,
-                          size: 18,
+                          size: isMobile ? 14 : 18,
                         ),
 
                         if (hayProblemas)
@@ -331,8 +345,8 @@ class _MainLayoutState
               return Padding(
 
                 padding:
-                const EdgeInsets.only(
-                  right: 12,
+                EdgeInsets.only(
+                  right: isMobile ? 4 : 12,
                 ),
 
                 child: InkWell(
@@ -577,6 +591,7 @@ class _MainLayoutState
               );
             },
           ),
+      ],
 
           /// 🔥 OPERADOR
           Consumer<OperadorProvider>(
@@ -627,39 +642,21 @@ class _MainLayoutState
 
                   children: [
 
-                    const CircleAvatar(
-
-                      radius: 14,
-
-                      backgroundColor:
-                      Colors.white,
-
-                      child: Icon(
-                        Icons.person,
-                        size: 16,
-                        color: Colors.black,
-                      ),
-                    ),
-
-                    const SizedBox(
-                        width: 8),
-
                     Text(
-
-                      "$nombre $apellido",
-
+                      nombre,
                       style: const TextStyle(
                         color: Colors.black,
-                        fontWeight:
-                        FontWeight.bold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
-                    ),
+                    )
                   ],
                 ),
               );
             },
           ),
         ],
+
       ),
 
       body: Row(
@@ -669,7 +666,7 @@ class _MainLayoutState
           if (MediaQuery.of(context)
               .size
               .width >
-              800)
+              1100)
 
             const SizedBox(
               width: 300,

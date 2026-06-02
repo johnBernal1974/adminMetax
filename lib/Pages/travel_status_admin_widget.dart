@@ -104,6 +104,10 @@ class TravelStatusAdminWidget extends StatelessWidget {
 
         }).toList();
 
+        print(
+            "🚕 Viajes activos: ${viajes.length}"
+        );
+
         if (viajes.isEmpty) {
           return const Center(
             child: Text(
@@ -219,16 +223,27 @@ class TravelStatusAdminWidget extends StatelessWidget {
 
                             ? null
 
-                            : FirebaseFirestore.instance
-                            .collection('Clients')
-                            .doc(data['id'])
-                            .get(),
+                            : (() {
+
+                          print(
+                              "👤 Leyendo cliente: ${data['id']}"
+                          );
+
+                          return FirebaseFirestore.instance
+                              .collection('Clients')
+                              .doc(data['id'])
+                              .get();
+
+                        })(),
+
 
                         builder: (context, snapshot) {
 
                           if (!snapshot.hasData ||
                               snapshot.data == null ||
                               !snapshot.data!.exists) {
+
+
 
                             return const Text(
                               "👤 Sin cliente",
@@ -265,10 +280,20 @@ class TravelStatusAdminWidget extends StatelessWidget {
 
                             ? null
 
-                            : FirebaseFirestore.instance
-                            .collection('Drivers')
-                            .doc(data['idDriver'])
-                            .get(),
+                            : (() {
+
+                          print(
+                              "🚕 Leyendo conductor: ${data['idDriver']}"
+                          );
+
+                          return FirebaseFirestore.instance
+                              .collection('Drivers')
+                              .doc(data['idDriver'])
+                              .get();
+
+                        })(),
+
+
                         builder: (context, snapshot) {
 
                           if (!snapshot.hasData ||

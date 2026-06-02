@@ -7,6 +7,8 @@ class ClientProvider with ChangeNotifier {
   bool _loading = false;
   late List<Client> _clients = [];
 
+  List<Client> _allClients = [];
+
   ClientProvider() {
     _ref = FirebaseFirestore.instance.collection('Clients');
     fetchClients();
@@ -22,17 +24,28 @@ class ClientProvider with ChangeNotifier {
 
   Future<void> fetchClients() async {
     try {
+
       final snapshot = await FirebaseFirestore.instance
           .collection('Clients')
-          .get(); // 🔥 traer TODOS
+          .get();
 
-      _clients = snapshot.docs
+      _allClients = snapshot.docs
           .map((doc) => Client.fromJson(doc.data()))
           .toList();
 
+      _clients = List.from(_allClients);
+
+      print(
+          "👥 Clients cargados: ${_clients.length}"
+      );
+
       notifyListeners();
+
     } catch (e) {
-      print('Error cargando clientes: $e');
+
+      print(
+          'Error cargando clientes: $e'
+      );
     }
   }
 
@@ -72,22 +85,53 @@ class ClientProvider with ChangeNotifier {
   }
 
   Future<void> searchClients(String query) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('Clients')
-          .get();
 
-      _clients = snapshot.docs
-          .map((doc) => Client.fromJson(doc.data()))
-          .where((client) =>
-      client.nombres.toLowerCase().contains(query.toLowerCase()) ||
-          client.apellidos.toLowerCase().contains(query.toLowerCase()) ||
-          client.celular.contains(query))
-          .toList();
+    try {
+
+      final texto =
+      query.toLowerCase().trim();
+
+      if (texto.isEmpty) {
+
+        _clients = List.from(_allClients);
+
+        notifyListeners();
+
+        return;
+      }
+
+      _clients = _allClients.where((client) {
+
+        return
+
+          client.nombres
+              .toLowerCase()
+              .contains(texto)
+
+              ||
+
+              client.apellidos
+                  .toLowerCase()
+                  .contains(texto)
+
+              ||
+
+              client.celular
+                  .contains(query);
+
+      }).toList();
+
+      print(
+          "🔍 Resultados clientes: ${_clients.length}"
+      );
 
       notifyListeners();
+
     } catch (e) {
-      print('Error buscando clientes: $e');
+
+      print(
+          'Error buscando clientes: $e'
+      );
     }
   }
 

@@ -46,6 +46,9 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
   late final Stream<QuerySnapshot> conversacionesStream;
 
   final Map<String, Map<String, dynamic>?> cacheUsuarios = {};
+  List<QueryDocumentSnapshot> clientsCache = [];
+  List<QueryDocumentSnapshot> driversCache = [];
+
 
   String textoBusqueda = '';
 
@@ -56,6 +59,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
   @override
   void initState() {
     super.initState();
+    cargarCacheBusqueda();
 
     conversacionesStream = FirebaseFirestore.instance
         .collection('whatsapp_conversations_metax')
@@ -117,6 +121,30 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
     });
   }
 
+  Future<void> cargarCacheBusqueda() async {
+
+    print("📥 Cargando cache de búsqueda...");
+
+    final clients = await FirebaseFirestore.instance
+        .collection('Clients')
+        .get();
+
+    final drivers = await FirebaseFirestore.instance
+        .collection('Drivers')
+        .get();
+
+    clientsCache = clients.docs;
+    driversCache = drivers.docs;
+
+    print(
+        "✅ Cache Clients: ${clientsCache.length}"
+    );
+
+    print(
+        "✅ Cache Drivers: ${driversCache.length}"
+    );
+  }
+
   Future<void> buscarUsuariosExternos(
       String texto,
       ) async {
@@ -141,13 +169,12 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
     try {
 
       /// 🔥 CLIENTES
-      final clients = await FirebaseFirestore.instance
-          .collection('Clients')
-          .get();
+      final clients = clientsCache;
 
-      for (final doc in clients.docs) {
+      for (final doc in clients) {
 
-        final data = doc.data();
+        final data =
+        doc.data() as Map<String, dynamic>;
 
         final nombre =
         "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}"
@@ -191,13 +218,12 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
       }
 
       /// 🔥 CONDUCTORES
-      final drivers = await FirebaseFirestore.instance
-          .collection('Drivers')
-          .get();
+      final drivers = driversCache;
 
-      for (final doc in drivers.docs) {
+      for (final doc in drivers) {
 
-        final data = doc.data();
+        final data =
+        doc.data() as Map<String, dynamic>;
 
         final nombre =
         "${data['01_Nombres'] ?? ''} ${data['02_Apellidos'] ?? ''}"

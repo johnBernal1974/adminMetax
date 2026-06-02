@@ -495,7 +495,7 @@ class _DetalleBonosDriverPageState
           return DataRow(
             onSelectChanged: (_) {
 
-              _mostrarDetalleBono(
+              abrirDetalleBono(
                 data,
                 doc.id,
               );
@@ -545,6 +545,226 @@ class _DetalleBonosDriverPageState
         }).toList(),
       ),
     );
+  }
+
+  void abrirDetalleBono(
+      Map<String, dynamic> data,
+      String travelHistoryId,
+      ) {
+
+    final isMobile =
+        MediaQuery.of(context).size.width < 900;
+
+    if (isMobile) {
+
+      showModalBottomSheet(
+
+        context: context,
+
+        isScrollControlled: true,
+
+        backgroundColor: Colors.transparent,
+
+        builder: (_) {
+
+          return Container(
+
+            padding: const EdgeInsets.all(20),
+
+            decoration: const BoxDecoration(
+
+              color: Colors.white,
+
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+
+            child: SingleChildScrollView(
+
+              child: Column(
+
+                mainAxisSize: MainAxisSize.min,
+
+                children: [
+
+                  Container(
+
+                    width: 50,
+                    height: 5,
+
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton.icon(
+
+                    onPressed: () async {
+
+                      Navigator.pop(context);
+
+                      try {
+
+                        final callable =
+                        FirebaseFunctions.instance
+                            .httpsCallable(
+                          'enviarPlantillaBonoPendiente',
+                        );
+
+                        final telefono =
+                        driverData['celular']
+                            .toString()
+                            .trim();
+
+                        final nombre =
+                        (driverData['nombre'] ??
+                            driverData['nombres'] ??
+                            'Conductor')
+                            .toString();
+
+                        final numeroViaje =
+                            data['numeroViaje'] ?? '';
+
+                        final ruta =
+                            '${data['from']} → ${data['to']}';
+
+                        final valorBono =
+                            (data['tarifaDescuento'] as num?)
+                                ?.toInt() ??
+                                0;
+
+                        await callable.call({
+
+                          "telefono": "57$telefono",
+
+                          "nombre": nombre,
+
+                          "numeroViaje": numeroViaje,
+
+                          "ruta": ruta,
+
+                          "valorBono":
+                          valorBono.toString(),
+                        });
+
+                        if (!mounted) return;
+
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+
+                          const SnackBar(
+
+                            backgroundColor:
+                            Colors.green,
+
+                            content: Text(
+                              'Plantilla enviada correctamente',
+                            ),
+                          ),
+                        );
+
+                      } catch (e) {
+
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+
+                          SnackBar(
+                            content: Text('$e'),
+                          ),
+                        );
+                      }
+                    },
+
+                    icon: const Icon(Icons.send),
+
+                    label: const Text(
+                      'Preguntar tipo de pago',
+                    ),
+
+                    style: ElevatedButton.styleFrom(
+
+                      minimumSize:
+                      const Size(double.infinity, 50),
+
+                      backgroundColor:
+                      const Color(0xFF25D366),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  ElevatedButton.icon(
+
+                    onPressed: () async {
+
+                      Navigator.pop(context);
+
+                      await marcarComoPagado(data);
+                    },
+
+                    icon: const Icon(Icons.payments),
+
+                    label: const Text('Pagado'),
+
+                    style: ElevatedButton.styleFrom(
+
+                      minimumSize:
+                      const Size(double.infinity, 50),
+
+                      backgroundColor:
+                      Colors.green,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  ElevatedButton.icon(
+
+                    onPressed: () {
+
+                      Navigator.pop(context);
+
+                      pagarBonoIndividual(
+                        data,
+                        travelHistoryId,
+                      );
+                    },
+
+                    icon: const Icon(
+                      Icons.account_balance_wallet,
+                    ),
+
+                    label: const Text('Saldo'),
+
+                    style: ElevatedButton.styleFrom(
+
+                      minimumSize:
+                      const Size(double.infinity, 50),
+
+                      backgroundColor:
+                      Colors.orange,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+    } else {
+
+      _mostrarDetalleBono(
+        data,
+        travelHistoryId,
+      );
+    }
   }
 
   void _mostrarDetalleBono(
@@ -1359,88 +1579,97 @@ class _DetalleBonosDriverPageState
           data['finalViaje'],
         );
 
-        return Container(
+        return InkWell(
+          onTap: () {
 
-          margin:
-          const EdgeInsets.only(
-            bottom: 12,
-          ),
-
-          decoration:
-          BoxDecoration(
-
-            color:
-            Colors.white,
-
-            borderRadius:
-            BorderRadius.circular(
-              16,
+            abrirDetalleBono(
+              data,
+              bonos[index].id,
+            );
+          },
+          child: Container(
+          
+            margin:
+            const EdgeInsets.only(
+              bottom: 12,
             ),
-
-            border: Border.all(
-              color: Colors
-                  .grey.shade300,
+          
+            decoration:
+            BoxDecoration(
+          
+              color:
+              Colors.white,
+          
+              borderRadius:
+              BorderRadius.circular(
+                16,
+              ),
+          
+              border: Border.all(
+                color: Colors
+                    .grey.shade300,
+              ),
             ),
-          ),
-
-          child: Padding(
-
-            padding:
-            const EdgeInsets.all(
-              14,
-            ),
-
-            child: Column(
-
-              crossAxisAlignment:
-              CrossAxisAlignment
-                  .start,
-
-              children: [
-
-                Text(
-
-                  numeroViaje,
-
-                  style:
-                  const TextStyle(
-
-                    fontWeight:
-                    FontWeight.w900,
-
-                    fontSize: 14,
+          
+            child: Padding(
+          
+              padding:
+              const EdgeInsets.all(
+                14,
+              ),
+          
+              child: Column(
+          
+                crossAxisAlignment:
+                CrossAxisAlignment
+                    .start,
+          
+                children: [
+          
+                  Text(
+          
+                    numeroViaje,
+          
+                    style:
+                    const TextStyle(
+          
+                      fontWeight:
+                      FontWeight.w900,
+          
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-
-                const SizedBox(
-                  height: 8,
-                ),
-
-                Text(
-                  fecha,
-                ),
-
-                const SizedBox(
-                  height: 12,
-                ),
-
-                _rowDato(
-                  'Tarifa',
-                  '\$ ${formatMoney(tarifa)}',
-                ),
-
-                _rowDato(
-                  'Cliente pagó',
-                  '\$ ${formatMoney(clientePago)}',
-                ),
-
-                _rowDato(
-                  'Bono MetaX',
-                  '\$ ${formatMoney(bono)}',
-                  color: Colors.orange,
-                  bold: true,
-                ),
-              ],
+          
+                  const SizedBox(
+                    height: 8,
+                  ),
+          
+                  Text(
+                    fecha,
+                  ),
+          
+                  const SizedBox(
+                    height: 12,
+                  ),
+          
+                  _rowDato(
+                    'Tarifa',
+                    '\$ ${formatMoney(tarifa)}',
+                  ),
+          
+                  _rowDato(
+                    'Cliente pagó',
+                    '\$ ${formatMoney(clientePago)}',
+                  ),
+          
+                  _rowDato(
+                    'Bono MetaX',
+                    '\$ ${formatMoney(bono)}',
+                    color: Colors.orange,
+                    bold: true,
+                  ),
+                ],
+              ),
             ),
           ),
         );
