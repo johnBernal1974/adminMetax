@@ -227,6 +227,96 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     _initController("34_Nueva_Recarga", (widget.driver.the34NuevaRecarga ?? 0).toString());
   }
 
+  Future<void> eliminarVehiculo({
+    required String driverId,
+    required String placa,
+  }) async {
+
+    await FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(driverId)
+        .collection("vehiculos")
+        .doc(placa)
+        .delete();
+  }
+
+  Future<void> confirmarEliminarVehiculo(
+      String driverId,
+      String placa,
+      ) async {
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) {
+
+        return AlertDialog(
+          title: const Text("Eliminar vehículo"),
+          content: Text(
+            "¿Vas a borrar el vehículo de placa $placa?\n\nEsta acción no se puede deshacer.",
+          ),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text("Cancelar"),
+            ),
+
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                "Eliminar",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+
+    try {
+
+      if (placa == widget.driver.vehiculoActivoId) {
+        throw Exception(
+          "No se puede eliminar el vehículo activo",
+        );
+      }
+
+      await eliminarVehiculo(
+        driverId: driverId,
+        placa: placa,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Vehículo $placa eliminado",
+          ),
+        ),
+      );
+
+    } catch (e) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Error: $e",
+          ),
+        ),
+      );
+    }
+  }
+
 
   Color getStatusColor() {
     if (widget.driver.verificacionStatus == "registrado"
@@ -475,25 +565,49 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
 
                               Row(
                                 children: [
-                                  Text(
-                                    "Placa: ${vehiculo["18_Placa"] ?? ""}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
+
+                                  Expanded(
+                                    child: Text(
+                                      "Placa: ${vehiculo["18_Placa"] ?? ""}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_forever,
+                                      color: Colors.red,
+                                    ),
+                                    tooltip: "Eliminar vehículo",
+                                    onPressed: () {
+
+                                      confirmarEliminarVehiculo(
+                                        driver.id,
+                                        vehiculo["id"],
+                                      );
+
+                                    },
+                                  ),
 
                                   if (isActivo)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Colors.green,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: const Text(
                                         "ACTIVO",
-                                        style: TextStyle(color: Colors.white, fontSize: 10),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
                                       ),
                                     ),
                                 ],
