@@ -153,9 +153,22 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                       children: [
 
                         /// 🚗 PLACA
-                        Text(
-                          "Placa No. $placa",
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            Text(
+                              "Placa No. $placa",
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () {
+                                mostrarDialogoCambiarPlaca(
+                                  driverId,
+                                  placa,
+                                );
+                              },
+                            )
+                          ],
                         ),
 
                         const SizedBox(height: 10),
@@ -559,6 +572,88 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
     );
   }
 
+  Future<void> mostrarDialogoCambiarPlaca(
+      String driverId,
+      String placaActual,
+      ) async {
+
+    final controller =
+    TextEditingController(
+      text: placaActual,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (_) {
+
+        return AlertDialog(
+          title: const Text(
+            "Cambiar placa",
+          ),
+          content: TextField(
+            controller: controller,
+            decoration:
+            const InputDecoration(
+              labelText: "Nueva placa",
+            ),
+          ),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancelar"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+
+                try {
+
+                  Navigator.pop(context);
+
+                  await cambiarPlacaVehiculo(
+                    driverId: driverId,
+                    placaAnterior: placaActual,
+                    placaNueva: controller.text,
+                  );
+
+                  if (!mounted) return;
+
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Placa actualizada correctamente",
+                      ),
+                    ),
+                  );
+
+                  Navigator.pop(context);
+
+                } catch (e) {
+
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        e.toString(),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                "Guardar",
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   List<String> validarCamposVehiculo() {
     List<String> faltantes = [];
 
@@ -648,6 +743,67 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         const SnackBar(content: Text("Error al guardar")),
       );
     }
+  }
+
+  Future<void> cambiarPlacaVehiculo({
+    required String driverId,
+    required String placaAnterior,
+    required String placaNueva,
+  }) async {
+
+    placaNueva = placaNueva.trim().toUpperCase();
+
+    if (placaNueva.isEmpty) {
+      throw Exception("La placa no puede estar vacía");
+    }
+
+    final driverRef = FirebaseFirestore.instance
+        .collection("Drivers")
+        .doc(driverId);
+
+    print("driverId**************: $driverId");
+    print("placaAnterior*****************: $placaAnterior");
+    print("placaNueva*****************: $placaNueva");
+
+    final vehiculoAnteriorRef = driverRef
+        .collection("vehiculos")
+        .doc(placaAnterior);
+
+    final vehiculoNuevoRef = driverRef
+        .collection("vehiculos")
+        .doc(placaNueva);
+
+    final vehiculoAnteriorSnap =
+    await vehiculoAnteriorRef.get();
+
+    print("Existe anterior: ${vehiculoAnteriorSnap.exists}");
+    print("Data anterior: ${vehiculoAnteriorSnap.data()}");
+
+    if (!vehiculoAnteriorSnap.exists) {
+      throw Exception("Vehículo no encontrado");
+    }
+
+    final nuevoExiste =
+    await vehiculoNuevoRef.get();
+
+    if (nuevoExiste.exists) {
+      throw Exception(
+        "Ya existe un vehículo con la placa $placaNueva",
+      );
+    }
+
+    final vehiculoData =
+    Map<String, dynamic>.from(
+      vehiculoAnteriorSnap.data()!,
+    );
+
+    vehiculoData["18_Placa"] = placaNueva;
+
+    await vehiculoNuevoRef.set(vehiculoData);
+
+    //await vehiculoAnteriorRef.delete();
+
+    print("Cambio realizado");
   }
 
   Widget _estadoWidget(String? estado) {
@@ -1395,6 +1551,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
       ),
     );
   }
+
+
 
   Future<void> validarEstadoConductor(String driverId) async {
     final vehiculosSnapshot = await FirebaseFirestore.instance
