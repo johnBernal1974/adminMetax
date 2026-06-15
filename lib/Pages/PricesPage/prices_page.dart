@@ -199,6 +199,7 @@ class _PricesPageState extends State<PricesPage> {
   Widget _cardBusquedaEspera(Map<String, dynamic> d) {
     return _cardBase("Búsqueda y espera", Icons.radar, [
       _fieldDouble("radio_de_busqueda", "Radio de búsqueda (km)", d),
+      _fieldDouble("radio_maximo_busqueda", "Máximo Radio de búsqueda (km)", d),
 
       // ✅ NUEVO
       _fieldInt("tiempo_busqueda", "Tiempo de búsqueda", d),
