@@ -4,7 +4,7 @@ class RoutePermissions {
   static const Map<String, Set<String>> routePermissions = {
 
     // acceso total (para operadorFull + operador1)
-    'general_page': {'operadorFull', 'operador1'},
+    'general_page': {'operadorFull', 'operador1', 'contador' },
     'usuarios_page': {'operadorFull', 'operador1'},
 
     // conductores
