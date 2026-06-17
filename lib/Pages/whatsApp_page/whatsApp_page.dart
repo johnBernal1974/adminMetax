@@ -1670,7 +1670,7 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
 
                           enviarMensajeDirecto(
                               "🚕 *Cómo aceptar un servicio*\n\n"
-                                  "https://youtu.be/KevVY_nEkD4"
+                                  "https://youtube.com/shorts/gYwLW0AHmyU"
                           );
 
                           break;
@@ -1680,6 +1680,15 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                           enviarMensajeDirecto(
                               "💳 *Cómo recargar saldo*\n\n"
                                   "https://youtube.com/shorts/SEei5W92ez4?feature=share"
+                          );
+
+                          break;
+
+                        case "tutorial_bonos":
+
+                          enviarMensajeDirecto(
+                              "💳 *Viajes con bonos promocionales*\n\n"
+                                  "https://youtube.com/shorts/t8_HQsKc5Eo"
                           );
 
                           break;
@@ -1747,6 +1756,11 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                       const PopupMenuItem(
                         value: "tutorial_recarga",
                         child: Text("💳 Tutorial como recargar"),
+                      ),
+
+                      const PopupMenuItem(
+                        value: "tutorial_bonos",
+                        child: Text("💳 Tutorial Viajes con bono de descuento"),
                       ),
 
                       const PopupMenuItem(

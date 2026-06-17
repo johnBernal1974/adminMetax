@@ -94,6 +94,11 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
             DropdownButtonFormField<String>(
               value: plantillaSeleccionada,
               items: const [
+
+                DropdownMenuItem(
+                  value: "video_burbuja_funcionalidad_conductores",
+                  child: Text("Video funcionalidad burbuja"),
+                ),
                 DropdownMenuItem(
                   value: "expansion_conductores_2026_04",
                   child: Text("Expansión conductores"),
