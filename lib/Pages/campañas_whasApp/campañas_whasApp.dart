@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -94,6 +93,11 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
             DropdownButtonFormField<String>(
               value: plantillaSeleccionada,
               items: const [
+
+                DropdownMenuItem(
+                  value: "publicidad_emisoras_villavicencio", // Este es el ID que tu Cloud Function debe reconocer
+                  child: Text("Publicidad Emisoras (Video)"),
+                ),
 
                 DropdownMenuItem(
                   value: "video_burbuja_funcionalidad_conductores",
