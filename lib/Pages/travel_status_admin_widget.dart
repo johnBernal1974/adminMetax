@@ -1,8 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:metax_administrador/src/color.dart';
 
 class TravelStatusAdminWidget extends StatelessWidget {
   const TravelStatusAdminWidget({super.key});
+
+  // Pon esto fuera del build o como una constante de clase
+  static const  Map<String, String> traducciones = {
+    'created': 'Solicitado',
+    'accepted': 'Aceptado',
+    'no_accepted': 'No aceptado',
+    'driver_on_the_way': 'En camino',
+    'driver_is_waiting': 'Conductor esperando',
+    'started': 'Viaje iniciado',
+    'finished': 'Finalizado',
+    'cancelled': 'Cancelado',
+    'no_driver_found': 'Sin conductor',
+    'cancelByDriver': 'Conductor Canceló',
+    'cancelByDriverAfterAccepted': 'Conductor Canceló',
+    'cancelByClient': 'Cliente Canceló',
+    'cancelByClientAfterAccepted': 'Cliente Canceló',
+  };
 
   static const List<String> estados = [
 
@@ -33,6 +51,8 @@ class TravelStatusAdminWidget extends StatelessWidget {
     'cancelByClientAfterAccepted',
 
   ];
+
+
 
   Color colorEstado(String status) {
     switch (status) {
@@ -334,49 +354,26 @@ class TravelStatusAdminWidget extends StatelessWidget {
                           Expanded(
                             child:
                             DropdownButtonFormField<String>(
-                              value: estados.contains(status)
-                                  ? status
-                                  : 'created',
-
-                              decoration:
-                              InputDecoration(
+                              value: estados.contains(status) ? status : 'created',
+                              decoration: InputDecoration(
                                 filled: true,
-
-                                fillColor:
-                                colorEstado(status)
-                                    .withOpacity(0.08),
-
-                                border:
-                                OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                                ),
+                                fillColor: colorEstado(status).withOpacity(0.08),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-
                               items: estados.map((e) {
-
                                 return DropdownMenuItem(
                                   value: e,
-
                                   child: Text(
-                                    e,
+                                    traducciones[e] ?? e, // 🔥 Aquí está el cambio: busca la traducción, si no existe muestra el original
                                     style: TextStyle(
-                                      color:
-                                      colorEstado(e),
-                                      fontWeight:
-                                      FontWeight.w600,
+                                      color: colorEstado(e),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 );
                               }).toList(),
-
                               onChanged: (value) {
-
-                                if (value == null) {
-                                  return;
-                                }
-
+                                if (value == null) return;
                                 refresh(() {
                                   status = value;
                                 });
@@ -387,40 +384,28 @@ class TravelStatusAdminWidget extends StatelessWidget {
                           const SizedBox(width: 10),
 
                           ElevatedButton.icon(
-
-                            style:
-                            ElevatedButton.styleFrom(
-                              backgroundColor:
-                              Colors.green,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary,
+                              foregroundColor: Colors.black, // 🔥 Esto pone tanto el icono como el texto de color negro
                             ),
-
                             onPressed: () async {
-
-                              await FirebaseFirestore
-                                  .instance
-                                  .collection(
-                                  'TravelInfo')
+                              await FirebaseFirestore.instance
+                                  .collection('TravelInfo')
                                   .doc(doc.id)
                                   .update({
                                 "status": status,
                               });
 
-                              ScaffoldMessenger.of(
-                                  context)
-                                  .showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Estado actualizado",
+                              if(context.mounted){
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Estado actualizado"),
                                   ),
-                                ),
-                              );
+                                );
+                              }
                             },
-
-                            icon:
-                            const Icon(Icons.save),
-
-                            label:
-                            const Text("Guardar"),
+                            icon: const Icon(Icons.save),
+                            label: const Text("Guardar"),
                           ),
                         ],
                       ),
