@@ -112,9 +112,13 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   void _startBlink() {
     _blinkTimer?.cancel();
-    _blinkTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+    // Cambiamos de 500ms a 1000ms (1 segundo) para reducir carga de CPU
+    _blinkTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
+      if (!mounted) return;
       _blinkOn = !_blinkOn;
-      if (_lastDocs != null) {
+
+      // Solo actualizamos el estado si realmente tenemos marcadores
+      if (_lastDocs != null && _markers.isNotEmpty) {
         _rebuildMarkersFromDocs(_lastDocs!);
       }
     });
@@ -205,9 +209,17 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   }
 
   void _listenWorkingDrivers() {
+    // 1. Calculamos el límite de tiempo (hace 15 minutos)
+    final hace15Minutos = DateTime.now().subtract(const Duration(minutes: 15));
+
+    // 2. Aplicamos el filtro en el servidor
+    // NOTA: Como 'updatedAt' está dentro de 'position', esto funcionará
+    // solo si Firestore reconoce el campo. Si te da error de índice,
+    // crearemos el índice compuesto necesario.
     final q = FirebaseFirestore.instance
         .collection('Locations')
-        .where('status', whereIn: ['driver_working', 'driver_available']);
+        .where('status', whereIn: ['driver_working', 'driver_available'])
+        .where('position.updatedAt', isGreaterThan: Timestamp.fromDate(hace15Minutos));
 
     _sub = q.snapshots().listen((snap) async {
       _lastDocs = snap.docs;
@@ -332,111 +344,55 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   }
 
   Future<void> _rebuildMarkersFromDocs(List<QueryDocumentSnapshot> docs) async {
-
-    // 🔥 asegurar que los iconos ya cargaron
-    if (_taxiIconNormal == null || _taxiIconEmergency == null) {
-      if (kDebugMode) print("⏳ Esperando iconos...");
+    if (_taxiIconNormal == null || _taxiIconEmergency == null || _taxiIconWorking == null) {
       return;
     }
 
-    final markers = <Marker>{};
-    final currentEmergencyIds = <String>{};
+    final newMarkers = <Marker>{};
     final newAvailable = <String, _DriverAvailable>{};
     final newWorking = <String, _DriverWorking>{};
     final newEmergencies = <String, _EmergencyDriver>{};
+    final currentEmergencyIds = <String>{};
 
     for (final doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
-
       final pos = data['position'];
       if (pos is! Map<String, dynamic>) continue;
-
-      final placaRaw = pos['placa']?.toString() ?? 'SINPLACA';
-      final placa = formatPlaca(placaRaw);
-      final status = data['status'];
-
-      final actividad = _estadoActividad(data);
-
-      // 🔥 REGLA CLAVE:
-      // ❌ ocultar inactivos SOLO si NO están en servicio
-      if (status != 'driver_working' && actividad == "inactivo") {
-
-        continue;
-      }
-
-      final nombres = (pos['nombres'] ?? '').toString();
-      final apellidos = (pos['apellidos'] ?? '').toString();
-      final imageUrl = (pos['image'] ?? '').toString();
-
-      final emergencyActive = pos['emergency_active'] == true;
 
       final geo = pos['geopoint'];
       if (geo is! GeoPoint) continue;
 
-      final heading = (data['heading'] as num?)?.toDouble() ?? 0.0;
       final latLng = LatLng(geo.latitude, geo.longitude);
+      final status = data['status'];
+      final emergencyActive = pos['emergency_active'] == true;
+      final placa = formatPlaca(pos['placa']?.toString() ?? 'SINPLACA');
+      final nombres = pos['nombres']?.toString() ?? '';
+      final apellidos = pos['apellidos']?.toString() ?? '';
+      final imageUrl = pos['image']?.toString() ?? '';
+      final heading = (data['heading'] as num?)?.toDouble() ?? 0.0;
+      final nombreCompleto = '${nombres.trim()} ${apellidos.trim()}'.trim();
 
-      // ==============================
-      // 🔥 CLASIFICACIÓN CORRECTA
-      // ==============================
-
-      // 🔴 Emergencias (prioridad)
+      // Clasificación
       if (emergencyActive) {
         currentEmergencyIds.add(doc.id);
-
-        newEmergencies[doc.id] = _EmergencyDriver(
-          id: doc.id,
-          placa: placa,
-          nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
-          imageUrl: imageUrl,
-          latLng: latLng,
-        );
+        newEmergencies[doc.id] = _EmergencyDriver(id: doc.id, placa: placa, nombre: nombreCompleto, imageUrl: imageUrl, latLng: latLng);
+      } else if (status == 'driver_working') {
+        newWorking[doc.id] = _DriverWorking(id: doc.id, placa: placa, nombre: nombreCompleto, imageUrl: imageUrl, latLng: latLng);
+      } else {
+        newAvailable[doc.id] = _DriverAvailable(id: doc.id, placa: placa, nombre: nombreCompleto, imageUrl: imageUrl, latLng: latLng);
       }
 
-      // 🟢 En servicio (SIEMPRE válido)
-      else if (status == 'driver_working') {
-        newWorking[doc.id] = _DriverWorking(
-          id: doc.id,
-          placa: placa,
-          nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
-          imageUrl: imageUrl,
-          latLng: latLng,
-        );
-      }
-
-      // 🟢 Disponibles reales (activos)
-      else {
-        newAvailable[doc.id] = _DriverAvailable(
-          id: doc.id,
-          placa: placa,
-          nombre: '${nombres.trim()} ${apellidos.trim()}'.trim(),
-          imageUrl: imageUrl,
-          latLng: latLng,
-        );
-      }
-
-      // ==============================
-      // 🎨 ICONOS CORRECTOS
-      // ==============================
-
+      // Definir ícono
       BitmapDescriptor icon;
-
       if (emergencyActive) {
-        // 🔴 Emergencia (parpadeo)
         icon = _blinkOn ? _taxiIconEmergency! : _taxiIconWorking!;
       } else if (status == 'driver_working') {
-        // 🟢 SIEMPRE verde (aunque esté quieto)
         icon = _taxiIconWorking!;
       } else {
-        // 🚕 disponibles normales
         icon = _taxiIconNormal!;
       }
 
-      // ==============================
-      // 🧭 MARKER
-      // ==============================
-
-      markers.add(
+      newMarkers.add(
         Marker(
           markerId: MarkerId(doc.id),
           position: latLng,
@@ -444,45 +400,25 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
           flat: true,
           anchor: const Offset(0.5, 0.5),
           icon: icon,
-          onTap: () => _openDriverCard(
-            id: doc.id,
-            latLng: latLng,
-            placa: placa,
-            nombres: nombres,
-            apellidos: apellidos,
-            imageUrl: imageUrl,
-            emergencyActive: emergencyActive,
-          ),
+          onTap: () => _openDriverCard(id: doc.id, latLng: latLng, placa: placa, nombres: nombres, apellidos: apellidos, imageUrl: imageUrl, emergencyActive: emergencyActive),
         ),
       );
     }
 
-    // 🔊 sonido de nuevas emergencias
+    // Sonido solo si hay una emergencia nueva
     final newOnes = currentEmergencyIds.difference(_prevEmergencyIds);
-    if (_soundEnabled && newOnes.isNotEmpty) {
-      await _playEmergencySound();
-    }
+    if (_soundEnabled && newOnes.isNotEmpty) await _playEmergencySound();
 
-    _prevEmergencyIds
-      ..clear()
-      ..addAll(currentEmergencyIds);
+    _prevEmergencyIds.clear();
+    _prevEmergencyIds.addAll(currentEmergencyIds);
 
     if (!mounted) return;
 
     setState(() {
-      _markers = markers;
-
-      _emergencies
-        ..clear()
-        ..addAll(newEmergencies);
-
-      _availableDrivers
-        ..clear()
-        ..addAll(newAvailable);
-
-      _workingDrivers
-        ..clear()
-        ..addAll(newWorking);
+      _markers = newMarkers; // 🔥 Actualizamos el set de marcadores
+      _emergencies..clear()..addAll(newEmergencies);
+      _availableDrivers..clear()..addAll(newAvailable);
+      _workingDrivers..clear()..addAll(newWorking);
     });
   }
 

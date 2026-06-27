@@ -15,11 +15,7 @@ class TravelStatusAdminWidget extends StatelessWidget {
     'started': 'Viaje iniciado',
     'finished': 'Finalizado',
     'cancelled': 'Cancelado',
-    'no_driver_found': 'Sin conductor',
-    'cancelByDriver': 'Conductor Canceló',
-    'cancelByDriverAfterAccepted': 'Conductor Canceló',
-    'cancelByClient': 'Cliente Canceló',
-    'cancelByClientAfterAccepted': 'Cliente Canceló',
+
   };
 
   static const List<String> estados = [
@@ -35,21 +31,6 @@ class TravelStatusAdminWidget extends StatelessWidget {
     'driver_is_waiting',
 
     'started',
-
-    'finished',
-
-    'cancelled',
-
-    'no_driver_found',
-
-    'cancelByDriver',
-
-    'cancelByDriverAfterAccepted',
-
-    'cancelByClient',
-
-    'cancelByClientAfterAccepted',
-
   ];
 
 
@@ -74,15 +55,6 @@ class TravelStatusAdminWidget extends StatelessWidget {
       case 'started':
         return Colors.green;
 
-      case 'finished':
-        return Colors.teal;
-
-      case 'cancelled':
-        return Colors.red;
-
-      case 'no_driver_found':
-        return Colors.black54;
-
       default:
         return Colors.black;
     }
@@ -91,13 +63,19 @@ class TravelStatusAdminWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
+    final List<String> estadosActivos = [
+      'created',
+      'accepted',
+      'driver_on_the_way',
+      'driver_is_waiting',
+      'started',
+    ];
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('TravelInfo')
-          .orderBy(
-        'horaSolicitudViaje',
-        descending: true,
-      )
+          .where('status', whereIn: estadosActivos)
+          .orderBy('horaSolicitudViaje', descending: true)
           .snapshots(),
 
       builder: (context, snapshot) {
@@ -110,38 +88,16 @@ class TravelStatusAdminWidget extends StatelessWidget {
 
         final docs = snapshot.data!.docs;
 
-        /// 🔥 SOLO ACTIVOS
-        final viajes = docs.where((doc) {
 
-          final data =
-          doc.data() as Map<String, dynamic>;
-
-          final status =
-              data['status'] ?? '';
-
-          return status != 'finished' &&
-              status != 'cancelled';
-
-        }).toList();
-
-        print(
-            "🚕 Viajes activos: ${viajes.length}"
-        );
-
-        if (viajes.isEmpty) {
-          return const Center(
-            child: Text(
-              "No hay viajes activos",
-            ),
-          );
+        if (docs.isEmpty) {
+          return const Center(child: Text("No hay viajes activos"));
         }
 
         return ListView.builder(
-          itemCount: viajes.length,
+          itemCount: docs.length,
 
           itemBuilder: (context, index) {
-
-            final doc = viajes[index];
+            final doc = docs[index];
 
             final data =
             doc.data() as Map<String, dynamic>;
@@ -419,6 +375,7 @@ class TravelStatusAdminWidget extends StatelessWidget {
       },
     );
   }
+
   String formatearFechaHora(dynamic timestamp) {
 
     if (timestamp is! Timestamp) {

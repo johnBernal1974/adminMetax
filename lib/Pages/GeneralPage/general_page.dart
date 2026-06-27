@@ -157,11 +157,11 @@ class _GeneralPageState extends State<GeneralPage> {
               const SizedBox(height: 10),
 
 
-              /// 🔥 SOLO MASTER Y OPERADOR FULL
-              if (role == 'Master' || role == 'operadorFull')
-                const ExportarUsuariosButton(),
-
-              const SizedBox(height: 10),
+              // /// 🔥 SOLO MASTER Y OPERADOR FULL
+              // if (role == 'Master' || role == 'operadorFull')
+              //   const ExportarUsuariosButton(),
+              //
+              // const SizedBox(height: 10),
 
               Wrap(
                 spacing: 10,
