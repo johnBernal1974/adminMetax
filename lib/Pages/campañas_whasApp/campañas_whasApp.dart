@@ -95,10 +95,13 @@ class _CampanasWhatsAppPageState extends State<CampanasWhatsAppPage> {
               items: const [
 
                 DropdownMenuItem(
-                  value: "publicidad_emisoras_villavicencio", // Este es el ID que tu Cloud Function debe reconocer
-                  child: Text("Publicidad Emisoras (Video)"),
+                  value: "estamos_en_la_radio", // Este es el ID que tu Cloud Function debe reconocer
+                  child: Text("Publicidad en emisoras"),
                 ),
-
+                DropdownMenuItem(
+                  value: "video_burbuja_funcionalidad_conductores",
+                  child: Text("Video funcionalidad burbuja"),
+                ),
                 DropdownMenuItem(
                   value: "video_burbuja_funcionalidad_conductores",
                   child: Text("Video funcionalidad burbuja"),

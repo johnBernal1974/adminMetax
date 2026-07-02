@@ -2,6 +2,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -15,6 +16,8 @@ import '../../widget/audio_player_widget.dart';
 import '../../widget/video_player_widget.dart';
 import '../ClientDetailPage/client_detail_page.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
 
 class WhatsAppMetaXPage extends StatefulWidget {
   const WhatsAppMetaXPage({super.key});
@@ -119,6 +122,50 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
         }
       }
     });
+  }
+
+  Future<void> _seleccionarYEnviarArchivo() async {
+    try {
+      // 1. Abrir selector de archivos
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.media, // O FileType.any si quieres PDFs, etc.
+        allowMultiple: false,
+      );
+
+      if (result != null) {
+        // 2. Obtener bytes (Web)
+        Uint8List? fileBytes = result.files.first.bytes;
+        String fileName = result.files.first.name;
+
+        if (fileBytes != null) {
+          // AQUÍ DEBES LLAMAR A TU LÓGICA DE SUBIDA.
+          // Ejemplo: Subir a Firebase Storage y luego obtener la URL.
+
+          // Simulación: Una vez tengas la URL de descarga:
+          String urlArchivo = "https://firebasestorage.googleapis.com/v0/b/apptaxi-e641d.firebasestorage.app/o/banner%201%2050%20cupos.png?alt=media&token=d82c4cbd-f364-46d1-8415-14fef90e4dea";
+
+          // 3. Registrar el mensaje en Firestore
+          await FirebaseFirestore.instance.collection('whatsapp_messages_metax').add({
+            "conversationId": selectedNumero,
+            "imageUrl": urlArchivo, // O "fileUrl": urlArchivo si es documento
+            "from_me": true,
+            "timestamp": Timestamp.now(),
+            "text": "📷 Archivo: $fileName"
+          });
+
+          // 4. Actualizar la conversación
+          await FirebaseFirestore.instance
+              .collection('whatsapp_conversations_metax')
+              .doc(selectedNumero)
+              .update({
+            "lastMessage": "📷 Archivo compartido",
+            "lastMessageAt": Timestamp.now(),
+          });
+        }
+      }
+    } catch (e) {
+      print("Error al seleccionar archivo: $e");
+    }
   }
 
   Future<void> cargarCacheBusqueda() async {
@@ -642,6 +689,57 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
         ),
       ],
     );
+  }
+
+  Future<void> adjuntarArchivoYEnviar() async {
+    try {
+      // 1. Selección del archivo
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.media,
+        allowMultiple: false,
+      );
+
+      if (result == null || selectedNumero == null) return;
+
+      Uint8List? fileBytes = result.files.first.bytes;
+      String fileName = result.files.first.name;
+
+      if (fileBytes != null) {
+        // 2. Subida a Firebase Storage
+        // Creamos una referencia única basada en el tiempo para evitar nombres duplicados
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('whatsapp_files')
+            .child(selectedNumero!)
+            .child('${DateTime.now().millisecondsSinceEpoch}_$fileName');
+
+        final uploadTask = await ref.putData(fileBytes);
+        final urlArchivo = await uploadTask.ref.getDownloadURL();
+
+        // 3. Registrar en Firestore
+        // El campo 'imageUrl' es el que tu widget buildMensaje usa para mostrar la imagen
+        await FirebaseFirestore.instance.collection('whatsapp_messages_metax').add({
+          "conversationId": selectedNumero,
+          "imageUrl": urlArchivo,
+          "from_me": true,
+          "timestamp": Timestamp.now(),
+          "text": "📷 Imagen enviada", // Este es el texto que aparecerá en la lista
+        });
+
+        // 4. Actualizar la conversación
+        await FirebaseFirestore.instance
+            .collection('whatsapp_conversations_metax')
+            .doc(selectedNumero)
+            .update({
+          "lastMessage": "📷 Imagen",
+          "lastMessageAt": Timestamp.now(),
+        });
+
+        print("✅ Archivo enviado y registrado: $urlArchivo");
+      }
+    } catch (e) {
+      print("❌ Error crítico al enviar archivo: $e");
+    }
   }
 
   Widget _buildResultadoExterno(
@@ -1460,7 +1558,9 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                     /// 🔘 BOTÓN "+"
                     IconButton(
                       icon: const Icon(Icons.add, color: Colors.black54),
-                      onPressed: () {},
+                      onPressed: () {
+                        _seleccionarYEnviarArchivo();
+                      },
                     ),
 
                     /// 🔘 INPUT REDONDO

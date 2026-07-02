@@ -31,37 +31,23 @@ class _GeneralPageState extends State<GeneralPage> {
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   Provider.of<DriverProvider>(context, listen: false)
-    //       .fetchDrivers();
-    // });
-
+    // Esto está bien, pero asegúrate de que fetchTotalClients sea eficiente
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final clientProvider = Provider.of<ClientProvider>(context, listen: false);
-
       totalClientes = await clientProvider.fetchTotalClients();
-
-      setState(() {});
+      if (mounted) setState(() {});
     });
-
-
   }
 
   void _refreshData() async {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
     final clientProvider = Provider.of<ClientProvider>(context, listen: false);
 
+    // Solo pedimos lo que usamos
     await driverProvider.fetchDrivers();
     await clientProvider.fetchClients();
-    driverProvider.fetchTravelHistoryCount();
 
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Datos actualizados'),
-        duration: Duration(seconds: 2), // Ajusta la duración según sea necesario
-      ),
-    );
   }
 
   @override
@@ -69,146 +55,53 @@ class _GeneralPageState extends State<GeneralPage> {
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
     final driverProvider = Provider.of<DriverProvider>(context);
     final clientProvider = Provider.of<ClientProvider>(context);
+
+    // Solo conductores (carro)
     final List<Driver> conductores = driverProvider.getDriversByRole('carro');
-    final List<Driver> motociclistas = driverProvider.getDriversByRole('moto');
-    final List<Driver> conductoresIsWorking =
-    driverProvider.getDriversByRoleAndWorkingStatus('carro', true);
-    final List<Driver> motociclistasIsWorking =
-    driverProvider.getDriversByRoleAndWorkingStatus('moto', true);
-    final List<Driver> conductoresisActive =
-    driverProvider.getDriversByRoleAndActiveStatus('carro', true);
-    final List<Driver> motociclistasisActive =
-    driverProvider.getDriversByRoleAndActiveStatus('moto', true);
     final List<Client> clientesActivos = clientProvider.clients;
-    final int totalUsuarios =
-        conductores.length + motociclistas.length + clientesActivos.length;
+
+    // Total usuarios = solo conductores de carro + clientes
+    final int totalUsuarios = conductores.length + clientesActivos.length;
 
     return PopScope(
       canPop: false,
-      child: Consumer<DriverProvider>(
-        builder: (context, driverProvider, _) {
-          return MainLayout(
-            content: _buildContent(
-              context,
-              isMobileOrTablet,
-              driverProvider,
-              clientProvider,
-              conductores,
-              motociclistas,
-              clientesActivos,
-              totalUsuarios,
-              conductoresIsWorking,
-              motociclistasIsWorking,
-              conductoresisActive,
-              motociclistasisActive,
-            ),
-            pageTitle: 'General',
-          );
-        },
+      child: MainLayout(
+        pageTitle: 'General',
+        content: _buildContent(
+          context,
+          isMobileOrTablet,
+          totalConductores: conductores.length,
+          totalClientes: clientesActivos.length,
+          totalUsuarios: totalUsuarios,
+        ),
       ),
     );
   }
 
   Widget _buildContent(
       BuildContext context,
-      bool isMobileOrTablet,
-      DriverProvider driverProvider,
-      ClientProvider clientProvider,
-      List<Driver> conductores,
-      List<Driver> motociclistas,
-      List<Client> clientesActivos,
-      int totalUsuarios,
-      List<Driver> conductoresIsWorking,
-      List<Driver> motociclistasIsWorking,
-      List<Driver> conductoresisActive,
-      List<Driver> motociclistasisActive ) {
-
-    final role = context.watch<OperadorProvider>().rolActual ?? '';
-
+      bool isMobileOrTablet, {
+        required int totalConductores,
+        required int totalClientes,
+        required int totalUsuarios,
+      }) {
     return ListView(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
           margin: const EdgeInsets.all(7),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-
-              const Padding(
-                padding: EdgeInsets.all(6.0),
-                child: Text(
-                  'Información General',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _refreshData,
-              ),
-
-              const SizedBox(height: 10),
-
-
-              // /// 🔥 SOLO MASTER Y OPERADOR FULL
-              // if (role == 'Master' || role == 'operadorFull')
-              //   const ExportarUsuariosButton(),
-              //
-              // const SizedBox(height: 10),
-
+              const Text('Información General', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
+              const SizedBox(height: 20),
               Wrap(
                 spacing: 10,
                 alignment: WrapAlignment.center,
                 children: isMobileOrTablet
-                    ? _buildMobileContainers(
-                    context,
-                    driverProvider,
-                    conductores.length,
-                    motociclistas.length,
-                    clientesActivos.length,
-                    totalUsuarios)
-                    : _buildDesktopContainers(
-                    context,
-                    driverProvider,
-                    conductores.length,
-                    motociclistas.length,
-                    clientesActivos.length,
-                    totalUsuarios),
-              ),
-
-              const SizedBox(height: 20),
-
-              const Divider(
-                color: Colors.grey,
-                height: 3,
-              ),
-              const SizedBox(height: 20),
-
-              isMobileOrTablet
-                  ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildColumnContent(
-                    driverProvider,
-                    conductoresisActive,
-                    conductoresIsWorking,
-                    motociclistasisActive,
-                    motociclistasIsWorking),
-              )
-                  : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildRowContent(
-                    driverProvider,
-                    conductoresisActive,
-                    conductoresIsWorking,
-                    motociclistasisActive,
-                    motociclistasIsWorking),
+                    ? _buildMobileContainers(context, totalConductores, totalClientes, totalUsuarios)
+                    : _buildDesktopContainers(context, totalConductores, totalClientes, totalUsuarios),
               ),
             ],
           ),
@@ -217,168 +110,36 @@ class _GeneralPageState extends State<GeneralPage> {
     );
   }
 
-  List<Widget> _buildColumnContent(DriverProvider driverProvider, List<Driver> conductoresisActive, List<Driver> conductoresIsWorking, List<Driver> motociclistasisActive, List<Driver> motociclistasIsWorking) {
+  List<Widget> _buildMobileContainers(BuildContext context, int conductores, int clientes, int totalUsuarios) {
     return [
-      _buildInfoCard(
-        'Estado de Conexión',
-        [
-          _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
-          _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
-
-        ],
-      ),
-      const SizedBox(height: 30),
-      _buildInfoCard(
-        'Viajes realizados',
-        [
-          _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
-        ],
-      ),
-      const SizedBox(height: 30),
-      // _buildInfoCard(
-      //   'Recargas realizadas',
-      //   [
-      //     _buildDataRow('Conductores:', "0"),
-      //     _buildDataRow('Motociclistas:', "0"),
-      //     _buildDataRow('Total recargas:', "0"),
-      //   ],
-      // ),
-      // const SizedBox(height: 30),
-      // _buildInfoCard(
-      //   'Bonos',
-      //   [
-      //     _buildDataRow('Asignados:', "0"),
-      //     _buildDataRow('Usados:', "0"),
-      //     _buildDataRow('Bonos usados:', "\$0"),
-      //   ],
-      // ),
-    ];
-  }
-
-  List<Widget> _buildRowContent(DriverProvider driverProvider, List<Driver> conductoresisActive, List<Driver> conductoresIsWorking, List<Driver> motociclistasisActive, List<Driver> motociclistasIsWorking) {
-    return [
-      Expanded(
-        flex: 2,
-        child: _buildInfoCard(
-          'Estado de Conexión',
-          [
-            _buildDataRow('Vehículos conectados:', conductoresisActive.length.toString()),
-            _buildDataRow('Vehículos en servicio:', conductoresIsWorking.length.toString()),
-          ],
-        ),
-      ),
-      const SizedBox(width: 30),
-      Expanded(
-        flex: 2,
-        child: _buildInfoCard(
-          'Viajes realizados',
-          [
-            _buildDataRow('Total viajes:', driverProvider.travelHistoryCount.toString()),
-          ],
-        ),
-      ),
-      const SizedBox(width: 30),
-      // Expanded(
-      //   flex: 2,
-      //   child: _buildInfoCard(
-      //     'Recargas realizadas',
-      //     [
-      //       _buildDataRow('Conductores:', "0"),
-      //       _buildDataRow('Motociclistas:', "0"),
-      //       _buildDataRow('Total recargas:', "0"),
-      //     ],
-      //   ),
-      // ),
-      // const SizedBox(width: 30),
-      // Expanded(
-      //   flex: 2,
-      //   child: _buildInfoCard(
-      //     'Bonos',
-      //     [
-      //       _buildDataRow('Asignados:', "0"),
-      //       _buildDataRow('Usados:', "0"),
-      //       _buildDataRow('Bonos usados:', "\$0"),
-      //     ],
-      //   ),
-      // ),
-    ];
-  }
-
-  Widget _buildInfoCard(String title, List<Widget> content) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: blancoCards,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...content,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDataRow(String title, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 12)),
-        const SizedBox(width: 20),
-        Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  List<Widget> _buildMobileContainers(BuildContext context, DriverProvider driverProvider, int conductores, int motociclistas, int clientes, int totalUsuarios) {
-    return [
-
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'conductores_page'),
           child: _buildInfoContainerMobil(context, 'Conductores', Icons.directions_car, conductores.toString(), Colors.lightBlue.shade300)),
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
-          child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, totalClientes.toString(), Colors.green.shade300)),
+          child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
       _buildInfoContainerMobil(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey),
-      //_buildInfoContainerMobil(context, 'Viajes', Icons.info_outline,  driverProvider.travelHistoryCount.toString(), Colors.purple.shade300),
-      // Agregar más contenedores según sea necesario
     ];
   }
 
-  List<Widget> _buildDesktopContainers(BuildContext context, DriverProvider driverProvider, int conductores, int motociclistas, int clientes, int totalUsuarios) {
+  List<Widget> _buildDesktopContainers(BuildContext context, int conductores, int clientes, int totalUsuarios) {
     return [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-
           Expanded(
             child: GestureDetector(
                 onTap: () => Navigator.pushNamed(context, 'conductores_page'),
                 child: _buildInfoContainer(context, 'Conductores', Icons.directions_car, conductores.toString(), Colors.lightBlue.shade300)),
           ),
-
           Expanded(
             child: GestureDetector(
                 onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
-                child: _buildInfoContainer(context, 'Clientes', Icons.person, totalClientes.toString(), Colors.green.shade300)),
+                child: _buildInfoContainer(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
           ),
           Expanded(
             child: _buildInfoContainer(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey.shade400),
           ),
-          // Expanded(
-          //   child: _buildInfoContainer(context, 'Viajes', Icons.add_chart_rounded, driverProvider.travelHistoryCount.toString(), Colors.purple.shade300),
-          // ),
-          // Agregar más contenedores según sea necesario
         ],
       ),
     ];

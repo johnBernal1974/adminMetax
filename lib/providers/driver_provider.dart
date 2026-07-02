@@ -191,29 +191,28 @@ class DriverProvider with ChangeNotifier {
 
 
   Future<void> fetchTravelHistoryCount() async {
-    print("🔥 fetchTravelHistoryCount EJECUTADO");
+    print("🔥 fetchTravelHistoryCount optimizado (Solo Carros) EJECUTADO");
     try {
-      QuerySnapshot querySnapshot = await _travelHistoryRef.get();
-      print(
-          "🚕 TravelHistory docs: ${querySnapshot.docs.length}"
-      );
-      _travelHistoryCount = querySnapshot.size;
+      // 1. Obtener el total general
+      final totalQuery = await _travelHistoryRef.count().get();
+      // Agregamos ?? 0 para manejar el nulo
+      _travelHistoryCount = totalQuery.count ?? 0;
 
-      // Filtrar y contar los documentos con rol "moto"
-      travelHistoryMotoCount = querySnapshot.docs
-          .where((doc) => doc.get('rol') == 'moto')
-          .length;
+      // 2. Obtener conteo de carros
+      final carrosQuery = await _travelHistoryRef.where('rol', isEqualTo: 'carro').count().get();
+      // Agregamos ?? 0 para manejar el nulo
+      travelHistoryCarroCount = carrosQuery.count ?? 0;
 
-      // Filtrar y contar los documentos con rol "carro"
-      travelHistoryCarroCount = querySnapshot.docs
-          .where((doc) => doc.get('rol') == 'carro')
-          .length;
-      notifyListeners(); // Notificamos a los oyentes que el valor ha cambiado
-    } catch (error) {
-      print('Error al obtener el número de documentos en TravelHistory: $error');
-      _travelHistoryCount = 0;
+      // Limpiamos la variable de motos
       travelHistoryMotoCount = 0;
+
+      notifyListeners();
+    } catch (error) {
+      print('Error al obtener conteos: $error');
+      _travelHistoryCount = 0;
       travelHistoryCarroCount = 0;
+      travelHistoryMotoCount = 0;
+      notifyListeners(); // Agregado por seguridad
     }
   }
 
