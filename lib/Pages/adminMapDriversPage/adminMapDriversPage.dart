@@ -182,12 +182,12 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   }
 
   void _listenWorkingDrivers() {
-    final hace15Minutos = DateTime.now().subtract(const Duration(minutes: 15));
+    final hace30Minutos = DateTime.now().subtract(const Duration(minutes: 15));
 
     final q = FirebaseFirestore.instance
         .collection('Locations')
         .where('status', whereIn: ['driver_working', 'driver_available'])
-        .where('position.updatedAt', isGreaterThan: Timestamp.fromDate(hace15Minutos));
+        .where('position.updatedAt', isGreaterThan: Timestamp.fromDate(hace30Minutos));
 
     _sub = q.snapshots().listen((snap) async {
       _lastDocs = snap.docs;

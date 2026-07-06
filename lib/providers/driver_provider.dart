@@ -337,6 +337,21 @@ class DriverProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<int> obtenerConteoConductoresCarroSencillo() async {
+    try {
+      // Filtramos por el rol 'carro' y contamos directamente en el servidor
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .where('rol', isEqualTo: 'carro')
+          .count()
+          .get();
+      return querySnapshot.count ?? 0;
+    } catch (e) {
+      print("Error al contar conductores: $e");
+      return 0;
+    }
+  }
+
 
 
   Future<void> buscarDriver(String query) async {

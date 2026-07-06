@@ -26,52 +26,60 @@ class GeneralPage extends StatefulWidget {
 
 class _GeneralPageState extends State<GeneralPage> {
 
+  int totalConductores = 0;
   int totalClientes = 0;
+  int totalUsuarios = 0;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Esto está bien, pero asegúrate de que fetchTotalClients sea eficiente
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final clientProvider = Provider.of<ClientProvider>(context, listen: false);
-      totalClientes = await clientProvider.fetchTotalClients();
-      if (mounted) setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarSoloCantidades();
     });
   }
 
-  void _refreshData() async {
-    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+  Future<void> _cargarSoloCantidades() async {
+    setState(() => _isLoading = true);
+
     final clientProvider = Provider.of<ClientProvider>(context, listen: false);
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
-    // Solo pedimos lo que usamos
-    await driverProvider.fetchDrivers();
-    await clientProvider.fetchClients();
+    // Ejecutamos ambos conteos en paralelo para que sea inmediato
+    final resultados = await Future.wait([
+      driverProvider.obtenerConteoConductoresCarroSencillo(),
+      clientProvider.obtenerConteoClientesSencillo(),
+    ]);
 
-    setState(() {});
+    totalConductores = resultados[0];
+    totalClientes = resultados[1];
+    totalUsuarios = totalConductores + totalClientes;
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _refreshData() {
+    _cargarSoloCantidades();
   }
 
   @override
   Widget build(BuildContext context) {
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
-    final driverProvider = Provider.of<DriverProvider>(context);
-    final clientProvider = Provider.of<ClientProvider>(context);
 
-    // Solo conductores (carro)
-    final List<Driver> conductores = driverProvider.getDriversByRole('carro');
-    final List<Client> clientesActivos = clientProvider.clients;
-
-    // Total usuarios = solo conductores de carro + clientes
-    final int totalUsuarios = conductores.length + clientesActivos.length;
 
     return PopScope(
       canPop: false,
       child: MainLayout(
         pageTitle: 'General',
-        content: _buildContent(
+        content: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _buildContent(
           context,
           isMobileOrTablet,
-          totalConductores: conductores.length,
-          totalClientes: clientesActivos.length,
+          totalConductores: totalConductores,
+          totalClientes: totalClientes,
           totalUsuarios: totalUsuarios,
         ),
       ),
@@ -94,7 +102,20 @@ class _GeneralPageState extends State<GeneralPage> {
           child: Column(
             children: [
               const Text('Información General', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
+              const SizedBox(height: 10), // Un pequeño espacio
+
+              /// 🔥 NUEVO BOTÓN DE REFRESCAR
+              ElevatedButton.icon(
+                onPressed: _refreshData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refrescar datos'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primary, // Color llamativo
+                  foregroundColor: Colors.black,         // Color del texto e icono
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+              ),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 10,

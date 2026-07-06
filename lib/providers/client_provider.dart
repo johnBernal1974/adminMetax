@@ -143,5 +143,16 @@ class ClientProvider with ChangeNotifier {
         snapshot.docs.map((doc) => Client.fromJson(doc.data())).toList());
   }
 
+  Future<int> obtenerConteoClientesSencillo() async {
+    try {
+      // Usamos .count() para que Firestore solo nos devuelva el número total
+      final querySnapshot = await FirebaseFirestore.instance.collection('Clients').count().get();
+      return querySnapshot.count ?? 0;
+    } catch (e) {
+      print("Error al contar clientes: $e");
+      return 0;
+    }
+  }
+
 
 }
