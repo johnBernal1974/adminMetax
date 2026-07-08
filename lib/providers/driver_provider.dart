@@ -12,6 +12,9 @@ class DriverProvider with ChangeNotifier {
   int travelHistoryMotoCount = 0; // Variable para contar "moto"
   int travelHistoryCarroCount = 0; // Variable para contar "carro"
 
+  List<Driver> _cachePendientes = [];
+  List<Driver> _cacheActivosBloqueados = [];
+
   DriverProvider() {
 
     print(
@@ -352,23 +355,91 @@ class DriverProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchPendientesServidor() async {
+    // Si ya los descargamos antes, los mostramos de inmediato sin ir a Firestore 🎉
+    if (_cachePendientes.isNotEmpty) {
+      _drivers = List.from(_cachePendientes);
+      notifyListeners();
+      return;
+    }
 
+    setLoading(true);
+    try {
+      final snapshot = await _ref
+          .where("rol", isEqualTo: "carro")
+          .where("Verificacion_Status", whereIn: ["registrado", "procesando"])
+          .get();
 
-  Future<void> buscarDriver(String query) async {
+      _cachePendientes = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data["id"] = doc.id;
+        return Driver.fromJson(data);
+      }).toList();
+
+      _drivers = List.from(_cachePendientes);
+      notifyListeners();
+    } catch (e) {
+      print('Error al traer pendientes: $e');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// 🟢 MODIFICA EL MÉTODO DE ACTIVOS/BLOQUEADOS
+  Future<void> fetchActivosBloqueadosServidor() async {
+    // Si ya los descargamos una vez, los usamos de inmediato
+    if (_cacheActivosBloqueados.isNotEmpty) {
+      _drivers = List.from(_cacheActivosBloqueados);
+      notifyListeners();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      final snapshot = await _ref
+          .where("rol", isEqualTo: "carro")
+          .where("Verificacion_Status", whereIn: ["activado", "bloqueado"])
+          .get();
+
+      _cacheActivosBloqueados = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data["id"] = doc.id;
+        return Driver.fromJson(data);
+      }).toList();
+
+      _drivers = List.from(_cacheActivosBloqueados);
+      notifyListeners();
+    } catch (e) {
+      print('Error al traer activos/bloqueados: $e');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// 🔄 TIP COMPLEMENTARIO: Cuando el usuario le dé al botón físico de "Refrescar" en la UI,
+  /// simplemente limpia las variables de caché para obligar a traer los datos nuevos:
+  void limpiarCache() {
+    _cachePendientes.clear();
+    _cacheActivosBloqueados.clear();
+  }
+
+  Future<void> buscarDriver(String query, bool mostrarSoloActivosBloqueados) async {
     print("🔍 BUSCANDO: $query");
 
+    // Definimos la base de datos local correcta según la pestaña en la que está el administrador
+    final baseParaFiltrar = mostrarSoloActivosBloqueados ? _cacheActivosBloqueados : _cachePendientes;
+
     if (query.trim().isEmpty) {
-      await fetchDriversInicial();
+      // 🔥 OPTIMIZADO: Si borra el texto, restaura desde la memoria instantáneamente. 0 Lecturas.
+      _drivers = List.from(baseParaFiltrar);
+      notifyListeners();
       return;
     }
 
     final q = query.trim().toLowerCase();
 
-    /// 🔥 1. TRAER TODOS LOS DRIVERS (ya los tienes en memoria)
-    final allDrivers = List<Driver>.from(drivers);
-
-    /// 🔥 2. FILTRO LOCAL (NOMBRE, APELLIDO, CELULAR, DOC)
-    final filtrados = allDrivers.where((driver) {
+    /// 🔥 1. FILTRO LOCAL EN MEMORIA (Ahorro total de dinero)
+    final filtrados = baseParaFiltrar.where((driver) {
       final nombre = (driver.the01Nombres ?? "").toLowerCase();
       final apellido = (driver.the02Apellidos ?? "").toLowerCase();
       final celular = (driver.the07Celular ?? "").toLowerCase();
@@ -380,39 +451,42 @@ class DriverProvider with ChangeNotifier {
           documento.contains(q);
     }).toList();
 
-    /// 🔥 3. SI ENCUENTRA ALGO → DEVUELVE
+    /// 🔥 2. SI ENCUENTRA ALGO EN MEMORIA → LO MUESTRA DE INMEDIATO
     if (filtrados.isNotEmpty) {
-      drivers.clear();
-      drivers.addAll(filtrados);
+      _drivers = filtrados;
       notifyListeners();
       return;
     }
 
-    /// 🔥 4. SI NO → BUSCAR POR PLACA (Firestore)
+    /// 🔥 3. SI NO → BUSCAR POR PLACA (Firestore)
     final queryFormatted = query.trim().toUpperCase();
 
-    final vehiculosSnapshot = await FirebaseFirestore.instance
-        .collectionGroup("vehiculos")
-        .where("18_Placa", isEqualTo: queryFormatted)
-        .get();
-
-    List<String> driverIds = vehiculosSnapshot.docs
-        .map((doc) => doc["driverId"] as String)
-        .toSet()
-        .toList();
-
-    if (driverIds.isNotEmpty) {
-      final driversSnapshot = await FirebaseFirestore.instance
-          .collection("Drivers")
-          .where(FieldPath.documentId, whereIn: driverIds)
+    try {
+      final vehiculosSnapshot = await FirebaseFirestore.instance
+          .collectionGroup("vehiculos")
+          .where("18_Placa", isEqualTo: queryFormatted)
           .get();
 
-      drivers.clear();
-      drivers.addAll(
-        driversSnapshot.docs.map((e) => Driver.fromJson(e.data())).toList(),
-      );
-    } else {
-      await fetchDriversInicial();
+      List<String> driverIds = vehiculosSnapshot.docs
+          .map((doc) => doc["driverId"] as String)
+          .toSet()
+          .toList();
+
+      if (driverIds.isNotEmpty) {
+        final driversSnapshot = await _ref
+            .where(FieldPath.documentId, whereIn: driverIds)
+            .get();
+
+        _drivers = driversSnapshot.docs
+            .map((e) => Driver.fromJson(e.data() as Map<String, dynamic>))
+            .toList();
+      } else {
+        // 🔥 OPTIMIZADO: Si no encuentra la placa, regresa al listado original desde memoria sin recargar
+        _drivers = List.from(baseParaFiltrar);
+      }
+    } catch (e) {
+      print("Error buscando por placa: $e");
+      _drivers = List.from(baseParaFiltrar);
     }
 
     notifyListeners();

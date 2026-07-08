@@ -35,10 +35,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 🔥 CAMBIO: En vez de fetchDrivers, inicializa con la consulta segmentada de pendientes
       Provider.of<DriverProvider>(context, listen: false)
-          .fetchDriversInicial();
+          .fetchPendientesServidor();
     });
-    //cargarErroresVehiculos();
   }
 
   int getPrioridad(Driver driver) {
@@ -569,8 +569,18 @@ class _ConductoresPageState extends State<ConductoresPage> {
             IconButton(
               icon: const Icon(Icons.refresh),
               color: Theme.of(context).primaryColor,
-              onPressed: () {
-                driverProvider.fetchDriversInicial();
+              onPressed: () async {
+                final provider = Provider.of<DriverProvider>(context, listen: false);
+
+                // 🔥 1. Forzamos la limpieza de la caché para que traiga datos nuevos reales de Firestore
+                provider.limpiarCache();
+
+                // 🔥 2. Validamos en qué pestaña está el admin y refrescamos solo esa lista
+                if (mostrarSoloActivosBloqueados) {
+                  await provider.fetchActivosBloqueadosServidor();
+                } else {
+                  await provider.fetchPendientesServidor();
+                }
               },
             ),
           ],
@@ -585,28 +595,21 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
             ElevatedButton.icon(
               onPressed: () async {
-
-                final provider =
-                Provider.of<DriverProvider>(
+                final provider = Provider.of<DriverProvider>(
                   context,
                   listen: false,
                 );
 
                 if (!mostrarSoloActivosBloqueados) {
-
-                  await provider.fetchDriversActivos();
-
+                  /// 🔥 NUEVO: Trae solo activados/bloqueados desde el servidor sin basura
+                  await provider.fetchActivosBloqueadosServidor();
                 } else {
-
-                  await provider.fetchDriversInicial();
-
+                  /// 🔥 NUEVO: Trae solo los pendientes por revisar desde el servidor
+                  await provider.fetchPendientesServidor();
                 }
 
                 setState(() {
-
-                  mostrarSoloActivosBloqueados =
-                  !mostrarSoloActivosBloqueados;
-
+                  mostrarSoloActivosBloqueados = !mostrarSoloActivosBloqueados;
                 });
               },
               icon: Icon(
@@ -624,7 +627,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
               ),
-            ),
+            )
           ],
         ),
 
@@ -721,8 +724,18 @@ class _ConductoresPageState extends State<ConductoresPage> {
             ),
             const SizedBox(width: 100),
             ElevatedButton(
-              onPressed: () {
-                driverProvider.fetchDriversInicial();
+              onPressed: () async {
+                final provider = Provider.of<DriverProvider>(context, listen: false);
+
+                // 🔥 1. Forzamos la limpieza de la caché para que traiga datos nuevos reales de Firestore
+                provider.limpiarCache();
+
+                // 🔥 2. Validamos en qué pestaña está el admin y refrescamos solo esa lista
+                if (mostrarSoloActivosBloqueados) {
+                  await provider.fetchActivosBloqueadosServidor();
+                } else {
+                  await provider.fetchPendientesServidor();
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
@@ -731,7 +744,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 'Cargar Conductores',
                 style: TextStyle(color: Colors.white),
               ),
-            ),
+            )
           ],
         ),
 
@@ -743,47 +756,39 @@ class _ConductoresPageState extends State<ConductoresPage> {
             _buildSearchField(),
             ElevatedButton.icon(
               onPressed: () async {
-
-                final provider =
-                Provider.of<DriverProvider>(
+                final provider = Provider.of<DriverProvider>(
                   context,
                   listen: false,
                 );
 
                 if (!mostrarSoloActivosBloqueados) {
-
-                  await provider.fetchDriversActivos();
-
+                  /// 🔥 NUEVO: Trae solo activados/bloqueados desde el servidor sin basura
+                  await provider.fetchActivosBloqueadosServidor();
                 } else {
-
-                  await provider.fetchDriversInicial();
-
+                  /// 🔥 NUEVO: Trae solo los pendientes por revisar desde el servidor
+                  await provider.fetchPendientesServidor();
                 }
 
                 setState(() {
-
-                  mostrarSoloActivosBloqueados =
-                  !mostrarSoloActivosBloqueados;
-
+                  mostrarSoloActivosBloqueados = !mostrarSoloActivosBloqueados;
                 });
-
               },
               icon: Icon(
                 mostrarSoloActivosBloqueados
                     ? Icons.visibility_off
                     : Icons.visibility,
-                color: Colors.black,
+                color: Colors.white,
               ),
               label: Text(
                 mostrarSoloActivosBloqueados
                     ? "Ver pendientes"
                     : "Ver activados/bloqueados",
-                style: const TextStyle(color: Colors.black),
+                style: const TextStyle(color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
               ),
-            ),
+            )
           ],
         ),
 
@@ -978,9 +983,9 @@ class _ConductoresPageState extends State<ConductoresPage> {
             icon: const Icon(Icons.search),
             onPressed: () {
               final query = searchController.text.trim();
-
+              // 🔥 CAMBIO: Pasamos el booleano de la pestaña actual
               Provider.of<DriverProvider>(context, listen: false)
-                  .buscarDriver(query);
+                  .buscarDriver(query, mostrarSoloActivosBloqueados);
             },
           ),
         ),
@@ -988,14 +993,14 @@ class _ConductoresPageState extends State<ConductoresPage> {
         /// 🔥 SOLO ENTER
         onSubmitted: (value) {
           Provider.of<DriverProvider>(context, listen: false)
-              .buscarDriver(value.trim());
+              .buscarDriver(value.trim(), mostrarSoloActivosBloqueados);
         },
 
-        /// 🔥 SOLO PARA DETECTAR VACÍO (no para buscar)
+        /// 🔥 DETECTAR VACÍO (Restaura instantáneamente desde memoria sin ir a Firestore)
         onChanged: (value) {
           if (value.trim().isEmpty) {
             Provider.of<DriverProvider>(context, listen: false)
-                .fetchDriversInicial();
+                .buscarDriver("", mostrarSoloActivosBloqueados);
           }
         },
       ),
@@ -1067,17 +1072,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
           rows: filteredConductores.map((driver) {
             return DataRow(
               onSelectChanged: (_) async {
-
-                await FirebaseFirestore.instance
-                    .collection("Drivers")
-                    .doc(driver.id)
-                    .update({
-
-                  "revision_estado": "revisado",
-                  "revision_fecha": FieldValue.serverTimestamp(),
-
-                });
-
                 Navigator.push(
                   context,
                   MaterialPageRoute(
