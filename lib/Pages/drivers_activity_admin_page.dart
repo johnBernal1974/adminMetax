@@ -39,8 +39,9 @@ class _DriversActivityAdminPageState extends State<DriversActivityAdminPage> {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final activos = data['activos'] ?? 0;
           final dormidos = data['dormidos'] ?? 0;
-          final sinLocation = data['sinLocation'] ?? 0;
-          final totalActivados = data['totalActivados'] ?? 0;
+// Usamos el nuevo nombre del campo que definimos en la función
+          final activadosSinActividad = data['activadosSinActividad'] ?? 0;
+          final totalActivados = data['totalActivadosAprobados'] ?? 0;
 
           return Center(
             child: ConstrainedBox(
@@ -76,8 +77,9 @@ class _DriversActivityAdminPageState extends State<DriversActivityAdminPage> {
                             SizedBox(
                               width: isMobile ? double.infinity : 250,
                               child: GestureDetector(
-                                onTap: () => setState(() => filtroSeleccionado = 'sinLocation'),
-                                child: _buildCard('❌ Sin Location', sinLocation.toString(), Colors.red),
+                                onTap: () => setState(() => filtroSeleccionado = 'sinLocation'), // Mantenemos el filtro igual para no romper la lógica de búsqueda
+                                // Cambiamos el título que se ve en la pantalla
+                                child: _buildCard('❌ Activados sin actividad', activadosSinActividad.toString(), Colors.red),
                               ),
                             ),
                             SizedBox(
