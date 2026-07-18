@@ -221,6 +221,12 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('campanas_whatsapp_page'),
                 ),
 
+              DrawerListTitle(
+                title: "Gestión Conductores",
+                icon: Icons.group_work, // Puedes cambiar este ícono por el que prefieras
+                press: () => _go('gestor_conexion_drivers_page'),
+              ),
+
               if (_canSee(role, 'campanas_whatsapp_clientes_page'))
                 DrawerListTitle(
                   title: "Campañas Clientes",
