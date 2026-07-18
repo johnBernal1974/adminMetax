@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
   // Almacenamiento local aislado para Activos
   List<Driver> listaConductoresActivosLocal = [];
   bool cargandoActivosLocal = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -174,17 +177,24 @@ class _ConductoresPageState extends State<ConductoresPage> {
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
-    final conductores = driverProvider.drivers;
+    final todosLosConductores = driverProvider.drivers;
 
-    List filteredConductores = conductores;
+    // 1. LÓGICA DE BÚSQUEDA (Nombre, Apellido, Cédula, Celular)
+    final q = searchQuery.toLowerCase();
+    List filteredConductores = todosLosConductores.where((d) {
+      if (searchQuery.isEmpty) return true;
+      return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
+          (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
+          (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
+          (d.the07Celular ?? "").toLowerCase().contains(q);
+    }).toList();
 
-    // 1. REGISTRADOS
+    // 2. CATEGORÍAS (Usando la lista ya filtrada)
     final registrados = ordenarConductores(filteredConductores.where((d) {
       final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
       return estado == "registrado" && !tieneCorregida(d) && !tieneRechazada(d);
     }).toList());
 
-    // 2. CORREGIDOS
     final corregidos = ordenarConductores(filteredConductores.where((d) {
       final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
       final estadoVehiculo = driversEstadoVehiculo[d.id];
@@ -192,14 +202,12 @@ class _ConductoresPageState extends State<ConductoresPage> {
       return tieneCorregida(d) || estadoVehiculo == "corregida";
     }).toList());
 
-    // 3. RECHAZADOS
     final rechazados = ordenarConductores(filteredConductores.where((d) {
       final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
       if (estado == "bloqueado" || d.the38EstaBloqueado == true) return false;
       return tieneRechazada(d) && !tieneCorregida(d);
     }).toList());
 
-    // 4. PROCESANDO
     final procesando = ordenarConductores(filteredConductores.where((d) {
       final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
       final estadoVehiculo = driversEstadoVehiculo[d.id];
@@ -208,13 +216,18 @@ class _ConductoresPageState extends State<ConductoresPage> {
       return estado == "procesando" && !tieneRechazada(d);
     }).toList());
 
-    // 5. ACTIVADOS
     final activados = ordenarConductores(listaConductoresActivosLocal.where((d) {
       if (d.the38EstaBloqueado == true) return false;
+      // Filtro de búsqueda para activos
+      if (searchQuery.isNotEmpty) {
+        return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
+            (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
+            (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
+            (d.the07Celular ?? "").toLowerCase().contains(q);
+      }
       return true;
     }).toList());
 
-    // 6. BLOQUEADOS
     final bloqueados = ordenarConductores([
       ...filteredConductores,
       ...listaConductoresActivosLocal,
@@ -233,15 +246,17 @@ class _ConductoresPageState extends State<ConductoresPage> {
           children: [
             SizedBox(height: MediaQuery.of(context).padding.top),
 
-            // FILA SUPERIOR CORREGIDA (Sin duplicaciones anidadas)
+            // Reemplaza esta sección de Padding en tu método build
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
-              child: Row(
+              child: Wrap(
+                spacing: 10.0, // Espacio horizontal entre elementos
+                runSpacing: 10.0, // Espacio vertical cuando salten de línea
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _buildSearchField(),
-                  const Spacer(),
 
-                  // 🔥 BOTÓN 1: Vencidos pero ya ACTIVADOS (App Funcional en la calle)
+                  // Botón 1
                   _buildBotonSegmentado(
                     context: context,
                     titulo: 'Activos Vencidos',
@@ -249,9 +264,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     color: Colors.red,
                     icono: Icons.gpp_maybe_rounded,
                   ),
-                  const SizedBox(width: 10),
 
-                  // 🔥 BOTÓN 2: Vencidos en proceso de registro (Sin Activar)
+                  // Botón 2
                   _buildBotonSegmentado(
                     context: context,
                     titulo: 'Pendientes Vencidos',
@@ -259,8 +273,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     color: Colors.orange,
                     icono: Icons.folder_zip_outlined,
                   ),
-                  const SizedBox(width: 10),
 
+                  // Botón Refresh
                   IconButton(
                     icon: const Icon(Icons.refresh, size: 26),
                     color: Theme.of(context).primaryColor,
@@ -486,25 +500,32 @@ class _ConductoresPageState extends State<ConductoresPage> {
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
-          labelText: 'Buscar por cédula o placa',
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              final query = searchController.text.trim();
-              Provider.of<DriverProvider>(context, listen: false)
-                  .buscarDriver(query, mostrarSoloActivosBloqueados);
-            },
+          labelText: 'Buscar por nombre, apellido, cédula o celular',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.grey, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
           ),
         ),
-        onSubmitted: (value) {
-          Provider.of<DriverProvider>(context, listen: false)
-              .buscarDriver(value.trim(), mostrarSoloActivosBloqueados);
-        },
         onChanged: (value) {
-          if (value.trim().isEmpty) {
-            Provider.of<DriverProvider>(context, listen: false)
-                .buscarDriver("", mostrarSoloActivosBloqueados);
-          }
+          // Cancelamos el timer anterior si el usuario sigue escribiendo/borrando
+          if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+          // Esperamos 300ms antes de disparar el setState
+          _debounce = Timer(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              setState(() {
+                searchQuery = value;
+              });
+            }
+          });
         },
       ),
     );
