@@ -156,18 +156,19 @@ class _UsuariosPageState extends State<UsuariosPage> {
     }).toList();
 
     // 🔥 SUB-DIVISIÓN PARA CONTROL DE CÉDULA A PARTIR DEL TERCER SERVICIO (Viajes >= 2)
+    // 🔥 ACTUALIZADO: A partir de 0 viajes (desde el inicio o primer servicio)
     final activadosConCedula = ordenarClientes(activadosGeneral.where((client) {
       final viajes = client.viajes ?? 0;
       final tieneCedulaSubida = (client.cedulaFrontalUrl ?? "").isNotEmpty &&
           (client.cedulaReversoUrl ?? "").isNotEmpty;
-      return viajes >= 2 && tieneCedulaSubida;
+      return viajes >= 0 && tieneCedulaSubida;
     }).toList());
 
     final activadosSinCedula = ordenarClientes(activadosGeneral.where((client) {
       final viajes = client.viajes ?? 0;
       final tieneCedulaSubida = (client.cedulaFrontalUrl ?? "").isNotEmpty &&
           (client.cedulaReversoUrl ?? "").isNotEmpty;
-      return viajes >= 2 && !tieneCedulaSubida;
+      return viajes >= 0 && !tieneCedulaSubida;
     }).toList());
 
     final activados = ordenarClientes(activadosGeneral);
@@ -182,7 +183,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
     return MainLayout(
       pageTitle: 'Clientes',
       content: DefaultTabController(
-        length: 9, // 🔥 AUMENTAMOS A 9 PESTAÑAS PARA INCLUIR EL CONTROL DE CÉDULAS
+        length: 9,
         child: Column(
           children: [
             SizedBox(height: MediaQuery.of(context).padding.top),
@@ -207,26 +208,36 @@ class _UsuariosPageState extends State<UsuariosPage> {
               ),
             ),
 
-            // TabBar de Pestañas
+            // 🔥 PESTAÑAS DISTRIBUIDAS EN 2 LÍNEAS (WRAP) PARA QUE NINGUNA SE OCULTE EN PORTÁTILES
             Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               color: Colors.white,
               width: double.infinity,
-              child: TabBar(
-                isScrollable: true,
-                labelColor: Theme.of(context).primaryColor,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Theme.of(context).primaryColor,
-                tabs: [
-                  Tab(text: "🆕 Registrados (${registrados.length})"),
-                  Tab(text: "🛠️ Corregidos (${corregidos.length})"),
-                  Tab(text: "⏳ Procesando (${procesando.length})"),
-                  Tab(text: "🟡 Activ. Parcial (${activacionParcial.length})"),
-                  Tab(text: "🚫 Rechazados (${rechazados.length})"),
-                  Tab(text: "🟢 Activos (${activados.length})"),
-                  Tab(text: "⚠️ Sin Cédula (Servicio 3+) (${activadosSinCedula.length})"), // 🔥 NUEVA PESTAÑA DE ALERTA
-                  Tab(text: "✅ Con Cédula Al Día (${activadosConCedula.length})"), // 🔥 NUEVA PESTAÑA DE CONTROL
-                  Tab(text: "🔴 Bloqueados (${bloqueados.length})"),
-                ],
+              child: Builder(
+                builder: (context) {
+                  final TabController tabController = DefaultTabController.of(context);
+                  return AnimatedBuilder(
+                    animation: tabController,
+                    builder: (context, _) {
+                      return Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8.0,
+                        runSpacing: 6.0,
+                        children: [
+                          _buildCustomTabButton("🆕 Registrados", registrados.length, 0, tabController),
+                          _buildCustomTabButton("🛠️ Corregidos", corregidos.length, 1, tabController),
+                          _buildCustomTabButton("⏳ Procesando", procesando.length, 2, tabController),
+                          _buildCustomTabButton("🟡 Activ. Parcial", activacionParcial.length, 3, tabController),
+                          _buildCustomTabButton("🚫 Rechazados", rechazados.length, 4, tabController),
+                          _buildCustomTabButton("🟢 Activos", activados.length, 5, tabController),
+                          _buildCustomTabButton("⚠️ Sin Cédula", activadosSinCedula.length, 6, tabController),
+                          _buildCustomTabButton("✅ Al Día", activadosConCedula.length, 7, tabController),
+                          _buildCustomTabButton("🔴 Bloqueados", bloqueados.length, 8, tabController),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
 
@@ -246,14 +257,43 @@ class _UsuariosPageState extends State<UsuariosPage> {
                     _buildTabContent(activacionParcial),
                     _buildTabContent(rechazados),
                     _buildTabContent(activados),
-                    _buildTabContent(activadosSinCedula), // 🔥 VISTA DE QUIENES DEBEN SUBIRLA
-                    _buildTabContent(activadosConCedula), // 🔥 VISTA DE QUIENES YA LA TIENEN
+                    _buildTabContent(activadosSinCedula),
+                    _buildTabContent(activadosConCedula),
                     _buildTabContent(bloqueados),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomTabButton(String title, int count, int index, TabController controller) {
+    final bool isSelected = controller.index == index;
+    return InkWell(
+      onTap: () {
+        controller.animateTo(index);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.15) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Text(
+          "$title ($count)",
+          style: TextStyle(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
         ),
       ),
     );
@@ -321,9 +361,11 @@ class _UsuariosPageState extends State<UsuariosPage> {
       dataRowHeight: 70.0,
       columns: const [
         DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Foto', style: TextStyle(fontWeight: FontWeight.bold))),
         DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))),
         DataColumn(label: Text('Apellidos', style: TextStyle(fontWeight: FontWeight.bold))),
         DataColumn(label: Text('Celular', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Viajes', style: TextStyle(fontWeight: FontWeight.bold))),
         DataColumn(label: Text('Fecha registro', style: TextStyle(fontWeight: FontWeight.bold))),
         DataColumn(label: Text('Acción', style: TextStyle(fontWeight: FontWeight.bold))),
       ],
@@ -339,6 +381,36 @@ class _UsuariosPageState extends State<UsuariosPage> {
               ),
             ),
             DataCell(
+              // 🔥 ENVOLVEMOS LA FOTO EN UN GESTUREDETECTOR PARA QUE SEA CLICKEABLE
+              InkWell(
+                onTap: () {
+                  if (client.fotoPerfilUrl != null && client.fotoPerfilUrl.isNotEmpty) {
+                    _mostrarFotoGrande(context, client.fotoPerfilUrl, "${client.nombres} ${client.apellidos}");
+                  }
+                },
+                child: Tooltip(
+                  message: "Haz clic para ver la foto en grande",
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.grey.shade200,
+                      image: (client.fotoPerfilUrl != null && client.fotoPerfilUrl.isNotEmpty)
+                          ? DecorationImage(
+                        image: NetworkImage(client.fotoPerfilUrl),
+                        fit: BoxFit.cover,
+                      )
+                          : null,
+                    ),
+                    child: (client.fotoPerfilUrl == null || client.fotoPerfilUrl.isEmpty)
+                        ? const Icon(Icons.person, size: 20, color: Colors.grey)
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+            DataCell(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -351,6 +423,19 @@ class _UsuariosPageState extends State<UsuariosPage> {
             ),
             DataCell(Text(client.apellidos.isNotEmpty ? client.apellidos : "Apellidos no disponibles", style: const TextStyle(color: Colors.black))),
             DataCell(Text(client.celular.isNotEmpty ? client.celular : "Celular no disponible")),
+            DataCell(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${client.viajes ?? 0}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ),
+            ),
             DataCell(Text(_formatearFecha(client.fechaRegistro))),
             DataCell(
               IconButton(
@@ -361,6 +446,83 @@ class _UsuariosPageState extends State<UsuariosPage> {
           ],
         );
       }).toList(),
+    );
+  }
+
+  // 🔥 MÉTODO PARA ABRIR LA TARJETA FLOTANTE CON LA FOTO GRANDE
+  void _mostrarFotoGrande(BuildContext context, String imageUrl, String nombreCliente) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: 400,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Cabecera con Nombre y Botón de Cerrar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombreCliente,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                // Imagen ampliada con soporte de Zoom
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      maxWidth: 350,
+                      maxHeight: 400,
+                    ),
+                    child: InteractiveViewer(
+                      panEnabled: true, // Permite mover la imagen si se hace zoom
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            height: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const SizedBox(
+                            height: 150,
+                            child: Center(child: Text("No se pudo cargar la imagen")),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "💡 Puedes hacer zoom con el mouse o la pantalla táctil",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

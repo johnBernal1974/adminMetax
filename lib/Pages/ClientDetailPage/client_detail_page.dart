@@ -203,6 +203,83 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   }
   /////// widgets interfaz/////////////////////////////////////////
 
+  void _confirmarYEnviarRequerimientoCedula(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text("Enviar Requerimiento de Cédula"),
+          content: Text(
+            "¿Deseas enviar un mensaje por WhatsApp a ${widget.client.nombres} solicitando la actualización de su cédula?",
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancelar"),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.green),
+              child: const Text("Enviar"),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Cierra el diálogo de confirmación
+
+                // Muestra el indicador de carga
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 15),
+                        Text("Enviando requerimiento..."),
+                      ],
+                    ),
+                  ),
+                );
+
+                try {
+                  final telefono = widget.client.celular;
+                  final nombre = widget.client.nombres;
+                  final fullPhone = "57$telefono".replaceAll(RegExp(r'\s+'), '');
+
+                  // Llamada a la Cloud Function que creamos
+                  final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+                  await functions.httpsCallable('enviarRequerimientoCedula').call({
+                    "telefono": fullPhone,
+                    "nombre": nombre,
+                  });
+
+                  if (context.mounted) Navigator.pop(context); // Cierra el indicador de carga
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.green,
+                        content: Text("✅ Requerimiento de cédula enviado correctamente"),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) Navigator.pop(context); // Cierra el indicador de carga
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: Colors.red,
+                        content: Text("❌ Error al enviar mensaje: $e"),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _seccionValidacionUsuario(Client client) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -391,6 +468,13 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
+
+        // 🆔 NUEVO BOTÓN PARA PEDIR LA CÉDULA POR WHATSAPP
+        IconButton(
+          icon: const Icon(Icons.badge, color: Colors.blueAccent, size: 30),
+          tooltip: "Requerir Cédula por WhatsApp",
+          onPressed: () => _confirmarYEnviarRequerimientoCedula(context),
+        ),
         GestureDetector(
           onTap: () async {
 
