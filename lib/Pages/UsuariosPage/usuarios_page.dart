@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +9,7 @@ import '../../providers/client_provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../ClientDetailPage/client_detail_page.dart';
+import 'package:intl/intl.dart';
 
 class UsuariosPage extends StatefulWidget {
   const UsuariosPage({Key? key}) : super(key: key);
@@ -21,336 +21,267 @@ class UsuariosPage extends StatefulWidget {
 class _UsuariosPageState extends State<UsuariosPage> {
   TextEditingController searchController = TextEditingController();
   String searchQuery = "";
-  String filterStatus = "";
   int totalClients = 0;
   Operador? operador;
   Client? client;
-  OperadorProvider _operadorProvider = OperadorProvider();
-  MyAuthProvider _authProvider = MyAuthProvider();
+  final OperadorProvider _operadorProvider = OperadorProvider();
+  final MyAuthProvider _authProvider = MyAuthProvider();
 
-  bool mostrarSoloActivosBloqueados = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ClientProvider>(context, listen: false).fetchClients();
+    });
+  }
+
+  Color getStatusColor(Client client) {
+    if (client.fotoPerfilEstado == 'rechazada' ||
+        client.cedulaFrontalEstado == 'rechazada' ||
+        client.cedulaReversoEstado == 'rechazada') {
+      return Colors.orange;
+    }
+
+    if (client.fotoPerfilEstado == 'corregida' ||
+        client.cedulaFrontalEstado == 'corregida' ||
+        client.cedulaReversoEstado == 'corregida') {
+      return Colors.purple;
+    }
+
+    if (client.status == 'procesando') {
+      return Colors.blueAccent;
+    }
+
+    if (client.status == 'activacion_parcial') {
+      return Colors.black87;
+    }
+
+    if (client.status == 'registrado') {
+      return Colors.blueGrey;
+    }
+
+    if (client.status == 'activado') {
+      return Colors.green;
+    }
+
+    if (client.status == 'bloqueado') {
+      return Colors.red.shade900;
+    }
+
+    return Colors.grey;
+  }
+
+  bool tieneCorregida(Client client) {
+    return client.fotoPerfilEstado == 'corregida' ||
+        client.cedulaFrontalEstado == 'corregida' ||
+        client.cedulaReversoEstado == 'corregida' ||
+        client.nombreEstado == 'corregida';
+  }
+
+  bool tieneRechazada(Client client) {
+    return client.fotoPerfilEstado == 'rechazada' ||
+        client.cedulaFrontalEstado == 'rechazada' ||
+        client.cedulaReversoEstado == 'rechazada';
+  }
+
+  List ordenarClientes(List lista) {
+    lista.sort((a, b) {
+      final fechaA = a.fechaRegistro;
+      final fechaB = b.fechaRegistro;
+
+      DateTime? dateA;
+      DateTime? dateB;
+
+      if (fechaA is Timestamp) dateA = fechaA.toDate();
+      if (fechaB is Timestamp) dateB = fechaB.toDate();
+
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      return dateB.compareTo(dateA);
+    });
+    return lista;
+  }
 
   @override
   Widget build(BuildContext context) {
-    print('Nombre del operador recibido es/////////////////////**************************: ${operador?.the01Nombres}');
     final clientProvider = Provider.of<ClientProvider>(context);
     final usuarios = clientProvider.clients;
-    final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
 
-    Color getStatusColor(Client client) {
-
-      // 🔴 prioridad máxima
-      if (client.fotoPerfilEstado == 'rechazada' ||
-          client.cedulaFrontalEstado == 'rechazada' ||
-          client.cedulaReversoEstado == 'rechazada') {
-        return Colors.red;
-      }
-
-      // 🟣 corregida
-      if (client.fotoPerfilEstado == 'corregida' ||
-          client.cedulaFrontalEstado == 'corregida' ||
-          client.cedulaReversoEstado == 'corregida') {
-        return Colors.purple;
-      }
-
-      // 🔵 en proceso
-      if (client.status == 'procesando') {
-        return Colors.blue;
-      }
-
-      if (client.status == 'activacion_parcial') {
-        return Colors.black87;
-      }
-
-      // ⚪ registrado
-      if (client.status == 'registrado') {
-        return Colors.grey;
-      }
-
-      // 🟢 activado
-      if (client.status == 'activado') {
-        return Colors.green;
-      }
-
-      return Colors.grey;
-    }
-
+    // 1. LÓGICA DE BÚSQUEDA (Nombre, Apellidos, Celular)
+    final q = searchQuery.toLowerCase();
     List filteredClientes = usuarios.where((client) {
-
-      final estado = (client.status ?? "")
-          .toString()
-          .trim()
-          .toLowerCase();
-
-      // 🔥 FILTRO BOTÓN
-      if (mostrarSoloActivosBloqueados) {
-        if (!(estado.contains("activado") || estado.contains("bloqueado"))) {
-          return false;
-        }
-      } else {
-        if (!(estado.contains("registrado") ||
-            estado.contains("procesando") ||
-            estado.contains("activacion_parcial"))) {
-          return false;
-        }
-      }
-
-      // 🔍 BUSCADOR
-      return client.nombres.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          client.apellidos.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          client.celular.toLowerCase().contains(searchQuery.toLowerCase());
-
+      if (searchQuery.isEmpty) return true;
+      return client.nombres.toLowerCase().contains(q) ||
+          client.apellidos.toLowerCase().contains(q) ||
+          client.celular.toLowerCase().contains(q);
     }).toList();
 
-    filteredClientes.sort((a, b) {
+    // 2. CATEGORÍAS (Pestañas)
+    final registrados = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      return estado == "registrado" && !tieneCorregida(client) && !tieneRechazada(client);
+    }).toList());
 
-      // 🔥 activacion_parcial primero
-      if (a.status == 'activacion_parcial' &&
-          b.status != 'activacion_parcial') {
-        return -1;
-      }
+    final corregidos = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      if (estado == "bloqueado") return false;
+      return tieneCorregida(client);
+    }).toList());
 
-      if (a.status != 'activacion_parcial' &&
-          b.status == 'activacion_parcial') {
-        return 1;
-      }
+    final rechazados = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      if (estado == "bloqueado") return false;
+      return tieneRechazada(client) && !tieneCorregida(client);
+    }).toList());
 
-      // 🟣 corregidas después
-      bool aCorregido =
-          a.fotoPerfilEstado == 'corregida' ||
-              a.cedulaFrontalEstado == 'corregida' ||
-              a.cedulaReversoEstado == 'corregida';
+    final procesando = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      if (estado == "bloqueado") return false;
+      if (tieneCorregida(client)) return false;
+      return estado == "procesando" && !tieneRechazada(client);
+    }).toList());
 
-      bool bCorregido =
-          b.fotoPerfilEstado == 'corregida' ||
-              b.cedulaFrontalEstado == 'corregida' ||
-              b.cedulaReversoEstado == 'corregida';
+    final activacionParcial = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      if (estado == "bloqueado") return false;
+      if (tieneCorregida(client)) return false;
+      return estado == "activacion_parcial" && !tieneRechazada(client);
+    }).toList());
 
-      if (aCorregido && !bCorregido) {
-        return -1;
-      }
+    final activadosGeneral = filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      return estado == "activado";
+    }).toList();
 
-      if (!aCorregido && bCorregido) {
-        return 1;
-      }
+    // 🔥 SUB-DIVISIÓN PARA CONTROL DE CÉDULA A PARTIR DEL TERCER SERVICIO (Viajes >= 2)
+    final activadosConCedula = ordenarClientes(activadosGeneral.where((client) {
+      final viajes = client.viajes ?? 0;
+      final tieneCedulaSubida = (client.cedulaFrontalUrl ?? "").isNotEmpty &&
+          (client.cedulaReversoUrl ?? "").isNotEmpty;
+      return viajes >= 2 && tieneCedulaSubida;
+    }).toList());
 
-      return 0;
-    });
+    final activadosSinCedula = ordenarClientes(activadosGeneral.where((client) {
+      final viajes = client.viajes ?? 0;
+      final tieneCedulaSubida = (client.cedulaFrontalUrl ?? "").isNotEmpty &&
+          (client.cedulaReversoUrl ?? "").isNotEmpty;
+      return viajes >= 2 && !tieneCedulaSubida;
+    }).toList());
+
+    final activados = ordenarClientes(activadosGeneral);
+
+    final bloqueados = ordenarClientes(filteredClientes.where((client) {
+      final estado = (client.status ?? "").toLowerCase().trim();
+      return estado == "bloqueado";
+    }).toList());
+
     totalClients = filteredClientes.length;
 
-    int countByStatus(String status) {
-      return usuarios.where((client) {
-        switch (status) {
-
-          case 'registrado':
-            return client.status == 'registrado';
-
-          case 'procesando':
-            return client.status == 'procesando';
-
-          case 'activacion_parcial':
-            return client.status == 'activacion_parcial';
-
-          case 'activado':
-            return client.status == 'activado';
-
-          case 'bloqueado':
-            return client.status == 'bloqueado';
-
-          case 'rechazado_docs':
-            return client.fotoPerfilEstado == 'rechazada' ||
-                client.cedulaFrontalEstado == 'rechazada' ||
-                client.cedulaReversoEstado == 'rechazada';
-
-          case 'corregido_docs':
-            return client.fotoPerfilEstado == 'corregida' ||
-                client.cedulaFrontalEstado == 'corregida' ||
-                client.cedulaReversoEstado == 'corregida';
-
-          default:
-            return false;
-        }
-      }).length;
-    }
-
     return MainLayout(
-      content: Column(
-        children: [
-          SizedBox(height: MediaQuery.of(context).padding.top), // Espacio para la barra de estado en la parte superior
-          Expanded(
-            child: SingleChildScrollView(
+      pageTitle: 'Clientes',
+      content: DefaultTabController(
+        length: 9, // 🔥 AUMENTAMOS A 9 PESTAÑAS PARA INCLUIR EL CONTROL DE CÉDULAS
+        child: Column(
+          children: [
+            SizedBox(height: MediaQuery.of(context).padding.top),
+
+            // Barra superior con Buscador y Refrescar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+              child: Wrap(
+                spacing: 10.0,
+                runSpacing: 10.0,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _buildSearchField(),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 26),
+                    color: Theme.of(context).primaryColor,
+                    onPressed: () {
+                      clientProvider.fetchClients();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // TabBar de Pestañas
+            Container(
+              color: Colors.white,
+              width: double.infinity,
+              child: TabBar(
+                isScrollable: true,
+                labelColor: Theme.of(context).primaryColor,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Theme.of(context).primaryColor,
+                tabs: [
+                  Tab(text: "🆕 Registrados (${registrados.length})"),
+                  Tab(text: "🛠️ Corregidos (${corregidos.length})"),
+                  Tab(text: "⏳ Procesando (${procesando.length})"),
+                  Tab(text: "🟡 Activ. Parcial (${activacionParcial.length})"),
+                  Tab(text: "🚫 Rechazados (${rechazados.length})"),
+                  Tab(text: "🟢 Activos (${activados.length})"),
+                  Tab(text: "⚠️ Sin Cédula (Servicio 3+) (${activadosSinCedula.length})"), // 🔥 NUEVA PESTAÑA DE ALERTA
+                  Tab(text: "✅ Con Cédula Al Día (${activadosConCedula.length})"), // 🔥 NUEVA PESTAÑA DE CONTROL
+                  Tab(text: "🔴 Bloqueados (${bloqueados.length})"),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Contenido de las Pestañas
+            Expanded(
               child: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
                 margin: const EdgeInsets.all(7),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth <= 600) {
-                      return _buildMobileLayout(context, clientProvider, filteredClientes, countByStatus, getStatusColor);
-                    } else {
-                      return _buildDesktopLayout(context, clientProvider, filteredClientes, countByStatus, getStatusColor);
-                    }
-                  },
+                child: TabBarView(
+                  children: [
+                    _buildTabContent(registrados),
+                    _buildTabContent(corregidos),
+                    _buildTabContent(procesando),
+                    _buildTabContent(activacionParcial),
+                    _buildTabContent(rechazados),
+                    _buildTabContent(activados),
+                    _buildTabContent(activadosSinCedula), // 🔥 VISTA DE QUIENES DEBEN SUBIRLA
+                    _buildTabContent(activadosConCedula), // 🔥 VISTA DE QUIENES YA LA TIENEN
+                    _buildTabContent(bloqueados),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      pageTitle: 'Clientes',
     );
   }
 
-  void getOperadorInfo() async {
-    operador = await OperadorProvider().getById(_authProvider.getUser()!.uid);
-    print('Datos del operador: $operador');
-    // Asegúrate de llamar a setState si es necesario para actualizar la UI
-  }
-
-  Widget _buildMobileLayout(
-      BuildContext context,
-      ClientProvider clientProvider,
-      List filteredClientes,
-      int Function(String) countByStatus,
-      Color Function(Client) getStatusColor
-      ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                mostrarSoloActivosBloqueados
-                    ? 'Total de Clientes activos/bloqueados:\n$totalClients'
-                    : 'Total de Clientes pendientes:\n$totalClients',
-                style: const TextStyle(fontSize: 16),
-              ),
+  Widget _buildTabContent(List listaClientes) {
+    if (listaClientes.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            "No hay clientes disponibles en esta sección.",
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              color: Theme.of(context).primaryColor,
-              onPressed: () {
-                clientProvider.fetchClients();
-              },
-            ),
-          ],
-        ),
-
-        const Divider(color: Colors.grey, height: 20, thickness: 2),
-
-        _buildSearchField(),
-
-        const SizedBox(height: 20),
-
-        ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              mostrarSoloActivosBloqueados =
-              !mostrarSoloActivosBloqueados;
-            });
-          },
-          icon: Icon(
-            mostrarSoloActivosBloqueados
-                ? Icons.visibility_off
-                : Icons.visibility,
-            color: Colors.white,
-          ),
-          label: Text(
-            mostrarSoloActivosBloqueados
-                ? "Ver pendientes"
-                : "Ver activados/bloqueados",
-            style: const TextStyle(color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
           ),
         ),
+      );
+    }
 
-        const SizedBox(height: 20),
-
-        _buildClientTable(filteredClientes, getStatusColor),
-      ],
-    );
-  }
-
-  Widget _buildDesktopLayout(
-      BuildContext context,
-      ClientProvider clientProvider,
-      List filteredClientes,
-      int Function(String) countByStatus,
-      Color Function(Client) getStatusColor
-      ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-
-        Row(
-          children: [
-            Text(
-              mostrarSoloActivosBloqueados
-                  ? 'Total de Clientes activos/bloqueados:\n$totalClients'
-                  : 'Total de Clientes pendientes:\n$totalClients',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(width: 100),
-            ElevatedButton(
-              onPressed: () {
-                clientProvider.fetchClients();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
-              child: const Text(
-                'Cargar Clientes',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-
-        const Divider(color: Colors.grey, height: 20, thickness: 2),
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildSearchField(),
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  mostrarSoloActivosBloqueados =
-                  !mostrarSoloActivosBloqueados;
-                });
-              },
-              icon: Icon(
-                mostrarSoloActivosBloqueados
-                    ? Icons.visibility_off
-                    : Icons.visibility,
-                color: Colors.black,
-              ),
-              label: Text(
-                mostrarSoloActivosBloqueados
-                    ? "Ver pendientes"
-                    : "Ver activados/bloqueados",
-                style: const TextStyle(color: Colors.black),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 30),
-
-        _buildClientTable(filteredClientes, getStatusColor),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: _buildClientTable(listaClientes, getStatusColor),
+      ),
     );
   }
 
@@ -360,174 +291,110 @@ class _UsuariosPageState extends State<UsuariosPage> {
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
-          labelText: 'Buscar cliente',
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () async {
-              await _ejecutarBusqueda();
-            },
+          labelText: 'Buscar por nombre, apellidos o celular',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.grey, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
           ),
         ),
-
-        // 🔥 SOLO cuando presiona ENTER
-        onSubmitted: (value) async {
-          await _ejecutarBusqueda();
-        },
-
-        // ❌ IMPORTANTE: quitar lógica de búsqueda en tiempo real
         onChanged: (value) {
-          // solo actualiza el texto, NO busca
-          searchQuery = value.trim();
+          setState(() {
+            searchQuery = value.trim();
+          });
         },
       ),
     );
-  }
-
-  Future<void> _ejecutarBusqueda() async {
-    final query = searchController.text.trim();
-
-    final provider = Provider.of<ClientProvider>(context, listen: false);
-
-    if (query.isEmpty) {
-      await provider.fetchClients();
-      return;
-    }
-
-    await provider.searchClients(query);
-
-    // 🔥 validar si no encontró resultados
-    if (provider.clients.isEmpty && mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Sin resultados"),
-          content: const Text("No se encontró ningún cliente con ese criterio."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar"),
-            )
-          ],
-        ),
-      );
-    }
   }
 
   Widget _buildClientTable(List filteredClientes, Color Function(Client) getStatusColor) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: DataTable(
-          columnSpacing: 20.0,
-          headingRowHeight: 56.0,
-          dataRowHeight: 70.0,
-          columns: const [
-            DataColumn(
-              label: Text(
-                'Estado',
-                style: TextStyle(fontWeight: FontWeight.bold),
+    return DataTable(
+      columnSpacing: 20.0,
+      headingRowHeight: 56.0,
+      dataRowHeight: 70.0,
+      columns: const [
+        DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Apellidos', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Celular', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Fecha registro', style: TextStyle(fontWeight: FontWeight.bold))),
+        DataColumn(label: Text('Acción', style: TextStyle(fontWeight: FontWeight.bold))),
+      ],
+      rows: filteredClientes.map((client) {
+        return DataRow(
+          onSelectChanged: (_) => _irADetalleCliente(client),
+          cells: [
+            DataCell(
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: getStatusColor(client)),
               ),
             ),
-
-            DataColumn(
-              label: Text(
-                'Nombre',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            DataCell(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(client.nombres.isNotEmpty ? client.nombres : "Nombre no disponible", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  if (tieneCorregida(client)) _buildMiniBadge("Corregido", Colors.purple),
+                  if (!tieneCorregida(client) && tieneRechazada(client)) _buildMiniBadge("Rechazado", Colors.orange),
+                ],
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Apellidos',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Celular',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Fecha registro',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Acción',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            DataCell(Text(client.apellidos.isNotEmpty ? client.apellidos : "Apellidos no disponibles", style: const TextStyle(color: Colors.black))),
+            DataCell(Text(client.celular.isNotEmpty ? client.celular : "Celular no disponible")),
+            DataCell(Text(_formatearFecha(client.fechaRegistro))),
+            DataCell(
+              IconButton(
+                icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
+                onPressed: () => _irADetalleCliente(client),
               ),
             ),
           ],
-          rows: filteredClientes.map((client) {
-            return DataRow(
-              onSelectChanged: (_) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ClientDetailPage(client: client),
-                  ),
-                );
-              },
-              cells: [
-                DataCell(
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: getStatusColor(client),
-                    ),
-                  ),
-                ),
-                DataCell(Text(client.nombres.isNotEmpty ? client.nombres : "Nombre no disponible")),
-                DataCell(Text(client.apellidos.isNotEmpty ? client.apellidos : "Apellidos no disponibles")),
-                DataCell(Text(client.celular.isNotEmpty ? client.celular : "Celular no disponible")),
-                DataCell(
-                  Text(
-                    _formatearFecha(client.fechaRegistro),
-                  ),
-                ),
-                DataCell(
-                  IconButton(
-                    icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ClientDetailPage(client: client),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
+
+  Widget _buildMiniBadge(String texto, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+      child: Text(texto, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+    );
+  }
+
   String _formatearFecha(dynamic fecha) {
     try {
       if (fecha == null) return "Sin fecha";
-
       if (fecha is Timestamp) {
         final date = fecha.toDate();
-        return "${date.day}/${date.month}/${date.year}";
+        return DateFormat('dd/MM/yyyy HH:mm').format(date);
       }
-
       if (fecha is String) {
         return fecha;
       }
-
       return "Formato inválido";
     } catch (e) {
       return "Error";
     }
   }
 
-
+  void _irADetalleCliente(Client client) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClientDetailPage(client: client),
+      ),
+    );
+  }
 }
