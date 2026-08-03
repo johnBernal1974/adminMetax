@@ -45,6 +45,9 @@ class Client {
   String fechaExpedicionDocumento;
   String fechaNacimiento;
 
+  String fechaActivacion;
+  String nombreActivador;
+
   Client({
     required this.id,
     required this.nombres,
@@ -78,6 +81,8 @@ class Client {
 
     required this.fechaExpedicionDocumento,
     required this.fechaNacimiento,
+    required this.fechaActivacion,
+    required this.nombreActivador,
   });
 
   // =========================
@@ -143,6 +148,9 @@ class Client {
 
     fechaExpedicionDocumento: (json["05_Fecha_Expedicion_Documento"] ?? "").toString(),
     fechaNacimiento: (json["08_Fecha_Nacimiento"] ?? "").toString(),
+
+    fechaActivacion: (json["12_Fecha_Activacion"] ?? "").toString(),
+    nombreActivador: (json["13_Nombre_Activador"] ?? "").toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -184,5 +192,8 @@ class Client {
 
     "05_Fecha_Expedicion_Documento": fechaExpedicionDocumento,
     "08_Fecha_Nacimiento": fechaNacimiento,
+
+    "12_Fecha_Activacion": fechaActivacion,
+    "13_Nombre_Activador": nombreActivador,
   };
 }

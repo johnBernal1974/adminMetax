@@ -43,6 +43,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, FocusNode> _focusNodes = {};
 
+  String? nombreActivadorClient;
+  String? fechaActivacionClient;
 
 
   @override
@@ -861,6 +863,8 @@ El equipo de Metax''';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildInfoRowHorizontal('Fecha activación:', client.fechaActivacion ?? 'No activado'),
+        _buildInfoRowHorizontal('Activador:', client.nombreActivador ?? 'No asignado'),
         _buildInfoRowHorizontal('Celular:   ', client.celular),
         _buildInfoRowHorizontal('Viajes:   ', client.viajes.toString()),
         _buildInfoRowHorizontalIconoEstrella('Calificación:   ', averageRating.toStringAsFixed(1)),
@@ -1161,12 +1165,18 @@ El equipo de Metax''';
               child: const Text('Activar'),
               onPressed: () async {
 
+                final nombreOp = "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}";
+                final fechaActual = DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES').format(DateTime.now());
+
                 await FirebaseFirestore.instance
                     .collection('Clients')
                     .doc(client.id)
                     .update({
                   "status": "activado",
-                  "requiere_revision": false, // 🔥 CLAVE
+                  "requiere_revision": false,
+                  "11_Esta_activado": true,
+                  "13_Nombre_Activador": nombreOp,
+                  "12_Fecha_Activacion": fechaActual,
                 });
                 /// 🔥 ENVIAR ACTIVACIÓN POR WHATSAPP
                 try {
@@ -2033,6 +2043,55 @@ El equipo de Metax''';
                               const SizedBox(height: 30),
                             ],
                           ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.symmetric(vertical: 20),
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    const url = 'https://antecedentes.policia.gov.co:7005/WebJudicial/';
+                                    final uri = Uri.parse(url);
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    backgroundColor: primary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                                  label: const Text('Antecedentes', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(vertical: 20),
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    _showConfirmationBloqueoAJ(
+                                      context,
+                                      "¿Está seguro de bloquear el cliente por AJ?",
+                                      "bloqueo_AJ",
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    backgroundColor: Colors.redAccent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.cancel, color: Colors.white),
+                                  label: const Text('Bloqueo AJ', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ],
@@ -2282,6 +2341,56 @@ El equipo de Metax''';
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 30),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 20),
+                                      height: 50,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          const url = 'https://antecedentes.policia.gov.co:7005/WebJudicial/';
+                                          final uri = Uri.parse(url);
+                                          if (await canLaunchUrl(uri)) {
+                                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                                          backgroundColor: primary,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.add_chart_sharp, color: Colors.white),
+                                        label: const Text('Antecedentes', style: TextStyle(color: Colors.white)),
+                                      ),
+                                    ),
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 20),
+                                      height: 50,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          _showConfirmationBloqueoAJ(
+                                            context,
+                                            "¿Está seguro de bloquear el cliente por AJ?",
+                                            "bloqueo_AJ",
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                                          backgroundColor: Colors.redAccent,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.cancel, color: Colors.white),
+                                        label: const Text('Bloqueo AJ', style: TextStyle(color: Colors.white)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 50),
                               ],
                             ),
@@ -2292,6 +2401,34 @@ El equipo de Metax''';
                   ),
                 ),
               ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationBloqueoAJ(BuildContext context, String message, String statusValue) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("No"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text("Sí"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _saveField("status", statusValue, () {
+                  setState(() {
+                    widget.client.status = statusValue;
+                  });
+                });
+              },
             ),
           ],
         );
