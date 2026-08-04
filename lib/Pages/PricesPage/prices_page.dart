@@ -25,6 +25,10 @@ class _PricesPageState extends State<PricesPage> {
   DocumentReference<Map<String, dynamic>> get _doc =>
       FirebaseFirestore.instance.collection('Prices').doc('info');
 
+  // Documento de configuración de metas del Grupo Élite
+  DocumentReference<Map<String, dynamic>> get _docElite =>
+      FirebaseFirestore.instance.collection('ParametrosElite').doc('configuracion_actual');
+
   TextEditingController _c(String key, String initial) {
     return _controllers.putIfAbsent(key, () => TextEditingController(text: initial));
   }
@@ -52,6 +56,22 @@ class _PricesPageState extends State<PricesPage> {
     }
   }
 
+  // Guardado específico para la colección de Metas Élite
+  Future<void> _saveEliteParam(String key, dynamic value) async {
+    try {
+      await _docElite.set({key: value}, SetOptions(merge: true));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Meta Élite actualizada: $key")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error guardando $key: $e")),
+      );
+    }
+  }
+
   Future<void> _saveInt(String key, TextEditingController controller) async {
     final v = int.tryParse(controller.text.trim());
     if (v == null) {
@@ -65,6 +85,9 @@ class _PricesPageState extends State<PricesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 900;
+    final cardWidth = isMobile ? double.infinity : 520.0;
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _doc.snapshots(),
       builder: (context, snap) {
@@ -82,9 +105,6 @@ class _PricesPageState extends State<PricesPage> {
 
         selectedCedula = (data["cedula"] is bool) ? data["cedula"] as bool : false;
 
-        final isMobile = MediaQuery.of(context).size.width < 900;
-        final cardWidth = isMobile ? double.infinity : 520.0;
-
         return MainLayout(
           pageTitle: "Configuraciones",
           content: SingleChildScrollView(
@@ -93,6 +113,7 @@ class _PricesPageState extends State<PricesPage> {
               spacing: 12,
               runSpacing: 12,
               children: [
+                SizedBox(width: cardWidth, child: _cardMetasElite()), // ⭐️ NUEVA TARJETA
                 SizedBox(width: cardWidth, child: _cardContacto(data)),
                 SizedBox(width: cardWidth, child: _cardTarifas(data)),
                 SizedBox(width: cardWidth, child: _cardKm(data)),
@@ -137,12 +158,45 @@ class _PricesPageState extends State<PricesPage> {
     );
   }
 
+  // ⭐️ NUEVA TARJETA: EDITAR METAS DEL GRUPO ÉLITE
+  Widget _cardMetasElite() {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _docElite.snapshots(),
+      builder: (context, snap) {
+        final data = snap.data?.data() ?? {};
+
+        return _cardBase("Metas Grupo Élite", Icons.stars_rounded, [
+          _fieldIntCustom(
+            key: "metaHoras",
+            label: "Meta Horas Conectadas",
+            data: data,
+            defaultValue: 208,
+            onSave: (val) => _saveEliteParam("metaHoras", val),
+          ),
+          _fieldIntCustom(
+            key: "metaUsuarios",
+            label: "Meta Clientes Referidos",
+            data: data,
+            defaultValue: 650,
+            onSave: (val) => _saveEliteParam("metaUsuarios", val),
+          ),
+          _fieldIntCustom(
+            key: "metaConductores",
+            label: "Meta Conductores Referidos",
+            data: data,
+            defaultValue: 10,
+            onSave: (val) => _saveEliteParam("metaConductores", val),
+          ),
+        ]);
+      },
+    );
+  }
+
   Widget _cardContacto(Map<String, dynamic> d) {
     return _cardBase("Info de contacto", Icons.support_agent, [
       _fieldText("celular_atencion_conductores", "Celular conductores", d),
       _fieldText("celular_atencion_usuarios", "Celular usuarios", d),
 
-      // ✅ NUEVOS
       _fieldText("correo_conductores", "Correo conductores", d),
       _fieldText("correo_usuarios", "Correo usuarios", d),
       _fieldText("link_descarga_driver", "Link descarga driver", d),
@@ -158,7 +212,6 @@ class _PricesPageState extends State<PricesPage> {
       _fieldInt("tarifa_aeropuerto", "Tarifa aeropuerto", d),
       _fieldInt("tarifa_minima_regular", "Tarifa mínima regular", d),
 
-      // ✅ NUEVOS
       _fieldInt("tarifa_minima_hotel", "Tarifa mínima hotel", d),
       _fieldInt("tarifa_minima_turismo", "Tarifa mínima turismo", d),
 
@@ -172,7 +225,6 @@ class _PricesPageState extends State<PricesPage> {
     return _cardBase("Valores por km", Icons.route, [
       _fieldInt("valor_km_regular", "Valor km regular", d),
 
-      // ✅ NUEVOS
       _fieldInt("valor_km_hotel", "Valor km hotel", d),
       _fieldInt("valor_km_turismo", "Valor km turismo", d),
     ]);
@@ -182,7 +234,6 @@ class _PricesPageState extends State<PricesPage> {
     return _cardBase("Valores por minuto", Icons.timer, [
       _fieldInt("valor_min_regular", "Valor min regular", d),
 
-      // ✅ NUEVOS
       _fieldInt("valor_min_hotel", "Valor min hotel", d),
       _fieldInt("valor_min_turismo", "Valor min turismo", d),
     ]);
@@ -201,7 +252,6 @@ class _PricesPageState extends State<PricesPage> {
       _fieldDouble("radio_de_busqueda", "Radio de búsqueda (km)", d),
       _fieldDouble("radio_maximo_busqueda", "Máximo Radio de búsqueda (km)", d),
 
-      // ✅ NUEVO
       _fieldInt("tiempo_busqueda", "Tiempo de búsqueda", d),
 
       _fieldInt("tiempo_de_espera", "Tiempo de espera", d),
@@ -210,10 +260,8 @@ class _PricesPageState extends State<PricesPage> {
 
   Widget _cardRecargas(Map<String, dynamic> d) {
     return _cardBase("Recargas", Icons.account_balance_wallet, [
-      // ✅ FIX KEY: recarga_inicial (NO recarga_Inicial)
       _fieldInt("recarga_inicial", "Recarga inicial", d),
 
-      // ✅ NUEVO
       _fieldText("numero_cuenta_recargas", "Número cuenta recargas", d),
     ]);
   }
@@ -236,7 +284,6 @@ class _PricesPageState extends State<PricesPage> {
         ],
       ),
 
-      // ✅ NUEVO
       _fieldInt("cedula_despues_de_viajes", "Cédula después de viajes", d),
     ]);
   }
@@ -293,11 +340,51 @@ class _PricesPageState extends State<PricesPage> {
 
   // ===================== FIELDS =====================
 
+  // Campo entero genérico reutilizable con callback personalizado
+  Widget _fieldIntCustom({
+    required String key,
+    required String label,
+    required Map<String, dynamic> data,
+    required int defaultValue,
+    required Function(int) onSave,
+  }) {
+    final initial = (data[key] ?? defaultValue).toString();
+    final controller = _c("elite_$key", initial);
+
+    if (!controller.value.isComposingRangeValid && controller.text != initial) {
+      controller.text = initial;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () {
+              final v = int.tryParse(controller.text.trim());
+              if (v == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Escribe un número entero válido")),
+                );
+                return;
+              }
+              onSave(v);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _fieldText(String key, String label, Map<String, dynamic> d) {
     final initial = (d[key] ?? "").toString();
     final controller = _c(key, initial);
 
-    // si Firestore cambia, actualiza el controller sin romper el cursor (solo si no está editando)
     if (!controller.value.isComposingRangeValid && controller.text != initial) {
       controller.text = initial;
     }

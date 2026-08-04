@@ -67,6 +67,10 @@ class Driver {
   Timestamp? revisionFecha;
   String revisionPor;
 
+  bool? isElite;
+  int? escuadronId;
+  bool? esCapitan;
+
 
   Driver({
     required this.id,
@@ -122,6 +126,10 @@ class Driver {
     required this.revisionComentario,
     required this.revisionFecha,
     required this.revisionPor,
+
+    this.isElite = false,
+    this.escuadronId,
+    this.esCapitan = false,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -198,6 +206,11 @@ class Driver {
 
       revisionPor:
       json["revision_por"] ?? '',
+
+      isElite: json["is_elite"] ?? false,
+      escuadronId: json["escuadron_id"],
+      esCapitan: json["es_capitan"] ?? false,
+
     );
   }
 
@@ -257,6 +270,9 @@ class Driver {
     "revision_comentario": revisionComentario,
     "revision_fecha": revisionFecha,
     "revision_por": revisionPor,
+    "is_elite": isElite ?? false,
+    "escuadron_id": escuadronId,
+    "es_capitan": esCapitan ?? false,
 
   };
 }

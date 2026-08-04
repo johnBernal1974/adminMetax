@@ -8,11 +8,14 @@ import '../../common/main_layout.dart';
 import '../../models/conductor_model.dart';
 import '../../models/operador_model.dart';
 import '../../providers/driver_provider.dart';
+import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
 import 'package:intl/intl.dart';
 import 'dart:html' as html;
 import 'dart:convert';
+
+import '../elites/elite_group_page.dart';
 
 class ConductoresPage extends StatefulWidget {
   ConductoresPage({Key? key}) : super(key: key);
@@ -35,6 +38,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
   List<Driver> listaConductoresActivosLocal = [];
   bool cargandoActivosLocal = false;
   Timer? _debounce;
+  int _initialTabIndex = 0; // Pestaña por defecto: Registrados (0)
 
   @override
   void initState() {
@@ -48,6 +52,35 @@ class _ConductoresPageState extends State<ConductoresPage> {
     });
   }
 
+  // 🔒 Validación de roles con permiso para ver módulos/columnas Élite
+  bool _tienePermisoElite() {
+    try {
+      final operadorProvider = Provider.of<OperadorProvider>(context, listen: false);
+      if (!operadorProvider.activoActual) return false;
+
+      final String rol = (operadorProvider.rolActual ?? "").trim().toLowerCase();
+      final rolesPermitidos = ["master", "operadorfull", "contador"];
+
+      return rolesPermitidos.contains(rol);
+    } catch (e) {
+      print("Error verificando permisos de operador: $e");
+      return false;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (args != null && args['tab'] == 'elites' && _tienePermisoElite()) {
+      setState(() {
+        _initialTabIndex = 5; // Pestaña ⭐ Elites (índice 5 si tiene permiso)
+      });
+    }
+  }
+
   // Consulta única al iniciar la página para evitar retrasos al cambiar de pestaña
   Future<void> _cargarActivosDeFormaAislada() async {
     if (!mounted) return;
@@ -56,7 +89,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
     });
 
     try {
-      // Consulta directa y limpia sin filtros de rol
       final snapshotActivos = await FirebaseFirestore.instance
           .collection("Drivers")
           .where("Verificacion_Status", isEqualTo: "activado")
@@ -178,6 +210,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
     final todosLosConductores = driverProvider.drivers;
+    final bool puedeVerElite = _tienePermisoElite();
 
     // 1. LÓGICA DE BÚSQUEDA (Nombre, Apellido, Cédula, Celular)
     final q = searchQuery.toLowerCase();
@@ -189,7 +222,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
           (d.the07Celular ?? "").toLowerCase().contains(q);
     }).toList();
 
-    // 2. CATEGORÍAS (Usando la lista ya filtrada)
+    // 2. CATEGORÍAS
     final registrados = ordenarConductores(filteredConductores.where((d) {
       final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
       return estado == "registrado" && !tieneCorregida(d) && !tieneRechazada(d);
@@ -218,7 +251,19 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
     final activados = ordenarConductores(listaConductoresActivosLocal.where((d) {
       if (d.the38EstaBloqueado == true) return false;
-      // Filtro de búsqueda para activos
+      if (searchQuery.isNotEmpty) {
+        return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
+            (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
+            (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
+            (d.the07Celular ?? "").toLowerCase().contains(q);
+      }
+      return true;
+    }).toList());
+
+    // 🌟 FILTRO EXCLUSIVO PARA CONDUCTORES ELITE
+    final elites = ordenarConductores(listaConductoresActivosLocal.where((d) {
+      if (d.the38EstaBloqueado == true) return false;
+      if (d.isElite != true) return false;
       if (searchQuery.isNotEmpty) {
         return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
             (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
@@ -238,25 +283,28 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
     totalDrivers = filteredConductores.length + activados.length;
 
+    // Ajusta la cantidad de pestañas según permisos
+    final int cantidadTabs = puedeVerElite ? 7 : 6;
+    final int initialTabValida = _initialTabIndex < cantidadTabs ? _initialTabIndex : 0;
+
     return MainLayout(
       pageTitle: 'Conductores',
       content: DefaultTabController(
-        length: 6,
+        length: cantidadTabs,
+        initialIndex: initialTabValida,
         child: Column(
           children: [
             SizedBox(height: MediaQuery.of(context).padding.top),
 
-            // Reemplaza esta sección de Padding en tu método build
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
               child: Wrap(
-                spacing: 10.0, // Espacio horizontal entre elementos
-                runSpacing: 10.0, // Espacio vertical cuando salten de línea
+                spacing: 10.0,
+                runSpacing: 10.0,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _buildSearchField(),
 
-                  // Botón 1
                   _buildBotonSegmentado(
                     context: context,
                     titulo: 'Activos Vencidos',
@@ -265,7 +313,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     icono: Icons.gpp_maybe_rounded,
                   ),
 
-                  // Botón 2
                   _buildBotonSegmentado(
                     context: context,
                     titulo: 'Pendientes Vencidos',
@@ -274,7 +321,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
                     icono: Icons.folder_zip_outlined,
                   ),
 
-                  // Botón Refresh
                   IconButton(
                     icon: const Icon(Icons.refresh, size: 26),
                     color: Theme.of(context).primaryColor,
@@ -303,6 +349,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
                   Tab(text: "⏳ Procesando (${procesando.length})"),
                   Tab(text: "🚫 Rechazados (${rechazados.length})"),
                   Tab(text: "🟢 Activos (${activados.length})"),
+                  if (puedeVerElite)
+                    Tab(text: "⭐ Elites (${elites.length}/60)"), // 🔒 TAB RESTRINGIDO
                   Tab(text: "🔴 Bloqueados (${bloqueados.length})"),
                 ],
               ),
@@ -317,12 +365,19 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 margin: const EdgeInsets.all(7),
                 child: TabBarView(
                   children: [
-                    _buildTabContent(registrados, false),
-                    _buildTabContent(corregidos, false),
-                    _buildTabContent(procesando, false),
-                    _buildTabContent(rechazados, false),
-                    _buildTabContent(activados, cargandoActivosLocal),
-                    _buildTabContent(bloqueados, false),
+                    _buildTabContent(registrados, false, puedeVerElite),
+                    _buildTabContent(corregidos, false, puedeVerElite),
+                    _buildTabContent(procesando, false, puedeVerElite),
+                    _buildTabContent(rechazados, false, puedeVerElite),
+                    _buildTabContent(activados, cargandoActivosLocal, puedeVerElite),
+                    if (puedeVerElite)
+                      EliteGroupTab(
+                        conductoresElite: elites.cast<Driver>(),
+                        onRefresh: () async {
+                          await _cargarActivosDeFormaAislada();
+                        },
+                      ),
+                    _buildTabContent(bloqueados, false, puedeVerElite),
                   ],
                 ),
               ),
@@ -333,7 +388,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  // 🔥 Construye el botón compacto dinámico segmentado
   Widget _buildBotonSegmentado({
     required BuildContext context,
     required String titulo,
@@ -358,7 +412,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
         style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13),
       ),
       onPressed: () {
-        // Solución al error de mouse_tracker en Flutter Web posponiendo el renderizado
         Future.delayed(Duration.zero, () {
           if (context.mounted) {
             _mostrarPanelLateralVencidos(context, titulo, filtrados, color);
@@ -368,7 +421,6 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  // 🔥 Muestra un contenedor lateral expandido (Sheet amplio) elegante para web desktop
   void _mostrarPanelLateralVencidos(BuildContext context, String titulo, List<dynamic> lista, Color color) {
     showModalBottomSheet(
       context: context,
@@ -462,7 +514,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  Widget _buildTabContent(List listaConductores, bool estaCargandoPestana) {
+  Widget _buildTabContent(List listaConductores, bool estaCargandoPestana, bool puedeVerElite) {
     if (estaCargandoPestana) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -489,7 +541,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
       scrollDirection: Axis.vertical,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: _buildDriverTable(listaConductores, getStatusColor),
+        child: _buildDriverTable(listaConductores, getStatusColor, puedeVerElite),
       ),
     );
   }
@@ -515,10 +567,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
           ),
         ),
         onChanged: (value) {
-          // Cancelamos el timer anterior si el usuario sigue escribiendo/borrando
           if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-          // Esperamos 300ms antes de disparar el setState
           _debounce = Timer(const Duration(milliseconds: 300), () {
             if (mounted) {
               setState(() {
@@ -531,22 +581,33 @@ class _ConductoresPageState extends State<ConductoresPage> {
     );
   }
 
-  Widget _buildDriverTable(List filteredConductores, Color Function(dynamic) getStatusColor) {
+  Widget _buildDriverTable(List filteredConductores, Color Function(dynamic) getStatusColor, bool puedeVerElite) {
     return DataTable(
-      columnSpacing: 20.0,
+      columnSpacing: 15.0,
       headingRowHeight: 56.0,
       dataRowHeight: 70.0,
-      columns: const [
-        DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Revisión', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Apellidos', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Identificación', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Celular', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Fecha registro', style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(label: Text('Acción', style: TextStyle(fontWeight: FontWeight.bold))),
+      columns: [
+        const DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Revisión', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Apellidos', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Identificación', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Celular', style: TextStyle(fontWeight: FontWeight.bold))),
+        const DataColumn(label: Text('Fecha registro', style: TextStyle(fontWeight: FontWeight.bold))),
+
+        // 🔒 COLUMNAS CONDICIONALES SEGÚN ROL
+        if (puedeVerElite) ...[
+          const DataColumn(label: Text('Es Élite', style: TextStyle(fontWeight: FontWeight.bold))),
+          const DataColumn(label: Text('Escuadrón', style: TextStyle(fontWeight: FontWeight.bold))),
+        ],
+
+        const DataColumn(label: Text('Acción', style: TextStyle(fontWeight: FontWeight.bold))),
       ],
       rows: filteredConductores.map((driver) {
+        final esElite = driver.isElite == true;
+        final escuadronNum = driver.escuadronId;
+        final esCapitan = driver.esCapitan == true;
+
         return DataRow(
           onSelectChanged: (_) => _irADetalleConductor(driver),
           cells: [
@@ -606,6 +667,113 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 },
               ),
             ),
+
+            // 🔒 CELDAS CONDICIONALES SEGÚN ROL
+            if (puedeVerElite) ...[
+              // 1. INTERRUPTOR INDEPENDIENTE: ACTIVAR/DESACTIVAR ÉLITE
+              DataCell(
+                IconButton(
+                  icon: Icon(
+                    esElite ? Icons.stars : Icons.stars_outlined,
+                    color: esElite ? Colors.amber : Colors.grey,
+                    size: 26,
+                  ),
+                  tooltip: esElite ? "Quitar de Élite" : "Hacer Conductor Élite",
+                  onPressed: () async {
+                    await _toggleStatusElite(driver.id, !esElite);
+                  },
+                ),
+              ),
+
+              // 2. SELECTOR INDEPENDIENTE: ASIGNAR ESCUADRÓN Y CAPITÁN
+              DataCell(
+                PopupMenuButton<int>(
+                  enabled: esElite,
+                  tooltip: esElite ? "Asignar Escuadrón" : "Primero hazlo Élite",
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: esElite ? (escuadronNum != null ? Colors.amber.shade50 : Colors.grey.shade100) : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: esElite ? (escuadronNum != null ? Colors.amber.shade700 : Colors.grey.shade300) : Colors.grey.shade200,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          !esElite
+                              ? "N/A"
+                              : (escuadronNum == null ? "Sin Escuadrón" : "E-$escuadronNum ${esCapitan ? '👑' : ''}"),
+                          style: TextStyle(
+                            color: esElite ? (escuadronNum != null ? Colors.amber.shade900 : Colors.black87) : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (esElite) const Icon(Icons.arrow_drop_down, size: 16, color: Colors.black54),
+                      ],
+                    ),
+                  ),
+                  onSelected: (int opcion) async {
+                    if (opcion == 0) {
+                      await _removerEscuadron(driver.id);
+                    } else if (opcion == 99) {
+                      await _toggleCapitan(driver.id, !esCapitan);
+                    } else {
+                      await _asignarAEscuadron(driver.id, opcion);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    for (int i = 1; i <= 6; i++)
+                      PopupMenuItem(
+                        value: i,
+                        child: Row(
+                          children: [
+                            Icon(
+                              escuadronNum == i ? Icons.check_circle : Icons.shield_outlined,
+                              color: escuadronNum == i ? Colors.green : Colors.grey,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text("Escuadrón $i"),
+                          ],
+                        ),
+                      ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 99,
+                      child: Row(
+                        children: [
+                          Icon(
+                            esCapitan ? Icons.star_half : Icons.star,
+                            color: Colors.amber.shade800,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(esCapitan ? "Quitar Capitán" : "Nombrar Capitán"),
+                        ],
+                      ),
+                    ),
+                    if (escuadronNum != null) ...[
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 0,
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_circle_outline, color: Colors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text("Quitar de Escuadrón", style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            ],
+
             DataCell(
               IconButton(
                 icon: const Icon(Icons.double_arrow_outlined, color: Colors.black),
@@ -616,6 +784,44 @@ class _ConductoresPageState extends State<ConductoresPage> {
         );
       }).toList(),
     );
+  }
+
+  // ⚡ METODOS DE FIRESTORE INDEPENDIENTES ⚡
+
+  Future<void> _toggleStatusElite(String driverId, bool nuevoEstado) async {
+    Map<String, dynamic> updateData = {
+      "is_elite": nuevoEstado,
+    };
+
+    if (!nuevoEstado) {
+      updateData["escuadron_id"] = FieldValue.delete();
+      updateData["es_capitan"] = FieldValue.delete();
+    }
+
+    await FirebaseFirestore.instance.collection("Drivers").doc(driverId).update(updateData);
+    await _cargarActivosDeFormaAislada();
+  }
+
+  Future<void> _asignarAEscuadron(String driverId, int escuadron) async {
+    await FirebaseFirestore.instance.collection("Drivers").doc(driverId).update({
+      "escuadron_id": escuadron,
+    });
+    await _cargarActivosDeFormaAislada();
+  }
+
+  Future<void> _removerEscuadron(String driverId) async {
+    await FirebaseFirestore.instance.collection("Drivers").doc(driverId).update({
+      "escuadron_id": FieldValue.delete(),
+      "es_capitan": FieldValue.delete(),
+    });
+    await _cargarActivosDeFormaAislada();
+  }
+
+  Future<void> _toggleCapitan(String driverId, bool esCapitan) async {
+    await FirebaseFirestore.instance.collection("Drivers").doc(driverId).update({
+      "es_capitan": esCapitan,
+    });
+    await _cargarActivosDeFormaAislada();
   }
 
   Widget _buildBadge(String texto, Color color) {

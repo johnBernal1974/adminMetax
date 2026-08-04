@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,6 +28,7 @@ class _GeneralPageState extends State<GeneralPage> {
   int totalConductores = 0;
   int totalClientes = 0;
   int totalUsuarios = 0;
+  int totalElites = 0; // ⭐️ NUEVA VARIABLE PARA ÉLITES
   bool _isLoading = false;
 
   @override
@@ -45,18 +45,56 @@ class _GeneralPageState extends State<GeneralPage> {
     final clientProvider = Provider.of<ClientProvider>(context, listen: false);
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
-    // Ejecutamos ambos conteos en paralelo para que sea inmediato
+    // 🟢 Ejecutamos los conteos en paralelo (Incluyendo el conteo ultra-liviano de Élites)
     final resultados = await Future.wait([
       driverProvider.obtenerConteoConductoresCarroSencillo(),
       clientProvider.obtenerConteoClientesSencillo(),
+      _obtenerConteoElites(), // Método de conteo directo sin traer listas pesadas
     ]);
 
     totalConductores = resultados[0];
     totalClientes = resultados[1];
+    totalElites = resultados[2];
     totalUsuarios = totalConductores + totalClientes;
 
     if (mounted) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  // ⭐️ Consulta rápida y económica de Firestore para saber cuántos Élite existen (is_elite == true)
+  Future<int> _obtenerConteoElites() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .where('is_elite', isEqualTo: true)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      print("Error contando conductores élite: $e");
+      return 0;
+    }
+  }
+
+  // 🔒 Valida permisos según los campos de OperadorProvider
+  bool _tienePermisoElite(BuildContext context) {
+    try {
+      final operadorProvider = Provider.of<OperadorProvider>(context, listen: false);
+
+      // Validamos que el operador esté activo
+      if (!operadorProvider.activoActual) return false;
+
+      // Obtenemos el rol actual del getter
+      final String rol = (operadorProvider.rolActual ?? "").trim().toLowerCase();
+
+      // Lista de roles con permiso
+      final rolesPermitidos = ["master", "operadorfull", "contador"];
+
+      return rolesPermitidos.contains(rol);
+    } catch (e) {
+      print("Error al comprobar permisos de operador: $e");
+      return false;
     }
   }
 
@@ -67,7 +105,6 @@ class _GeneralPageState extends State<GeneralPage> {
   @override
   Widget build(BuildContext context) {
     final isMobileOrTablet = MediaQuery.of(context).size.width <= 800;
-
 
     return PopScope(
       canPop: false,
@@ -81,6 +118,7 @@ class _GeneralPageState extends State<GeneralPage> {
           totalConductores: totalConductores,
           totalClientes: totalClientes,
           totalUsuarios: totalUsuarios,
+          totalElites: totalElites,
         ),
       ),
     );
@@ -92,6 +130,7 @@ class _GeneralPageState extends State<GeneralPage> {
         required int totalConductores,
         required int totalClientes,
         required int totalUsuarios,
+        required int totalElites,
       }) {
     return ListView(
       children: [
@@ -102,16 +141,16 @@ class _GeneralPageState extends State<GeneralPage> {
           child: Column(
             children: [
               const Text('Información General', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10), // Un pequeño espacio
+              const SizedBox(height: 10),
 
-              /// 🔥 NUEVO BOTÓN DE REFRESCAR
+              /// 🔥 BOTÓN DE REFRESCAR
               ElevatedButton.icon(
                 onPressed: _refreshData,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Refrescar datos'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primary, // Color llamativo
-                  foregroundColor: Colors.black,         // Color del texto e icono
+                  backgroundColor: primary,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 ),
@@ -119,10 +158,11 @@ class _GeneralPageState extends State<GeneralPage> {
               const SizedBox(height: 20),
               Wrap(
                 spacing: 10,
+                runSpacing: 10,
                 alignment: WrapAlignment.center,
                 children: isMobileOrTablet
-                    ? _buildMobileContainers(context, totalConductores, totalClientes, totalUsuarios)
-                    : _buildDesktopContainers(context, totalConductores, totalClientes, totalUsuarios),
+                    ? _buildMobileContainers(context, totalConductores, totalClientes, totalUsuarios, totalElites)
+                    : _buildDesktopContainers(context, totalConductores, totalClientes, totalUsuarios, totalElites),
               ),
             ],
           ),
@@ -131,7 +171,15 @@ class _GeneralPageState extends State<GeneralPage> {
     );
   }
 
-  List<Widget> _buildMobileContainers(BuildContext context, int conductores, int clientes, int totalUsuarios) {
+  List<Widget> _buildMobileContainers(
+      BuildContext context,
+      int conductores,
+      int clientes,
+      int totalUsuarios,
+      int elites
+      ) {
+    final bool puedeVerElite = _tienePermisoElite(context);
+
     return [
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'conductores_page'),
@@ -139,11 +187,26 @@ class _GeneralPageState extends State<GeneralPage> {
       GestureDetector(
           onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
           child: _buildInfoContainerMobil(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
+
+      // ⭐️ SOLO SE RENDERIZA SI EL ROL TIENE PERMISO
+      if (puedeVerElite)
+        GestureDetector(
+            onTap: () => Navigator.pushNamed(context, 'conductores_page', arguments: {'tab': 'elites'}),
+            child: _buildInfoContainerMobil(context, 'Élites (MetaX)', Icons.stars_rounded, "$elites/60", Colors.amber.shade400)),
+
       _buildInfoContainerMobil(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey),
     ];
   }
 
-  List<Widget> _buildDesktopContainers(BuildContext context, int conductores, int clientes, int totalUsuarios) {
+  List<Widget> _buildDesktopContainers(
+      BuildContext context,
+      int conductores,
+      int clientes,
+      int totalUsuarios,
+      int elites
+      ) {
+    final bool puedeVerElite = _tienePermisoElite(context);
+
     return [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -158,6 +221,15 @@ class _GeneralPageState extends State<GeneralPage> {
                 onTap: () => Navigator.pushNamed(context, 'usuarios_page'),
                 child: _buildInfoContainer(context, 'Clientes', Icons.person, clientes.toString(), Colors.green.shade300)),
           ),
+
+          // ⭐️ SOLO SE RENDERIZA SI EL ROL ES: Master, operadorFull o contador
+          if (puedeVerElite)
+            Expanded(
+              child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, 'conductores_page', arguments: {'tab': 'elites'}),
+                  child: _buildInfoContainer(context, 'Conductores Élite', Icons.stars_rounded, "$elites / 60", Colors.amber.shade400)),
+            ),
+
           Expanded(
             child: _buildInfoContainer(context, 'Usuarios Totales', Icons.people_alt, totalUsuarios.toString(), Colors.grey.shade400),
           ),
@@ -169,20 +241,23 @@ class _GeneralPageState extends State<GeneralPage> {
   Widget _buildInfoContainer(BuildContext context, String title, IconData icon, String value, Color color) {
     final isDesktop = MediaQuery.of(context).size.width > 1200;
     final containerWidth = isDesktop ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.width * 0.2;
-    final horizontalMargin = isDesktop ? 20.0 : 0.0;
+    final horizontalMargin = isDesktop ? 10.0 : 0.0;
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: horizontalMargin),
       width: containerWidth,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 3)),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.black, size: 25),
+          Icon(icon, color: Colors.black, size: 28),
           const SizedBox(height: 10),
           Text(
             title,
@@ -198,7 +273,7 @@ class _GeneralPageState extends State<GeneralPage> {
             value,
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -210,13 +285,13 @@ class _GeneralPageState extends State<GeneralPage> {
 
   Widget _buildInfoContainerMobil(BuildContext context, String title, IconData icon, String value, Color color) {
     final isDesktop = MediaQuery.of(context).size.width > 1200;
-    final containerWidth = isDesktop ? MediaQuery.of(context).size.width * 0.15 : MediaQuery.of(context).size.width * 0.4;
-    final horizontalMargin = isDesktop ? 20.0 : 0.0;
+    final containerWidth = isDesktop ? MediaQuery.of(context).size.width * 0.15 : MediaQuery.of(context).size.width * 0.42;
+    final horizontalMargin = isDesktop ? 10.0 : 0.0;
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: horizontalMargin),
+      margin: EdgeInsets.symmetric(vertical: 5, horizontal: horizontalMargin),
       width: containerWidth,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
@@ -224,8 +299,8 @@ class _GeneralPageState extends State<GeneralPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.black, size: 16),
-          const SizedBox(height: 10),
+          Icon(icon, color: Colors.black, size: 20),
+          const SizedBox(height: 8),
           Text(
             title,
             style: const TextStyle(
@@ -235,12 +310,12 @@ class _GeneralPageState extends State<GeneralPage> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Text(
             value,
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -249,11 +324,7 @@ class _GeneralPageState extends State<GeneralPage> {
       ),
     );
   }
-
-
-
 }
-
 
 class ExportarUsuariosButton extends StatelessWidget {
   const ExportarUsuariosButton({super.key});
@@ -261,12 +332,8 @@ class ExportarUsuariosButton extends StatelessWidget {
   Future<void> exportarUsuarios() async {
     List<List<String>> rows = [];
 
-    /// 🔥 ENCABEZADOS
     rows.add(["Tipo", "Nombres", "Apellidos", "Celular"]);
 
-    /// =========================
-    /// CLIENTES
-    /// =========================
     final clientesSnapshot =
     await FirebaseFirestore.instance.collection('Clients').get();
 
@@ -281,9 +348,6 @@ class ExportarUsuariosButton extends StatelessWidget {
       ]);
     }
 
-    /// =========================
-    /// DRIVERS
-    /// =========================
     final driversSnapshot =
     await FirebaseFirestore.instance.collection('Drivers').get();
 
@@ -298,10 +362,8 @@ class ExportarUsuariosButton extends StatelessWidget {
       ]);
     }
 
-    /// 🔥 CONVERTIR A CSV
     String csv = const ListToCsvConverter().convert(rows);
 
-    /// 🔥 DESCARGAR ARCHIVO
     final bytes = utf8.encode(csv);
     final blob = html.Blob([bytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
@@ -321,5 +383,4 @@ class ExportarUsuariosButton extends StatelessWidget {
       label: const Text("Descargar usuarios"),
     );
   }
-
 }
