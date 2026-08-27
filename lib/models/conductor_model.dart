@@ -258,8 +258,7 @@ class Driver {
     "cedula_trasera_tomada": cedulatraseraTomada,
     "licencia_categoria": licenciaCategoria,
     "licencia_vigencia": licenciaVigencia,
-    "soat_vigencia":
-    soatVigencia,
+    "soat_vigencia": soatVigencia,
 
     "tecno_vigencia":
     tecnoVigencia,

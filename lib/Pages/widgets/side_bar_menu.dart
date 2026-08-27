@@ -88,6 +88,13 @@ class _SideBarState extends State<SideBar> {
               // ITEMS FILTRADOS POR ROL
               // =========================
 
+              if (_canSee(role, 'panel_operadora_page'))
+                DrawerListTitle(
+                  title: "Servicios por Radio",
+                  icon: Icons.podcasts,
+                  press: () => _go('panel_operadora_page'),
+                ),
+
               if (_canSee(role, 'map_drivers_admin_page'))
                 DrawerListTitle(
                   title: "Mapa conductores",

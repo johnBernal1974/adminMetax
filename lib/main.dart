@@ -34,6 +34,7 @@ import 'Pages/porterias/editar_porteria_page.dart';
 import 'Pages/porterias/historial_porteria_page.dart';
 import 'Pages/porterias/porterias_page.dart';
 import 'Pages/porterias/registro_porterias_page.dart';
+import 'Pages/satelital/panel_operador_satelital.dart';
 import 'Pages/whatsApp_page/whatsApp_page.dart';
 import 'controllers/menu_controller.dart';
 import 'providers/driver_provider.dart';
@@ -186,6 +187,8 @@ class MyApp extends StatelessWidget {
               settings,
             );
           }
+          // 📻 NUEVA RUTA: Panel de Operadora / Radio
+          if (name == 'panel_operadora_page') return _guardedRoute(const PanelOperadoraPage(), settings);
 
           if (name == 'vehiculos_page') return _guardedRoute(const VehiculosAdminPage(), settings);
           if (name == 'detalle_vehiculo_page') return _guardedRoute(const VehiculoDetailAdminPage(), settings);

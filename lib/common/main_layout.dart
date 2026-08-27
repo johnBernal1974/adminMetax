@@ -45,7 +45,7 @@ class _MainLayoutState
       backgroundColor: blancoCards,
 
       drawer:
-      MediaQuery.of(context).size.width < 1100
+      MediaQuery.of(context).size.width < 1200
           ? const SideBar()
           : null,
 
@@ -301,7 +301,7 @@ class _MainLayoutState
           if (MediaQuery.of(context)
               .size
               .width >
-              1100)
+              1200)
 
             const SizedBox(
               width: 300,

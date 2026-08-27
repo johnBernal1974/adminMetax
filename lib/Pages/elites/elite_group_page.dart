@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../models/conductor_model.dart';
 
 class EliteGroupTab extends StatefulWidget {
@@ -18,16 +17,6 @@ class EliteGroupTab extends StatefulWidget {
 }
 
 class _EliteGroupTabState extends State<EliteGroupTab> {
-  final TextEditingController _utilidadesController = TextEditingController(text: "15800000");
-  double bolsaTotal = 15800000;
-
-  final NumberFormat _copFormat = NumberFormat.currency(
-    locale: 'es_CO',
-    symbol: '\$',
-    customPattern: '\$ #,##0', // 👈 Esto fuerza el símbolo al inicio
-    decimalDigits: 0,
-  );
-
   // 🎯 VALORES METAS CONFIGURABLES
   double _metaHoras = 208.0;
   int _metaUsuarios = 650;
@@ -53,13 +42,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     super.initState();
     _mesSeleccionado = _mesesDisponibles[0];
 
-    _utilidadesController.addListener(() {
-      final text = _utilidadesController.text.replaceAll(RegExp(r'[^0-9]'), '');
-      setState(() {
-        bolsaTotal = double.tryParse(text) ?? 0;
-      });
-    });
-
     // 🔔 Escucha cambios en vivo de las metas
     FirebaseFirestore.instance
         .collection("ParametrosElite")
@@ -75,11 +57,25 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
             _metaConductores = (data["metaConductores"] as num?)?.toInt() ?? 10;
             _cargandoMetas = false;
 
-            _cacheMetricas.clear(); // 🧹 Limpia caché al recibir nuevos valores
+            _cacheMetricas.clear();
           });
         }
       }
     });
+  }
+
+  // 🕒 FUNCIÓN PARA FORMATEAR LAS HORAS Y MINUTOS
+  String _formatearTiempoDesdeHoras(double horasDecimales) {
+    int horas = horasDecimales.floor();
+    int minutos = ((horasDecimales - horas) * 60).round();
+
+    if (horas > 0 && minutos > 0) {
+      return "$horas h, $minutos min";
+    } else if (horas > 0 && minutos == 0) {
+      return "$horas h";
+    } else {
+      return "$minutos min";
+    }
   }
 
   // --- FÓRMULAS DE CÁLCULO DE PUNTOS ---
@@ -104,12 +100,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
       );
     }
 
-    final bolsaGeneral80 = bolsaTotal * 0.80;
-    final bolsaCampeones20 = bolsaTotal * 0.20;
-
-    double sumaPuntosAprobados = 100; // Valor de respaldo
-    final valorPorPunto = sumaPuntosAprobados > 0 ? (bolsaGeneral80 / sumaPuntosAprobados) : 0.0;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 900;
@@ -119,16 +109,16 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeaderFinanciero(bolsaGeneral80, bolsaCampeones20, valorPorPunto, isMobile),
+              _buildHeaderSelectorMes(isMobile),
               const SizedBox(height: 20),
-              _buildRankingEscuadrones(valorPorPunto, bolsaCampeones20, isMobile),
+              _buildRankingEscuadrones(isMobile),
               const SizedBox(height: 20),
               Text(
                 "Matriz de Liquidación Individual (${widget.conductoresElite.length}/60)",
                 style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              _buildTablaLiquidacion(valorPorPunto, bolsaCampeones20, isMobile),
+              _buildTablaLiquidacion(isMobile),
             ],
           ),
         );
@@ -136,8 +126,8 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     );
   }
 
-  // 🏆 HEADER FINANCIERO (ADAPTABLE PC / MÓVIL)
-  Widget _buildHeaderFinanciero(double bolsa80, double bolsa20, double valorPunto, bool isMobile) {
+  // 🏆 HEADER SELECTOR DE MES
+  Widget _buildHeaderSelectorMes(bool isMobile) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -148,13 +138,12 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isMobile)
-            // 💻 DISEÑO PC EXACTO ORIGINAL
               Row(
                 children: [
-                  const Icon(Icons.account_balance_wallet_rounded, color: Colors.amber, size: 28),
+                  const Icon(Icons.stars_rounded, color: Colors.amber, size: 28),
                   const SizedBox(width: 10),
                   const Text(
-                    "Liquidación de Bolsa",
+                    "Seguimiento Grupo Élite",
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -188,38 +177,19 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 200,
-                    child: TextField(
-                      controller: _utilidadesController,
-                      style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: "Bolsa Total (\$)",
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        prefixText: "\$ ",
-                        prefixStyle: const TextStyle(color: Colors.amber),
-                        filled: true,
-                        fillColor: Colors.black26,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
                 ],
               )
             else
-            // 📱 DISEÑO MÓVIL EN CABECERA
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.account_balance_wallet_rounded, color: Colors.amber, size: 24),
+                      const Icon(Icons.stars_rounded, color: Colors.amber, size: 24),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          "Liquidación de Bolsa",
+                          "Seguimiento Grupo Élite",
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -255,53 +225,10 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 45,
-                    child: TextField(
-                      controller: _utilidadesController,
-                      style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: "Bolsa Total (\$)",
-                        labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
-                        prefixText: "\$ ",
-                        prefixStyle: const TextStyle(color: Colors.amber),
-                        filled: true,
-                        fillColor: Colors.black26,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
                 ],
               ),
 
             const Divider(color: Colors.white24, height: 24),
-
-            // 📱 SI ES MÓVIL: MUESTRA EN COLUMNA (UNO DEBAJO DEL OTRO)
-            if (isMobile)
-              Column(
-                children: [
-                  _buildMetricCardItem("Bolsa General (80%)", _copFormat.format(bolsa80), Colors.greenAccent),
-                  const SizedBox(height: 10),
-                  _buildMetricCardItem("Bolsa Campeones (20%)", _copFormat.format(bolsa20), Colors.amberAccent),
-                  const SizedBox(height: 10),
-                  _buildMetricCardItem("Valor por Punto", _copFormat.format(valorPunto), Colors.cyanAccent),
-                ],
-              )
-            else
-            // 💻 SI ES PC: MUESTRA EN FILA (ROW)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMetricCard("Bolsa General (80%)", _copFormat.format(bolsa80), Colors.greenAccent, isMobile),
-                  _buildMetricCard("Bolsa Campeones (20%)", _copFormat.format(bolsa20), Colors.amberAccent, isMobile),
-                  _buildMetricCard("Valor por Punto", _copFormat.format(valorPunto), Colors.cyanAccent, isMobile),
-                ],
-              ),
-
-            const SizedBox(height: 12),
 
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -316,7 +243,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "Metas Configurada: ${_metaHoras.toStringAsFixed(0)}h / ${_metaUsuarios} Clientes / ${_metaConductores} Conds",
+                      "Metas Configuradas: ${_metaHoras.toStringAsFixed(0)}h / ${_metaUsuarios} Clientes / ${_metaConductores} Conds",
                       style: TextStyle(color: Colors.white70, fontSize: isMobile ? 11 : 12),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
@@ -331,49 +258,9 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     );
   }
 
-  // Helper de tarjeta vertical/bloque para vista móvil
-  Widget _buildMetricCardItem(String title, String amount, Color color) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-          Text(
-            amount,
-            style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(String title, String amount, Color color, bool isMobile) {
-    return Column(
-      children: [
-        Text(title, style: TextStyle(color: Colors.white70, fontSize: isMobile ? 11 : 13), textAlign: TextAlign.center),
-        const SizedBox(height: 4),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            amount,
-            style: TextStyle(color: color, fontSize: isMobile ? 15 : 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 2. TARJETAS RESUMEN DE ESCUADRONES (PC Y MÓVIL)
-  Widget _buildRankingEscuadrones(double valorPorPunto, double bolsa20, bool isMobile) {
+  // 2. TARJETAS RESUMEN DE ESCUADRONES
+  Widget _buildRankingEscuadrones(bool isMobile) {
     if (!isMobile) {
-      // 💻 PC EXACTO ORIGINAL
       return LayoutBuilder(
         builder: (context, constraints) {
           return Wrap(
@@ -388,7 +275,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
 
               return InkWell(
                 onTap: () {
-                  _mostrarDetalleEscuadron(escuadronNum, miembros, valorPorPunto, bolsa20, isMobile);
+                  _mostrarDetalleEscuadron(escuadronNum, miembros, isMobile);
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
@@ -443,7 +330,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                         const Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text("0.0 Pts", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                            Text("0.00 Pts", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                             Text("Vacío", style: TextStyle(fontSize: 10, color: Colors.grey)),
                           ],
                         )
@@ -465,7 +352,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "${promedioReal.toStringAsFixed(1)} Pts",
+                                  "${promedioReal.toStringAsFixed(2)} Pts",
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.indigo,
@@ -485,7 +372,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
         },
       );
     } else {
-      // 📱 GRID MÓVIL
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -503,7 +389,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
 
           return InkWell(
             onTap: () {
-              _mostrarDetalleEscuadron(escuadronNum, miembros, valorPorPunto, bolsa20, isMobile);
+              _mostrarDetalleEscuadron(escuadronNum, miembros, isMobile);
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -548,7 +434,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                     ),
                   ),
                   if (!tieneMiembros)
-                    const Text("0.0", style: TextStyle(fontSize: 11, color: Colors.grey))
+                    const Text("0.00", style: TextStyle(fontSize: 11, color: Colors.grey))
                   else
                     FutureBuilder<double>(
                       future: _calcularPromedioRealEscuadron(miembros),
@@ -558,7 +444,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                         }
                         final promedioReal = snapshot.data ?? 0.0;
                         return Text(
-                          "${promedioReal.toStringAsFixed(1)}p",
+                          "${promedioReal.toStringAsFixed(2)}p",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.indigo),
                         );
                       },
@@ -594,7 +480,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
   }
 
   // 3. TABLA MATRIZ DE LIQUIDACIÓN
-  Widget _buildTablaLiquidacion(double valorPorPunto, double bolsa20, bool isMobile) {
+  Widget _buildTablaLiquidacion(bool isMobile) {
     if (widget.conductoresElite.isEmpty) {
       return const Card(
         child: Padding(
@@ -612,30 +498,40 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
         columns: [
           DataColumn(label: Text("Conductor", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
           DataColumn(label: Text("Escuadrón", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("Horas (${_metaHoras.toStringAsFixed(0)}h)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("Clientes (${_metaUsuarios}u)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("Conds (${_metaConductores}c)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
+          DataColumn(label: Text("Horas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
+          DataColumn(label: Text("Clientes", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
+          DataColumn(label: Text("Conds", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
           DataColumn(label: Text("Total Pts", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
           DataColumn(label: Text("Estado 70%", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("Pago 80%", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("Bono #1", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
-          DataColumn(label: Text("TOTAL A PAGAR", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14))),
         ],
         rows: widget.conductoresElite.map((driver) {
+          final String fotoUrl = driver.image;
+
           return DataRow(
             cells: [
               DataCell(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Row(
                   children: [
-                    Text("${driver.the01Nombres} ${driver.the02Apellidos}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14)),
-                    Text("C.C. ${driver.the03NumeroDocumento}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    CircleAvatar(
+                      radius: isMobile ? 16 : 18,
+                      backgroundColor: Colors.grey.shade300,
+                      backgroundImage: (fotoUrl.isNotEmpty) ? NetworkImage(fotoUrl) : null,
+                      child: (fotoUrl.isEmpty) ? const Icon(Icons.person, size: 18, color: Colors.grey) : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("${driver.the01Nombres} ${driver.the02Apellidos}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 14)),
+                        Text("C.C. ${driver.the03NumeroDocumento}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      ],
+                    ),
                   ],
                 ),
               ),
               DataCell(Text(driver.escuadronId != null ? "E-${driver.escuadronId}" : "Sin E.", style: TextStyle(fontSize: isMobile ? 12 : 14))),
-              ...List.generate(8, (indexCell) {
+              ...List.generate(5, (indexCell) {
                 return DataCell(
                   FutureBuilder<Map<String, dynamic>>(
                     future: obtenerMetricasRealesDriver(
@@ -663,26 +559,41 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                       double scoreTotal = ptsHoras + ptsUsers + ptsConds;
                       bool califica = scoreTotal >= 70.0;
 
-                      double pagoBolsa80 = califica ? (scoreTotal * valorPorPunto) : 0.0;
-                      bool esDelGanador = driver.escuadronId == 1;
-                      int integrantesEscuadron1 = widget.conductoresElite.where((d) => d.escuadronId == 1).length;
-
-                      double bonoCampeon = (califica && esDelGanador && integrantesEscuadron1 > 0)
-                          ? (bolsa20 / 3) / integrantesEscuadron1
-                          : 0.0;
-
-                      double totalCheque = pagoBolsa80 + bonoCampeon;
-
                       switch (indexCell) {
                         case 0:
-                          return Text("${horasReales.toStringAsFixed(1)} h (${ptsHoras.toStringAsFixed(1)})", style: TextStyle(fontSize: isMobile ? 11 : 13));
+                        // ⏰ Horas y debajo sus Puntos
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_formatearTiempoDesdeHoras(horasReales), style: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600)),
+                              Text("Puntos: ${ptsHoras.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                            ],
+                          );
                         case 1:
-                          return Text("$usuariosReales (${ptsUsers.toStringAsFixed(1)})", style: TextStyle(fontSize: isMobile ? 11 : 13));
+                        // 👥 Clientes (Solo número) y debajo sus Puntos
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("$usuariosReales", style: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600)),
+                              Text("Puntos: ${ptsUsers.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                            ],
+                          );
                         case 2:
-                          return Text("$condsReales (${ptsConds.toStringAsFixed(1)})", style: TextStyle(fontSize: isMobile ? 11 : 13));
+                        // 🚗 Conductores (Solo número) y debajo sus Puntos
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("$condsReales", style: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600)),
+                              Text("Puntos: ${ptsConds.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                            ],
+                          );
                         case 3:
+                        // Total Pts
                           return Text(
-                            scoreTotal.toStringAsFixed(1),
+                            scoreTotal.toStringAsFixed(2),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: isMobile ? 12 : 14,
@@ -690,32 +601,20 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                             ),
                           );
                         case 4:
+                        // Estado 70% (Sin la palabra reprobado)
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: califica ? Colors.green.shade50 : Colors.red.shade50,
+                              color: califica ? Colors.green.shade50 : Colors.orange.shade50,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              califica ? "✅ CALIFICA" : "❌ REPROBADO",
+                              califica ? "✅ CALIFICA" : "⚠️ NO CALIFICA",
                               style: TextStyle(
-                                color: califica ? Colors.green.shade800 : Colors.red,
+                                color: califica ? Colors.green.shade800 : Colors.orange.shade800,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 10,
                               ),
-                            ),
-                          );
-                        case 5:
-                          return Text(_copFormat.format(pagoBolsa80), style: TextStyle(fontSize: isMobile ? 11 : 13));
-                        case 6:
-                          return Text(_copFormat.format(bonoCampeon), style: TextStyle(color: Colors.amber, fontSize: isMobile ? 11 : 13));
-                        case 7:
-                          return Text(
-                            _copFormat.format(totalCheque),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent,
-                              fontSize: isMobile ? 12 : 14,
                             ),
                           );
                         default:
@@ -732,7 +631,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     );
   }
 
-  // 🟢 CONSULTA CON CACHÉ DE MEMORIA
+  // 🟢 CONSULTA REAL DE MÉTRICAS
   Future<Map<String, dynamic>> obtenerMetricasRealesDriver(
       String driverId,
       int anio,
@@ -744,12 +643,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     if (_cacheMetricas.containsKey(keyCache)) {
       return _cacheMetricas[keyCache]!;
     }
-
-    final DateTime primerDia = DateTime(anio, mes, 1);
-    final DateTime ultimoDia = DateTime(anio, mes + 1, 0);
-
-    final String mesInicioStr = DateFormat('yyyy-MM-dd').format(primerDia);
-    final String mesFinStr = DateFormat('yyyy-MM-dd').format(ultimoDia);
 
     double horasTotales = 0.0;
     int clientesReferidos = 0;
@@ -764,12 +657,28 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
       int segundosAcumulados = 0;
       for (var doc in snapshotEstadisticas.docs) {
         final data = doc.data();
-        final String? fechaDoc = data["fecha"];
+        DateTime? fechaDocParsed;
+        dynamic fechaRaw = data["fecha"] ?? data["createdAt"] ?? data["timestamp"];
 
-        if (fechaDoc != null &&
-            fechaDoc.compareTo(mesInicioStr) >= 0 &&
-            fechaDoc.compareTo(mesFinStr) <= 0) {
-          segundosAcumulados += (data["totalSegundos"] ?? 0) as int;
+        if (fechaRaw is Timestamp) {
+          fechaDocParsed = fechaRaw.toDate();
+        } else if (fechaRaw is String) {
+          fechaDocParsed = DateTime.tryParse(fechaRaw);
+        }
+
+        if (fechaDocParsed != null) {
+          if (fechaDocParsed.year == anio && fechaDocParsed.month == mes) {
+            segundosAcumulados += (data["totalSegundos"] ?? 0) as int;
+          }
+        } else if (fechaRaw is String) {
+          final partes = fechaRaw.split('-');
+          if (partes.length >= 2) {
+            int? a = int.tryParse(partes[0]);
+            int? m = int.tryParse(partes[1]);
+            if (a == anio && m == mes) {
+              segundosAcumulados += (data["totalSegundos"] ?? 0) as int;
+            }
+          }
         }
       }
       horasTotales = segundosAcumulados / 3600.0;
@@ -781,21 +690,13 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
 
       for (var doc in snapshotClients.docs) {
         final data = doc.data();
-        dynamic fechaRaw = data["createdAt"] ?? data["fechaRegistro"];
-        DateTime? fechaRegistro;
-
-        if (fechaRaw is Timestamp) {
-          fechaRegistro = fechaRaw.toDate();
-        } else if (fechaRaw is String) {
-          fechaRegistro = DateTime.tryParse(fechaRaw);
-        }
+        dynamic fechaRaw = data["21_Fecha_de_registro"] ?? data["createdAt"] ?? data["fechaRegistro"];
+        DateTime? fechaRegistro = _parsearFechaEspecial(fechaRaw);
 
         if (fechaRegistro != null) {
           if (fechaRegistro.year == anio && fechaRegistro.month == mes) {
             clientesReferidos++;
           }
-        } else {
-          clientesReferidos++;
         }
       }
 
@@ -806,30 +707,27 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
 
       for (var doc in snapshotDrivers.docs) {
         final data = doc.data();
-        final estado = (data["Verificacion_Status"] ?? "").toString().toLowerCase();
+        final bool estaActivadoBool = data["11_Esta_activado"] == true;
+        final String statusStr = (data["Verificacion_Status"] ?? "").toString().toLowerCase();
 
-        if (estado == "activado") {
-          dynamic fechaRaw = data["10_Fecha_Registro_timestamp"] ?? data["createdAt"];
-          DateTime? fechaRegistro;
+        if (estaActivadoBool || statusStr == "activado") {
+          dynamic fechaRaw = data["10_Fecha_Registro_Timestamp"] ??
+              data["10_Fecha_Registro_timestamp"] ??
+              data["12_Fecha_Activacion"] ??
+              data["createdAt"];
 
-          if (fechaRaw is Timestamp) {
-            fechaRegistro = fechaRaw.toDate();
-          } else if (fechaRaw is String) {
-            fechaRegistro = DateTime.tryParse(fechaRaw);
-          }
+          DateTime? fechaRegistro = _parsearFechaEspecial(fechaRaw);
 
           if (fechaRegistro != null) {
             if (fechaRegistro.year == anio && fechaRegistro.month == mes) {
               conductoresReferidos++;
             }
-          } else {
-            conductoresReferidos++;
           }
         }
       }
 
     } catch (e) {
-      print("❌ Error consultando métricas del driver $uidLimpia: $e");
+      print("❌ Error consultando métricas reales del driver $uidLimpia: $e");
     }
 
     final resultado = {
@@ -843,10 +741,54 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
     return resultado;
   }
 
-  // 🪟 MODAL DETALLE DE ESCUADRÓN (PC O MÓVIL)
-  void _mostrarDetalleEscuadron(int escuadronNum, List<Driver> miembros, double valorPorPunto, double bolsa20, bool isMobile) {
+  // 🛠️ PARSER INTELIGENTE DE FECHAS
+  DateTime? _parsearFechaEspecial(dynamic fechaRaw) {
+    if (fechaRaw == null) return null;
+
+    if (fechaRaw is Timestamp) {
+      return fechaRaw.toDate();
+    }
+
+    if (fechaRaw is String) {
+      DateTime? parsedStd = DateTime.tryParse(fechaRaw);
+      if (parsedStd != null) return parsedStd;
+
+      try {
+        final str = fechaRaw.toLowerCase();
+        int anio = 0;
+        int mes = 0;
+
+        final regAnio = RegExp(r'20\d{2}');
+        final matchAnio = regAnio.firstMatch(str);
+        if (matchAnio != null) {
+          anio = int.parse(matchAnio.group(0)!);
+        }
+
+        if (str.contains('enero')) mes = 1;
+        else if (str.contains('febrero')) mes = 2;
+        else if (str.contains('marzo')) mes = 3;
+        else if (str.contains('abril')) mes = 4;
+        else if (str.contains('mayo')) mes = 5;
+        else if (str.contains('junio')) mes = 6;
+        else if (str.contains('julio')) mes = 7;
+        else if (str.contains('agosto')) mes = 8;
+        else if (str.contains('septiembre')) mes = 9;
+        else if (str.contains('octubre')) mes = 10;
+        else if (str.contains('noviembre')) mes = 11;
+        else if (str.contains('diciembre')) mes = 12;
+
+        if (anio > 0 && mes > 0) {
+          return DateTime(anio, mes, 1);
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  // 🪟 MODAL DETALLE DE ESCUADRÓN
+  void _mostrarDetalleEscuadron(int escuadronNum, List<Driver> miembros, bool isMobile) {
     if (!isMobile) {
-      // 💻 DIÁLOGO EN PC ORIGINAL
       showDialog(
         context: context,
         builder: (context) {
@@ -888,7 +830,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                           children: [
                             const Text("Promedio Escuadrón", style: TextStyle(fontSize: 10, color: Colors.indigo)),
                             Text(
-                              "${promedio.toStringAsFixed(1)} Pts",
+                              "${promedio.toStringAsFixed(2)} Pts",
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.indigo),
                             ),
                           ],
@@ -917,21 +859,35 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                   columns: const [
                     DataColumn(label: Text("Conductor", style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text("Cédula", style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text("Horas (40pts)", style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text("Clientes (40pts)", style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text("Conds (20pts)", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Horas", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Clientes", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Conds", style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text("Total Pts", style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text("Estado", style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text("Pago Estimado", style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                   rows: miembros.map((driver) {
+                    final String fotoUrl = driver.image;
+
                     return DataRow(
                       cells: [
-                        DataCell(Text("${driver.the01Nombres} ${driver.the02Apellidos}",
-                            style: const TextStyle(fontWeight: FontWeight.bold))),
+                        DataCell(
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: Colors.grey.shade300,
+                                backgroundImage: (fotoUrl.isNotEmpty) ? NetworkImage(fotoUrl) : null,
+                                child: (fotoUrl.isEmpty) ? const Icon(Icons.person, size: 16, color: Colors.grey) : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Text("${driver.the01Nombres} ${driver.the02Apellidos}",
+                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
                         DataCell(Text(driver.the03NumeroDocumento ?? "S/N")),
 
-                        ...List.generate(6, (indexCell) {
+                        ...List.generate(5, (indexCell) {
                           return DataCell(
                             FutureBuilder<Map<String, dynamic>>(
                               future: obtenerMetricasRealesDriver(
@@ -958,35 +914,49 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                                 double total = ptsH + ptsU + ptsC;
                                 bool califica = total >= 70.0;
 
-                                double pago80 = califica ? (total * valorPorPunto) : 0.0;
-                                bool esDelGanador = escuadronNum == 1;
-                                double bono = (califica && esDelGanador) ? ((bolsa20 / 3) / miembros.length) : 0.0;
-
                                 switch (indexCell) {
                                   case 0:
-                                    return Text("${horas.toStringAsFixed(1)} h (${ptsH.toStringAsFixed(1)})");
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(_formatearTiempoDesdeHoras(horas), style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        Text("Puntos: ${ptsH.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                                      ],
+                                    );
                                   case 1:
-                                    return Text("$usuarios (${ptsU.toStringAsFixed(1)})");
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text("$usuarios", style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        Text("Puntos: ${ptsU.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                                      ],
+                                    );
                                   case 2:
-                                    return Text("$conds (${ptsC.toStringAsFixed(1)})");
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text("$conds", style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        Text("Puntos: ${ptsC.toStringAsFixed(2)}", style: TextStyle(fontSize: 10, color: Colors.indigo.shade700, fontWeight: FontWeight.bold)),
+                                      ],
+                                    );
                                   case 3:
                                     return Text(
-                                      total.toStringAsFixed(1),
+                                      total.toStringAsFixed(2),
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: califica ? Colors.green.shade800 : Colors.red),
                                     );
                                   case 4:
                                     return Text(
-                                      califica ? "✅ CALIFICA" : "❌ REPROBADO",
+                                      califica ? "✅ CALIFICA" : "⚠️ NO CALIFICA",
                                       style: TextStyle(
-                                          color: califica ? Colors.green.shade800 : Colors.red,
+                                          color: califica ? Colors.green.shade800 : Colors.orange.shade800,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 11),
                                     );
-                                  case 5:
-                                    return Text(_copFormat.format(pago80 + bono),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent));
                                   default:
                                     return const Text("");
                                 }
@@ -1011,7 +981,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
         },
       );
     } else {
-      // 📱 BOTTOM SHEET EN MÓVIL
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -1058,7 +1027,7 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                               border: Border.all(color: Colors.indigo.shade200),
                             ),
                             child: Text(
-                              "${promedio.toStringAsFixed(1)} Pts",
+                              "${promedio.toStringAsFixed(2)} Pts",
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.indigo),
                             ),
                           );
@@ -1078,6 +1047,8 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                     itemCount: miembros.length,
                     itemBuilder: (context, index) {
                       final driver = miembros[index];
+                      final String fotoUrl = driver.image;
+
                       return FutureBuilder<Map<String, dynamic>>(
                         future: obtenerMetricasRealesDriver(
                           driver.id,
@@ -1107,10 +1078,6 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                           double total = ptsH + ptsU + ptsC;
                           bool califica = total >= 70.0;
 
-                          double pago80 = califica ? (total * valorPorPunto) : 0.0;
-                          bool esDelGanador = escuadronNum == 1;
-                          double bono = (califica && esDelGanador) ? ((bolsa20 / 3) / miembros.length) : 0.0;
-
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1120,22 +1087,37 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        "${driver.the01Nombres} ${driver.the02Apellidos}",
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Colors.grey.shade300,
+                                        backgroundImage: (fotoUrl.isNotEmpty) ? NetworkImage(fotoUrl) : null,
+                                        child: (fotoUrl.isEmpty) ? const Icon(Icons.person, size: 18, color: Colors.grey) : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "${driver.the01Nombres} ${driver.the02Apellidos}",
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                            Text("C.C. ${driver.the03NumeroDocumento ?? 'S/N'}",
+                                                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                          ],
+                                        ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: califica ? Colors.green.shade50 : Colors.red.shade50,
+                                          color: califica ? Colors.green.shade50 : Colors.orange.shade50,
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
-                                          califica ? "CALIFICA" : "REPROBADO",
+                                          califica ? "CALIFICA" : "NO CALIFICA",
                                           style: TextStyle(
-                                            color: califica ? Colors.green.shade800 : Colors.red,
+                                            color: califica ? Colors.green.shade800 : Colors.orange.shade800,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 10,
                                           ),
@@ -1143,17 +1125,15 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                                       )
                                     ],
                                   ),
-                                  Text("C.C. ${driver.the03NumeroDocumento ?? 'S/N'}",
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                   const SizedBox(height: 8),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text("⏰ ${horas.toStringAsFixed(1)}h (${ptsH.toStringAsFixed(1)}p)",
+                                      Text("⏰ ${_formatearTiempoDesdeHoras(horas)} (${ptsH.toStringAsFixed(2)}p)",
                                           style: const TextStyle(fontSize: 11)),
-                                      Text("👥 $usuarios U (${ptsU.toStringAsFixed(1)}p)",
+                                      Text("👥 $usuarios (${ptsU.toStringAsFixed(2)}p)",
                                           style: const TextStyle(fontSize: 11)),
-                                      Text("🚗 $conds C (${ptsC.toStringAsFixed(1)}p)",
+                                      Text("🚗 $conds (${ptsC.toStringAsFixed(2)}p)",
                                           style: const TextStyle(fontSize: 11)),
                                     ],
                                   ),
@@ -1161,17 +1141,12 @@ class _EliteGroupTabState extends State<EliteGroupTab> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text("Puntaje: ${total.toStringAsFixed(1)} Pts",
+                                      Text("Puntaje: ${total.toStringAsFixed(2)} Pts",
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                             color: califica ? Colors.green.shade800 : Colors.red,
                                           )),
-                                      Text(
-                                        "Pago: ${_copFormat.format(pago80 + bono)}",
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueAccent),
-                                      ),
                                     ],
                                   ),
                                 ],
