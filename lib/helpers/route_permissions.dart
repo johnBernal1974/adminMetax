@@ -40,7 +40,7 @@ class RoutePermissions {
 
     // 🔥 WhatsApp MetaX
     'whatsapp_metax_page': {'operadorFull', 'operador1', 'operador2' },
-    'panel_operadora_page': {},
+    'panel_operadora_page': {'operador2'},
   };
 
   static bool canRoleAccess(
