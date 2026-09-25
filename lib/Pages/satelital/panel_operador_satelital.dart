@@ -20,9 +20,26 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
   final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _celularController = TextEditingController();
 
+// 💳 FORMA DE PAGO DEL SERVICIO DE RADIO
+  String _metodoPagoSeleccionado = 'Efectivo';
+
+// 🚕 REQUERIMIENTOS ESPECIALES DEL SERVICIO DE RADIO
+  final Set<String> _requerimientosSeleccionados = {};
+
+  // 🏢 INDICA SI EL CONDUCTOR DEBE DEJAR $1.000 EN PORTERÍA
+  bool _dejarDineroPorteria = false;
+
   bool _isLoading = false;
   bool _isSaving = false;
+
+// ✏️ ID del cliente cuando estamos editándolo
   String? _editingClientId;
+
+// 👤 Cliente frecuente seleccionado para solicitar un servicio
+  String? _clienteFrecuenteSeleccionadoId;
+
+// 🆕 Indica que estamos creando un cliente nuevo
+  bool _creandoClienteNuevo = false;
 
   // 🧠 Lista en memoria para guardar los clientes frecuentes sin gastar lecturas
   List<Map<String, dynamic>> _listaClientesFrecuentes = [];
@@ -51,6 +68,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'barrio': data['barrio'] ?? '',
           'direccion': data['direccion'] ?? '',
           'celular': data['celular'] ?? '',
+          'dejarDineroPorteria': data['dejarDineroPorteria'] ?? false,
         });
       }
 
@@ -81,7 +99,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     setState(() => _isLoading = true);
 
     try {
-      final travelRef = FirebaseFirestore.instance.collection('TravelInfo').doc();
+      final travelRef =
+      FirebaseFirestore.instance.collection('TravelInfo').doc();
       final travelId = travelRef.id;
 
       final cliente = _clienteController.text.trim();
@@ -89,7 +108,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       final direccion = _direccionController.text.trim();
       final celular = _celularController.text.trim();
 
-      // 1. Guardamos en TravelInfo incluyendo el celular
+      // 1. Guardamos en TravelInfo
       await travelRef.set({
         'id': travelId,
         'idClient': travelId,
@@ -107,7 +126,16 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         'tarifaInicial': 0.0,
         'tarifaDescuento': 0.0,
         'totalClientePaga': 0.0,
-        'metodo_pago': 'Efectivo',
+
+        // 💳 Forma de pago
+        'metodo_pago': _metodoPagoSeleccionado,
+
+        // 🚕 Requerimientos especiales
+        'requerimientos': _requerimientosSeleccionados.toList(),
+
+        // 🏢 Configuración de portería
+        'dejarDineroPorteria': _dejarDineroPorteria,
+
         'apuntes': '',
         'tipo_servicio': 'radio',
         'status': 'created',
@@ -118,7 +146,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Guardamos en ManualServices (incluyendo el celular)
+      // 2. Guardamos en ManualServices
       await FirebaseFirestore.instance.collection('ManualServices').add({
         'travelId': travelId,
         'cliente': cliente,
@@ -126,6 +154,14 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         'barrio': barrio,
         'direccion': direccion,
         'celular': celular,
+
+        // 💳🚕 Datos específicos de este servicio
+        'metodo_pago': _metodoPagoSeleccionado,
+        'requerimientos': _requerimientosSeleccionados.toList(),
+
+        // 🏢 Configuración guardada del cliente
+        'dejarDineroPorteria': _dejarDineroPorteria,
+
         'status': 'enviado',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -133,7 +169,10 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       await _cargarClientesFrecuentes();
 
       // 3. Cloud Function de notificación push
-      final url = Uri.parse('https://us-central1-apptaxi-e641d.cloudfunctions.net/broadcastManualService');
+      final url = Uri.parse(
+        'https://us-central1-apptaxi-e641d.cloudfunctions.net/broadcastManualService',
+      );
+
       await http.post(
         url,
         headers: {
@@ -146,23 +185,50 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'barrio': barrio,
           'direccion': direccion,
           'celular': celular,
+
+          // 💳🚕 Datos del servicio
+          'metodo_pago': _metodoPagoSeleccionado,
+          'requerimientos': _requerimientosSeleccionados.toList(),
+
+          // 🏢 Configuración del cliente
+          'dejarDineroPorteria': _dejarDineroPorteria,
+
           'targetDriverId': 'dka103QPiqhk4cWDWBqBKeIzg9n2',
           'tipo_servicio': 'radio',
         }),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ ¡Servicio de radio emitido con éxito!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('✅ ¡Servicio de radio emitido con éxito!'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      _clienteController.clear();
-      _barrioController.clear();
-      _direccionController.clear();
-      _celularController.clear();
+      // 🧹 Después de lanzar el servicio volvemos al estado inicial
+      setState(() {
+        // Ningún cliente seleccionado ni en edición
+        _editingClientId = null;
+        _clienteFrecuenteSeleccionadoId = null;
+        _creandoClienteNuevo = false;
 
+        // Limpiamos los datos del cliente
+        _clienteController.clear();
+        _barrioController.clear();
+        _direccionController.clear();
+        _celularController.clear();
+
+        // Reiniciamos las condiciones del servicio
+        _metodoPagoSeleccionado = 'Efectivo';
+        _requerimientosSeleccionados.clear();
+        _dejarDineroPorteria = false;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -196,16 +262,133 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                     shrinkWrap: true,
                     children: [
                       const Text(
-                        'Despacho de Servicios por operadora',
+                        'DESPACHO DE SERVICIOS POR OPERADORA',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Seleccione un cliente frecuente o registre una nueva solicitud.',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                       const SizedBox(height: 20),
 
+// =====================================================
+// 👤 ACCIONES DEL CLIENTE
+// =====================================================
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+
+                          // 🆕 NUEVO CLIENTE
+                          if (!_creandoClienteNuevo && _editingClientId == null) ...[
+                            TextButton.icon(
+                              onPressed: () {
+                                _limpiarFormularioEdicion();
+                              },
+                              icon: const Icon(
+                                Icons.person_add_alt_1,
+                                color: Colors.blueGrey,
+                              ),
+                              label: const Text(
+                                'Nuevo cliente',
+                                style: TextStyle(
+                                  color: Colors.blueGrey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          if (_creandoClienteNuevo || _editingClientId != null) ...[
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  // Volvemos al estado inicial
+                                  _editingClientId = null;
+                                  _clienteFrecuenteSeleccionadoId = null;
+                                  _creandoClienteNuevo = false;
+
+                                  // Limpiamos los datos cargados
+                                  _clienteController.clear();
+                                  _barrioController.clear();
+                                  _direccionController.clear();
+                                  _celularController.clear();
+
+                                  // Reiniciamos portería
+                                  _dejarDineroPorteria = false;
+                                });
+                              },
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.grey,
+                              ),
+                              label: const Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+                          ],
+
+                          // 💾 GUARDAR / ACTUALIZAR CLIENTE
+                          if (_creandoClienteNuevo || _editingClientId != null)
+                            OutlinedButton.icon(
+                              onPressed: (_isSaving ||
+                                  _isLoading ||
+                                  _clienteController.text.trim().isEmpty ||
+                                  _barrioController.text.trim().isEmpty ||
+                                  _direccionController.text.trim().isEmpty ||
+                                  _celularController.text.trim().isEmpty)
+                                  ? null
+                                  : _guardarClienteFrecuente,
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.green,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                                  : Icon(
+                                _editingClientId != null
+                                    ? Icons.save_as
+                                    : Icons.person_add,
+                                size: 22,
+                              ),
+                              label: Text(
+                                _isSaving
+                                    ? 'Guardando...'
+                                    : (_editingClientId != null
+                                    ? 'Actualizar Cliente'
+                                    : 'Guardar Cliente'),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _editingClientId != null
+                                    ? Colors.blue[800]
+                                    : Colors.green[800],
+                                side: BorderSide(
+                                  color: _editingClientId != null
+                                      ? Colors.blue.shade700
+                                      : Colors.green.shade700,
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+// =====================================================
+// 👤 SELECTOR DE CLIENTE FRECUENTE
+// =====================================================
                       _cargandoClientes
                           ? const LinearProgressIndicator()
                           : DropdownButtonFormField<String>(
@@ -219,6 +402,27 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                         ),
                         hint: const Text('-- Seleccione un cliente --'),
                         isExpanded: true,
+
+// 👁️ Así se muestra el cliente cuando el dropdown está CERRADO.
+// No mostramos aquí los botones editar/eliminar.
+                        selectedItemBuilder: (BuildContext context) {
+                          return _listaClientesFrecuentes.map<Widget>((item) {
+                            final nombreCliente = item['cliente'] as String;
+                            final direccion = item['direccion'] as String;
+
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '$nombreCliente ($direccion)',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList();
+                        },
+
                         items: _listaClientesFrecuentes.map((item) {
                           final idDoc = item['id'] as String;
                           final nombreCliente = item['cliente'] as String;
@@ -232,32 +436,50 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                                 Expanded(
                                   child: Text(
                                     '$nombreCliente ($direccion)',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                // 🛠️ Contenedor para los iconos de Editar y Borrar juntos
+
+                                // Estos botones aparecerán únicamente al abrir el dropdown
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Icono de Editar
                                     IconButton(
-                                      icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 20),
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Colors.blue,
+                                        size: 20,
+                                      ),
                                       tooltip: 'Editar cliente',
                                       onPressed: () {
-                                        Navigator.of(context).pop(); // Cerramos el menú
+                                        Navigator.of(context).pop();
+
                                         setState(() {
-                                          _editingClientId = idDoc; // Activamos el modo edición con este ID
+                                          // ✏️ Entramos explícitamente en modo edición
+                                          _editingClientId = idDoc;
+                                          _clienteFrecuenteSeleccionadoId = idDoc;
+                                          _creandoClienteNuevo = false;
+
                                           _clienteController.text = nombreCliente;
                                           _barrioController.text = item['barrio'] ?? '';
                                           _direccionController.text = direccion;
                                           _celularController.text = item['celular'] ?? '';
+
+                                          _dejarDineroPorteria =
+                                              item['dejarDineroPorteria'] == true;
                                         });
                                       },
                                     ),
-                                    // Icono de Borrar (el que ya tenías)
+
                                     IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
                                       tooltip: 'Eliminar cliente',
                                       onPressed: () {
                                         Navigator.of(context).pop();
@@ -276,12 +498,29 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                                   (element) => element['id'] == nuevoId,
                               orElse: () => {},
                             );
+
                             if (clienteEncontrado.isNotEmpty) {
                               setState(() {
-                                _clienteController.text = clienteEncontrado['cliente'];
-                                _barrioController.text = clienteEncontrado['barrio'];
-                                _direccionController.text = clienteEncontrado['direccion'];
-                                _celularController.text = clienteEncontrado['celular'] ?? '';
+                                // 👤 Cliente frecuente seleccionado para solicitar servicio
+                                _clienteFrecuenteSeleccionadoId = nuevoId;
+                                _creandoClienteNuevo = false;
+
+                                // No estamos editando
+                                _editingClientId = null;
+
+                                // Conservamos internamente los datos porque se necesitan
+                                // para lanzar la solicitud de radio
+                                _clienteController.text =
+                                    clienteEncontrado['cliente'] ?? '';
+                                _barrioController.text =
+                                    clienteEncontrado['barrio'] ?? '';
+                                _direccionController.text =
+                                    clienteEncontrado['direccion'] ?? '';
+                                _celularController.text =
+                                    clienteEncontrado['celular'] ?? '';
+
+                                _dejarDineroPorteria =
+                                    clienteEncontrado['dejarDineroPorteria'] == true;
                               });
                             }
                           }
@@ -289,6 +528,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                       ),
 
                       const SizedBox(height: 16),
+
+                    if (_creandoClienteNuevo || _editingClientId != null) ...[
 
                       TextFormField(
                         controller: _clienteController,
@@ -338,49 +579,277 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                         validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
                       ),
                       const SizedBox(height: 24),
-                      // ➕ Nuevo botón para guardar únicamente como cliente frecuente
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Si estamos editando, mostramos un botón de cancelar edición
-                          if (_editingClientId != null) ...[
-                            TextButton.icon(
-                              onPressed: _limpiarFormularioEdicion,
-                              icon: const Icon(Icons.close, color: Colors.grey),
-                              label: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
+                    ],
+// =====================================================
+// 👤 DATOS DEL CLIENTE FRECUENTE SELECCIONADO
+// =====================================================
+                      if (!_creandoClienteNuevo &&
+                          _editingClientId == null &&
+                          _clienteFrecuenteSeleccionadoId != null) ...[
 
-                          OutlinedButton.icon(
-                            onPressed: (_isSaving || _isLoading || _clienteController.text.trim().isEmpty || _barrioController.text.trim().isEmpty || _direccionController.text.trim().isEmpty || _celularController.text.trim().isEmpty)
-                                ? null
-                                : _guardarClienteFrecuente,
-                            icon: _isSaving
-                                ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.green, strokeWidth: 2),
-                            )
-                                : Icon(_editingClientId != null ? Icons.save_as : Icons.person_add, size: 22),
-                            label: Text(_isSaving
-                                ? 'Guardando...'
-                                : (_editingClientId != null ? 'Actualizar Cliente' : 'Guardar Cliente Frecuente')),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _editingClientId != null ? Colors.blue[800] : Colors.green[800],
-                              side: BorderSide(
-                                color: _editingClientId != null ? Colors.blue.shade700 : Colors.green.shade700,
-                                width: 1.5,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Datos del cliente',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+
+                              const SizedBox(height: 16),
+
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _clienteController.text,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_city, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _barrioController.text,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  const Icon(Icons.home, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _direccionController.text,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _celularController.text,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              const Divider(),
+                              const SizedBox(height: 6),
+
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Checkbox(
+                                    value: _dejarDineroPorteria,
+                                    onChanged: null,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _dejarDineroPorteria
+                                          ? 'Se tienen que dejar \$1.000 en portería.'
+                                          : 'No se deben dejar \$1.000 en portería.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: _dejarDineroPorteria
+                                            ? Colors.orange.shade800
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+/// =====================================================
+// 🏢 PAGO EN PORTERÍA
+// =====================================================
+
+// ✏️ SOLO NUEVO CLIENTE O CLIENTE EN EDICIÓN
+// En estos dos casos sí permitimos modificar la portería.
+                      if (_creandoClienteNuevo || _editingClientId != null) ...[
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text(
+                            'El conductor debe dejar \$1.000 en portería',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(height: 40, thickness: 2),
+                          subtitle: const Text(
+                            'Marque esta opción únicamente cuando aplique.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          value: _dejarDineroPorteria,
+                          onChanged: (valor) {
+                            setState(() {
+                              _dejarDineroPorteria = valor ?? false;
+                            });
+                          },
+                        ),
+                      ],
+    const SizedBox(height: 24),
 
+// =====================================================
+// 🚕 TARJETA - SOLICITUD DEL SERVICIO
+// =====================================================
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            const Text(
+                              'SOLICITAR SERVICIO',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // =====================================================
+                            // 💳 FORMA DE PAGO
+                            // =====================================================
+                            const Text(
+                              'Forma de pago',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          'Efectivo',
+                          'Nequi',
+                          'Daviplata',
+                          'Llave',
+                        ].map((opcion) {
+                          return ChoiceChip(
+                            label: Text(
+                              opcion,
+                              style: const TextStyle(
+                                fontSize: 10,
+                              ),
+                            ),
+                            selected: _metodoPagoSeleccionado == opcion,
+                            onSelected: (seleccionado) {
+                              if (seleccionado) {
+                                setState(() {
+                                  _metodoPagoSeleccionado = opcion;
+                                });
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 24),
+
+// =====================================================
+// 🚕 REQUERIMIENTOS ESPECIALES
+// =====================================================
+                      const Text(
+                        'Requerimientos',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          'Con Baúl',
+                          'Portabicicletas',
+                          'Silla de ruedas',
+                          'Mascotas',
+                          'Aire acondicionado',
+                        ].map((opcion) {
+                          final seleccionado =
+                          _requerimientosSeleccionados.contains(opcion);
+
+                          return FilterChip(
+                            label: Text(
+                              opcion,
+                              style: const TextStyle(
+                                fontSize: 10,
+                              ),
+                            ),
+                            selected: seleccionado,
+                            onSelected: (valor) {
+                              setState(() {
+                                if (valor) {
+                                  _requerimientosSeleccionados.add(opcion);
+                                } else {
+                                  _requerimientosSeleccionados.remove(opcion);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
@@ -395,141 +864,23 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
                                 : const Icon(Icons.podcasts, size: 24),
-                            label: Text(_isLoading ? 'Transmitiendo...' : 'Lanzar solicitud por la app'),
+                            label: Text(_isLoading ? 'Transmitiendo...' : 'Lanzar servicio'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green[700],
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                               textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
+
                         ],
                       ),
+                    ),
 
-                      const Divider(height: 40, thickness: 2),
+                      const SizedBox(height: 24),
 
-                      // 📜 SECCIÓN DE HISTORIAL DE SERVICIOS DE RADIO FINALIZADOS (COLAPSIBLE)
-                      SizedBox(
-                        child: StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('TravelHistory')
-                              .where('to', isEqualTo: 'Servicio por Radio Operador')
-                              .limit(20)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
-                            }
-
-                            final docs = snapshot.hasData ? snapshot.data!.docs : [];
-                            final cantidadTotal = docs.length;
-
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: ExpansionTile(
-                                initiallyExpanded: false, // Inicia cerrado por defecto
-                                tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-                                title: Row(
-                                  children: [
-                                    const Expanded(
-                                      child: Text(
-                                        'Historial de Servicios por operadora Finalizados',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    Chip(
-                                      label: Text('$cantidadTotal', style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500)),
-                                      backgroundColor: Colors.white,
-                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                                    ),
-                                  ],
-                                ),
-                                subtitle: Text(
-                                  'Últimos servicios de radio completados con éxito.',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 11),
-                                ),
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: SizedBox(
-                                      height: 250, // Altura interna para el scroll de la lista al expandir
-                                      child: docs.isEmpty
-                                          ? const Center(
-                                        child: Text('No hay servicios de radio finalizados.', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                                      )
-                                          : (() {
-                                        docs.sort((a, b) {
-                                          var aTime = (a.data() as Map<String, dynamic>)['finalViaje'] as Timestamp?;
-                                          var bTime = (b.data() as Map<String, dynamic>)['finalViaje'] as Timestamp?;
-                                          if (aTime == null || bTime == null) return 0;
-                                          return bTime.compareTo(aTime);
-                                        });
-
-                                        return ListView.builder(
-                                          itemCount: docs.length,
-                                          itemBuilder: (context, index) {
-                                            final data = docs[index].data() as Map<String, dynamic>;
-                                            final cliente = data['usuario'] ?? data['cliente'] ?? 'Cliente';
-                                            final barrio = data['barrio'] ?? '';
-                                            final direccion = data['direccion'] ?? '';
-                                            final placa = data['placa'] ?? 'S/P';
-
-                                            String fechaFinStr = 'N/A';
-                                            final finalViaje = data['finalViaje'];
-                                            if (finalViaje != null && finalViaje is Timestamp) {
-                                              final dt = finalViaje.toDate();
-                                              fechaFinStr = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} - ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-                                            }
-
-                                            return Card(
-                                              elevation: 1,
-                                              margin: const EdgeInsets.symmetric(vertical: 4),
-                                              child: ListTile(
-                                                dense: true,
-                                                title: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text(cliente, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                        border: Border.all(color: Colors.black54, width: 0.8),
-                                                      ),
-                                                      child: Text(
-                                                        placa.length >= 6 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa,
-                                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                subtitle: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text('$barrio - $direccion', style: const TextStyle(fontSize: 11)),
-                                                    const SizedBox(height: 2),
-                                                    Text('Finalizado: $fechaFinStr', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      })(),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -541,296 +892,9 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
             // ================= COLUMNA DERECHA: LISTADO EN VIVO DE SERVICIOS =================
             Expanded(
               flex: 1,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Servicios Solicitados (En Vivo)',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Monitoreo en tiempo real del estado de los servicios manuales.',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    ),
-                    const Divider(height: 24),
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('ManualServices')
-                            .orderBy('createdAt', descending: true)
-                            .limit(20)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-
-                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                            return const Center(
-                              child: Text('No hay servicios registrados aún.', style: TextStyle(color: Colors.grey)),
-                            );
-                          }
-
-                          final docs = snapshot.data!.docs;
-
-                          return ListView.builder(
-                            itemCount: docs.length,
-                            itemBuilder: (context, index) {
-                              final data = docs[index].data() as Map<String, dynamic>;
-                              final travelId = data['travelId'] ?? '';
-                              final cliente = data['cliente'] ?? 'Sin nombre';
-                              final barrio = data['barrio'] ?? '';
-                              final direccion = data['direccion'] ?? '';
-
-                              return StreamBuilder<DocumentSnapshot>(
-                                stream: travelId.isNotEmpty
-                                    ? FirebaseFirestore.instance.collection('TravelInfo').doc(travelId).snapshots()
-                                    : const Stream.empty(),
-                                builder: (context, travelSnapshot) {
-                                  if (travelId.isNotEmpty && !travelSnapshot.hasData) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  String statusReal = data['status'] ?? 'pendiente';
-                                  String placaVehiculo = '';
-                                  Timestamp? acceptedAtTimestamp;
-                                  Timestamp? horaInicioViajeTimestamp;
-                                  Timestamp? finishedAtTimestamp;
-
-                                  if (travelSnapshot.hasData && travelSnapshot.data!.exists) {
-                                    final travelData = travelSnapshot.data!.data() as Map<String, dynamic>?;
-                                    if (travelData != null) {
-                                      statusReal = travelData['status'] ?? statusReal;
-                                      placaVehiculo = travelData['placa'] ?? '';
-                                      acceptedAtTimestamp = travelData['acceptedAt'] as Timestamp?;
-                                      horaInicioViajeTimestamp = travelData['horaInicioViaje'] as Timestamp?;
-                                      finishedAtTimestamp = travelData['finishedAt'] as Timestamp?;
-                                    }
-                                  }
-
-                                  if (statusReal == 'finished' || statusReal == 'cancelled') {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  String textoEstado = 'Pendiente';
-                                  Color statusColor = Colors.orange;
-
-                                  switch (statusReal) {
-                                    case 'created':
-                                    case 'enviado':
-                                      textoEstado = 'Enviado';
-                                      statusColor = Colors.orange;
-                                      break;
-                                    case 'accepted':
-                                      textoEstado = 'Aceptado';
-                                      statusColor = Colors.blue;
-                                      break;
-                                    case 'driver_is_waiting':
-                                      textoEstado = 'En la puerta';
-                                      statusColor = Colors.purple;
-                                      break;
-                                    case 'started':
-                                      textoEstado = 'Iniciado';
-                                      statusColor = Colors.green;
-                                      break;
-                                    default:
-                                      textoEstado = statusReal.toUpperCase();
-                                      statusColor = Colors.blueGrey;
-                                  }
-
-                                  String formatearTimestamp(dynamic timestamp) {
-                                    if (timestamp != null && timestamp is Timestamp) {
-                                      final dateTime = timestamp.toDate();
-                                      final dia = dateTime.day.toString().padLeft(2, '0');
-                                      final mes = dateTime.month.toString().padLeft(2, '0');
-                                      final anio = dateTime.year;
-                                      final hora = dateTime.hour.toString().padLeft(2, '0');
-                                      final minuto = dateTime.minute.toString().padLeft(2, '0');
-                                      return '$dia/$mes/$anio - $hora:$minuto';
-                                    }
-                                    return 'N/A';
-                                  }
-
-                                  final horaSolicitudStr = formatearTimestamp(data['createdAt']);
-                                  final horaAceptacionStr = acceptedAtTimestamp != null ? formatearTimestamp(acceptedAtTimestamp) : null;
-                                  final horaInicioStr = horaInicioViajeTimestamp != null ? formatearTimestamp(horaInicioViajeTimestamp) : null;
-                                  final horaFinStr = finishedAtTimestamp != null ? formatearTimestamp(finishedAtTimestamp) : null;
-
-                                  return Card(
-                                    elevation: 2,
-                                    margin: const EdgeInsets.symmetric(vertical: 6),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(cliente, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                                const SizedBox(height: 4),
-                                                Text('Barrio: $barrio\nDir: $direccion', style: const TextStyle(fontSize: 10)),
-                                                const Divider(height: 16, thickness: 1),
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    const Text('Hora de solicitud:', style: TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w400)),
-                                                    Text(horaSolicitudStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black)),
-                                                  ],
-                                                ),
-                                                if (horaAceptacionStr != null) ...[
-                                                  const SizedBox(height: 2),
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      const Text('Hora de aceptación:', style: TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w400)),
-                                                      Text(horaAceptacionStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black)),
-                                                    ],
-                                                  ),
-                                                ],
-                                                if (horaInicioStr != null) ...[
-                                                  const SizedBox(height: 2),
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      const Text('Hora de inicio:', style: TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w400)),
-                                                      Text(horaInicioStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black)),
-                                                    ],
-                                                  ),
-                                                ],
-                                                if (horaFinStr != null) ...[
-                                                  const SizedBox(height: 2),
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      const Text('Hora de finalización:', style: TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w400)),
-                                                      Text(horaFinStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black)),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              Chip(
-                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                                                label: Text(
-                                                  textoEstado,
-                                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                                ),
-                                                backgroundColor: statusColor,
-                                              ),
-                                              if (placaVehiculo.isNotEmpty) ...[
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                    border: Border.all(color: Colors.black, width: 1.0),
-                                                  ),
-                                                  child: Text(
-                                                    placaVehiculo.length >= 6
-                                                        ? '${placaVehiculo.substring(0, 3)}-${placaVehiculo.substring(3)}'
-                                                        : placaVehiculo,
-                                                    style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.black,
-                                                      fontSize: 13,
-                                                      letterSpacing: 1.0,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (statusReal == 'created' && travelId.isNotEmpty) ...[
-                                                    Tooltip(
-                                                      message: 'Re-lanzar servicio',
-                                                      child: InkWell(
-                                                        onTap: () => _relanzarServicioExistente(travelId, cliente, barrio, direccion, data['celular'] ?? ''),
-                                                        child: Container(
-                                                          padding: const EdgeInsets.all(6),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.orange[800],
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                          child: const Icon(Icons.refresh, size: 16, color: Colors.white),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                  ],
-                                                  Tooltip(
-                                                    message: 'Cancelar y ocultar solicitud',
-                                                    child: InkWell(
-                                                      onTap: () {
-                                                        final manualDocId = docs[index].id;
-                                                        showDialog(
-                                                          context: context,
-                                                          builder: (dialogCtx) => AlertDialog(
-                                                            title: const Text('Cancelar Solicitud'),
-                                                            content: Text('¿Desea cancelar y remover la tarjeta de "$cliente"?'),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed: () => Navigator.pop(dialogCtx),
-                                                                child: const Text('No'),
-                                                              ),
-                                                              ElevatedButton(
-                                                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                                onPressed: () {
-                                                                  Navigator.pop(dialogCtx);
-                                                                  _cancelarServicioManual(travelId, manualDocId);
-                                                                },
-                                                                child: const Text('Sí, cancelar', style: TextStyle(color: Colors.white)),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        padding: const EdgeInsets.all(6),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.red[700],
-                                                          borderRadius: BorderRadius.circular(6),
-                                                        ),
-                                                        child: const Icon(Icons.close, size: 16, color: Colors.white),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+              child: _ServiciosEnVivoPanel(
+                onRelanzarServicio: _relanzarServicioExistente,
+                onCancelarServicio: _cancelarServicioManual,
               ),
             ),
           ],
@@ -924,9 +988,36 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     }
   }
 
-  Future<void> _relanzarServicioExistente(String travelId, String cliente, String barrio, String direccion, String celular) async {
+  Future<void> _relanzarServicioExistente(
+      String travelId,
+      String cliente,
+      String barrio,
+      String direccion,
+      String celular,
+      ) async {
     try {
-      final url = Uri.parse('https://us-central1-apptaxi-e641d.cloudfunctions.net/broadcastManualService');
+      // 🔄 Recuperar las condiciones originales del servicio
+      final travelDoc = await FirebaseFirestore.instance
+          .collection('TravelInfo')
+          .doc(travelId)
+          .get();
+
+      final travelData = travelDoc.data() ?? {};
+
+      final metodoPago =
+      (travelData['metodo_pago'] ?? 'Efectivo').toString();
+
+      final requerimientos =
+      List<String>.from(travelData['requerimientos'] ?? []);
+
+      final dejarDineroPorteria =
+          travelData['dejarDineroPorteria'] == true;
+
+      // 📡 Relanzar el mismo servicio
+      final url = Uri.parse(
+        'https://us-central1-apptaxi-e641d.cloudfunctions.net/broadcastManualService',
+      );
+
       await http.post(
         url,
         headers: {
@@ -939,17 +1030,29 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'barrio': barrio,
           'direccion': direccion,
           'celular': celular,
+
+          // 💳🚕 Conservamos las condiciones originales
+          'metodo_pago': metodoPago,
+          'requerimientos': requerimientos,
+          'dejarDineroPorteria': dejarDineroPorteria,
+
           'targetDriverId': 'dka103QPiqhk4cWDWBqBKeIzg9n2',
           'tipo_servicio': 'radio',
         }),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🔄 ¡Servicio retransmitido con éxito!'), backgroundColor: Colors.blue),
+        const SnackBar(
+          content: Text('🔄 ¡Servicio retransmitido con éxito!'),
+          backgroundColor: Colors.blue,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error al relanzar: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('❌ Error al relanzar: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -993,6 +1096,10 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     setState(() => _isSaving = true);
 
     try {
+      if (kDebugMode) {
+        print('✏️ ID CLIENTE EN EDICIÓN: $_editingClientId');
+      }
+
       final cliente = _clienteController.text.trim();
       final barrio = _barrioController.text.trim();
       final direccion = _direccionController.text.trim();
@@ -1006,6 +1113,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'barrio': barrio,
           'direccion': direccion,
           'celular': celular,
+          'dejarDineroPorteria': _dejarDineroPorteria,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1019,6 +1127,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'barrio': barrio,
           'direccion': direccion,
           'celular': celular,
+          'dejarDineroPorteria': _dejarDineroPorteria,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -1027,8 +1136,20 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         );
       }
 
-      // Limpiamos formularios y reseteamos el modo edición
-      _limpiarFormularioEdicion();
+      // ✅ Después de guardar/actualizar volvemos al estado inicial
+      setState(() {
+        _editingClientId = null;
+        _clienteFrecuenteSeleccionadoId = null;
+        _creandoClienteNuevo = false;
+
+        _clienteController.clear();
+        _barrioController.clear();
+        _direccionController.clear();
+        _celularController.clear();
+
+        _dejarDineroPorteria = false;
+      });
+
       await _cargarClientesFrecuentes();
 
     } catch (e) {
@@ -1043,11 +1164,777 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 // Función auxiliar para limpiar y salir del modo edición
   void _limpiarFormularioEdicion() {
     setState(() {
+      // Ya no estamos editando ningún cliente
       _editingClientId = null;
+
+      // Ya no hay un cliente frecuente seleccionado
+      _clienteFrecuenteSeleccionadoId = null;
+
+      // Entramos al modo NUEVO CLIENTE
+      _creandoClienteNuevo = true;
+
+      // Limpiamos los datos
       _clienteController.clear();
       _barrioController.clear();
       _direccionController.clear();
       _celularController.clear();
+
+      // Valor inicial para un cliente nuevo
+      _dejarDineroPorteria = false;
     });
+  }
+}
+
+class _ServiciosEnVivoPanel extends StatefulWidget {
+  final Future<void> Function(
+      String travelId,
+      String cliente,
+      String barrio,
+      String direccion,
+      String celular,
+      ) onRelanzarServicio;
+
+  final Future<void> Function(
+      String travelId,
+      String manualDocId,
+      ) onCancelarServicio;
+
+  const _ServiciosEnVivoPanel({
+    required this.onRelanzarServicio,
+    required this.onCancelarServicio,
+  });
+
+  @override
+  State<_ServiciosEnVivoPanel> createState() =>
+      _ServiciosEnVivoPanelState();
+}
+
+class _ServiciosEnVivoPanelState
+    extends State<_ServiciosEnVivoPanel> {
+
+  late final Stream<QuerySnapshot> _manualServicesStream;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Este stream se crea UNA SOLA VEZ.
+    // Los setState de la columna izquierda ya no lo reinician.
+    _manualServicesStream = FirebaseFirestore.instance
+        .collection('ManualServices')
+        .orderBy('createdAt', descending: true)
+        .limit(20)
+        .snapshots();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Servicios Solicitados (En Vivo)',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            'Monitoreo en tiempo real del estado de los servicios manuales.',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 13,
+            ),
+          ),
+
+          const Divider(height: 24),
+
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _manualServicesStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No hay servicios registrados aún.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data =
+                    docs[index].data() as Map<String, dynamic>;
+
+                    final travelId =
+                    (data['travelId'] ?? '').toString();
+
+                    final cliente =
+                    (data['cliente'] ?? 'Sin nombre').toString();
+
+                    final barrio =
+                    (data['barrio'] ?? '').toString();
+
+                    final direccion =
+                    (data['direccion'] ?? '').toString();
+
+                    return _ServicioEnVivoCard(
+                      key: ValueKey(docs[index].id),
+                      manualDocId: docs[index].id,
+                      travelId: travelId,
+                      cliente: cliente,
+                      barrio: barrio,
+                      direccion: direccion,
+                      celular: (data['celular'] ?? '').toString(),
+                      createdAt: data['createdAt'],
+                      statusManual:
+                      (data['status'] ?? 'pendiente').toString(),
+                      onRelanzarServicio:
+                      widget.onRelanzarServicio,
+                      onCancelarServicio:
+                      widget.onCancelarServicio,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// =====================================================
+// 🚕 TARJETA INDIVIDUAL DEL SERVICIO EN VIVO
+// =====================================================
+
+class _ServicioEnVivoCard extends StatefulWidget {
+  final String manualDocId;
+  final String travelId;
+  final String cliente;
+  final String barrio;
+  final String direccion;
+  final String celular;
+  final dynamic createdAt;
+  final String statusManual;
+
+  final Future<void> Function(
+      String travelId,
+      String cliente,
+      String barrio,
+      String direccion,
+      String celular,
+      ) onRelanzarServicio;
+
+  final Future<void> Function(
+      String travelId,
+      String manualDocId,
+      ) onCancelarServicio;
+
+  const _ServicioEnVivoCard({
+    super.key,
+    required this.manualDocId,
+    required this.travelId,
+    required this.cliente,
+    required this.barrio,
+    required this.direccion,
+    required this.celular,
+    required this.createdAt,
+    required this.statusManual,
+    required this.onRelanzarServicio,
+    required this.onCancelarServicio,
+  });
+
+  @override
+  State<_ServicioEnVivoCard> createState() =>
+      _ServicioEnVivoCardState();
+}
+
+class _ServicioEnVivoCardState
+    extends State<_ServicioEnVivoCard> {
+
+  Stream<DocumentSnapshot>? _travelStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _crearTravelStream();
+  }
+
+  void _crearTravelStream() {
+    if (widget.travelId.isEmpty) {
+      _travelStream = null;
+      return;
+    }
+
+    _travelStream = FirebaseFirestore.instance
+        .collection('TravelInfo')
+        .doc(widget.travelId)
+        .snapshots();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ServicioEnVivoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Solo cambiamos la suscripción si realmente cambió el viaje.
+    if (oldWidget.travelId != widget.travelId) {
+      _crearTravelStream();
+    }
+  }
+
+  String _formatearTimestamp(dynamic timestamp) {
+    if (timestamp != null && timestamp is Timestamp) {
+      final dateTime = timestamp.toDate();
+
+      final dia =
+      dateTime.day.toString().padLeft(2, '0');
+
+      final mes =
+      dateTime.month.toString().padLeft(2, '0');
+
+      final anio = dateTime.year;
+
+      final hora =
+      dateTime.hour.toString().padLeft(2, '0');
+
+      final minuto =
+      dateTime.minute.toString().padLeft(2, '0');
+
+      return '$dia/$mes/$anio - $hora:$minuto';
+    }
+
+    return 'N/A';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Si por alguna razón no existe travelId,
+    // usamos solamente los datos de ManualServices.
+    if (_travelStream == null) {
+      return _construirTarjeta(
+        statusReal: widget.statusManual,
+        placaVehiculo: '',
+        acceptedAtTimestamp: null,
+        horaInicioViajeTimestamp: null,
+        finishedAtTimestamp: null,
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _travelStream,
+      builder: (context, travelSnapshot) {
+        // Mientras llega la primera respuesta no mostramos
+        // una tarjeta incompleta.
+        if (!travelSnapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        String statusReal = widget.statusManual;
+        String placaVehiculo = '';
+
+        Timestamp? acceptedAtTimestamp;
+        Timestamp? horaInicioViajeTimestamp;
+        Timestamp? finishedAtTimestamp;
+
+        if (travelSnapshot.data!.exists) {
+          final travelData =
+          travelSnapshot.data!.data()
+          as Map<String, dynamic>?;
+
+          if (travelData != null) {
+            statusReal =
+                (travelData['status'] ?? statusReal)
+                    .toString();
+
+            placaVehiculo =
+                (travelData['placa'] ?? '').toString();
+
+            acceptedAtTimestamp =
+            travelData['acceptedAt'] as Timestamp?;
+
+            horaInicioViajeTimestamp =
+            travelData['horaInicioViaje'] as Timestamp?;
+
+            finishedAtTimestamp =
+            travelData['finishedAt'] as Timestamp?;
+          }
+        }
+
+        return _construirTarjeta(
+          statusReal: statusReal,
+          placaVehiculo: placaVehiculo,
+          acceptedAtTimestamp: acceptedAtTimestamp,
+          horaInicioViajeTimestamp:
+          horaInicioViajeTimestamp,
+          finishedAtTimestamp: finishedAtTimestamp,
+        );
+      },
+    );
+  }
+
+  Widget _construirTarjeta({
+    required String statusReal,
+    required String placaVehiculo,
+    required Timestamp? acceptedAtTimestamp,
+    required Timestamp? horaInicioViajeTimestamp,
+    required Timestamp? finishedAtTimestamp,
+  }) {
+
+    // Servicios terminados o cancelados no se muestran.
+    if (statusReal == 'finished' ||
+        statusReal == 'cancelled') {
+      return const SizedBox.shrink();
+    }
+
+    String textoEstado = 'Pendiente';
+    Color statusColor = Colors.orange;
+
+    switch (statusReal) {
+      case 'created':
+      case 'enviado':
+        textoEstado = 'Enviado';
+        statusColor = Colors.orange;
+        break;
+
+      case 'accepted':
+        textoEstado = 'Aceptado';
+        statusColor = Colors.blue;
+        break;
+
+      case 'driver_is_waiting':
+        textoEstado = 'En la puerta';
+        statusColor = Colors.purple;
+        break;
+
+      case 'started':
+        textoEstado = 'Iniciado';
+        statusColor = Colors.green;
+        break;
+
+      default:
+        textoEstado = statusReal.toUpperCase();
+        statusColor = Colors.blueGrey;
+    }
+
+    final horaSolicitudStr =
+    _formatearTimestamp(widget.createdAt);
+
+    final horaAceptacionStr =
+    acceptedAtTimestamp != null
+        ? _formatearTimestamp(
+      acceptedAtTimestamp,
+    )
+        : null;
+
+    final horaInicioStr =
+    horaInicioViajeTimestamp != null
+        ? _formatearTimestamp(
+      horaInicioViajeTimestamp,
+    )
+        : null;
+
+    final horaFinStr =
+    finishedAtTimestamp != null
+        ? _formatearTimestamp(
+      finishedAtTimestamp,
+    )
+        : null;
+
+    return Card(
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 5,
+      shadowColor: Colors.black26,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: Colors.grey.shade300,
+          width: 1.2,
+        ),
+      ),
+      margin: const EdgeInsets.symmetric(
+        vertical: 6,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+
+            // ============================================
+            // DATOS DEL SERVICIO
+            // ============================================
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.cliente,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    'Barrio: ${widget.barrio}\n'
+                        'Dir: ${widget.direccion}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                    ),
+                  ),
+
+                  const Divider(
+                    height: 16,
+                    thickness: 1,
+                  ),
+
+                  Row(
+                    mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Hora de solicitud:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.black,
+                          fontWeight:
+                          FontWeight.w400,
+                        ),
+                      ),
+                      Text(
+                        horaSolicitudStr,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                          FontWeight.w500,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (horaAceptacionStr != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment
+                          .spaceBetween,
+                      children: [
+                        const Text(
+                          'Hora de aceptación:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black,
+                            fontWeight:
+                            FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          horaAceptacionStr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                            FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  if (horaInicioStr != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment
+                          .spaceBetween,
+                      children: [
+                        const Text(
+                          'Hora de inicio:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black,
+                            fontWeight:
+                            FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          horaInicioStr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                            FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  if (horaFinStr != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment
+                          .spaceBetween,
+                      children: [
+                        const Text(
+                          'Hora de finalización:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black,
+                            fontWeight:
+                            FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          horaFinStr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                            FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 30),
+
+            // ============================================
+            // ESTADO / PLACA / ACCIONES
+            // ============================================
+
+            Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: statusColor,
+                      width: 2,
+                    ),
+                  ),
+                  child: Text(
+                    textoEstado,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (placaVehiculo.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Placa',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.black87,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      placaVehiculo.length >= 6
+                          ? '${placaVehiculo.substring(0, 3)}-${placaVehiculo.substring(3)}'
+                          : placaVehiculo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        fontSize: 14,
+                        letterSpacing: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+
+                    // 🔄 RELANZAR
+
+                    if (statusReal == 'created' &&
+                        widget.travelId
+                            .isNotEmpty) ...[
+                      Tooltip(
+                        message:
+                        'Re-lanzar servicio',
+                        child: InkWell(
+                          onTap: () =>
+                              widget.onRelanzarServicio(
+                                widget.travelId,
+                                widget.cliente,
+                                widget.barrio,
+                                widget.direccion,
+                                widget.celular,
+                              ),
+                          child: Container(
+                            padding:
+                            const EdgeInsets.all(
+                                4),
+                            decoration:
+                            BoxDecoration(
+                              color:
+                              Colors.orange[800],
+                              borderRadius:
+                              BorderRadius
+                                  .circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.refresh,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 4),
+                    ],
+
+                    // ❌ CANCELAR
+
+                    Tooltip(
+                      message:
+                      'Cancelar y ocultar solicitud',
+                      child: InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogCtx) =>
+                                AlertDialog(
+                                  title: const Text(
+                                    'Cancelar Solicitud',
+                                  ),
+                                  content: Text(
+                                    '¿Desea cancelar y remover la tarjeta de "${widget.cliente}"?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(
+                                              dialogCtx),
+                                      child:
+                                      const Text('No'),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton
+                                          .styleFrom(
+                                        backgroundColor:
+                                        Colors.red,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.pop(
+                                            dialogCtx);
+
+                                        widget
+                                            .onCancelarServicio(
+                                          widget.travelId,
+                                          widget.manualDocId,
+                                        );
+                                      },
+                                      child: const Text(
+                                        'Sí, cancelar',
+                                        style: TextStyle(
+                                          color:
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                          );
+                        },
+                        child: Container(
+                          padding:
+                          const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red[700],
+                            borderRadius:
+                            BorderRadius.circular(
+                                4),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
