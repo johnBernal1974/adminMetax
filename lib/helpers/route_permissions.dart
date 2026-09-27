@@ -39,7 +39,7 @@ class RoutePermissions {
     'historial_bonos_page': {'operadorFull', 'contador'},
 
     // 🔥 WhatsApp MetaX
-    'whatsapp_metax_page': {'operadorFull', 'operador1', 'operador2' },
+    'whatsapp_metax_page': {'operadorFull', 'operador1'},
     'panel_operadora_page': {'operador2'},
   };
 

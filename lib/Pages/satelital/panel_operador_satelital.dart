@@ -895,6 +895,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
               child: _ServiciosEnVivoPanel(
                 onRelanzarServicio: _relanzarServicioExistente,
                 onCancelarServicio: _cancelarServicioManual,
+                onOcultarServicio: _ocultarServicioManual,
               ),
             ),
           ],
@@ -1013,6 +1014,22 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       final dejarDineroPorteria =
           travelData['dejarDineroPorteria'] == true;
 
+      // 🔄 Reactivar el viaje para que pueda ser aceptado nuevamente
+      await FirebaseFirestore.instance
+          .collection('TravelInfo')
+          .doc(travelId)
+          .update({
+        'status': 'created',
+        'idDriver': '',
+        'placa': FieldValue.delete(),
+        'acceptedAt': FieldValue.delete(),
+        'driverWaitingAt': FieldValue.delete(),
+        'horaInicioViaje': FieldValue.delete(),
+        'cancelledAt': FieldValue.delete(),
+        'cancelledBy': FieldValue.delete(),
+        'cancelReason': FieldValue.delete(),
+      });
+
       // 📡 Relanzar el mismo servicio
       final url = Uri.parse(
         'https://us-central1-apptaxi-e641d.cloudfunctions.net/broadcastManualService',
@@ -1056,6 +1073,38 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       );
     }
   }
+
+
+  // 👁️ OCULTAR TARJETA DE UN SERVICIO CANCELADO POR EL CONDUCTOR
+  Future<void> _ocultarServicioManual(String manualDocId) async {
+    try {
+      if (manualDocId.isEmpty) return;
+
+      await FirebaseFirestore.instance
+          .collection('ManualServices')
+          .doc(manualDocId)
+          .delete();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Servicio ocultado de la lista'),
+          backgroundColor: Colors.blueGrey,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error al ocultar el servicio: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
 
   Future<void> _cancelarServicioManual(String travelId, String manualDocId) async {
     try {
@@ -1199,9 +1248,14 @@ class _ServiciosEnVivoPanel extends StatefulWidget {
       String manualDocId,
       ) onCancelarServicio;
 
+  final Future<void> Function(
+      String manualDocId,
+      ) onOcultarServicio;
+
   const _ServiciosEnVivoPanel({
     required this.onRelanzarServicio,
     required this.onCancelarServicio,
+    required this.onOcultarServicio,
   });
 
   @override
@@ -1319,6 +1373,8 @@ class _ServiciosEnVivoPanelState
                       widget.onRelanzarServicio,
                       onCancelarServicio:
                       widget.onCancelarServicio,
+                      onOcultarServicio:
+                      widget.onOcultarServicio,
                     );
                   },
                 );
@@ -1359,6 +1415,11 @@ class _ServicioEnVivoCard extends StatefulWidget {
       String manualDocId,
       ) onCancelarServicio;
 
+// 👁️ OCULTAR SERVICIO
+  final Future<void> Function(
+      String manualDocId,
+      ) onOcultarServicio;
+
   const _ServicioEnVivoCard({
     super.key,
     required this.manualDocId,
@@ -1371,6 +1432,7 @@ class _ServicioEnVivoCard extends StatefulWidget {
     required this.statusManual,
     required this.onRelanzarServicio,
     required this.onCancelarServicio,
+    required this.onOcultarServicio,
   });
 
   @override
@@ -1538,6 +1600,18 @@ class _ServicioEnVivoCardState
       case 'started':
         textoEstado = 'Iniciado';
         statusColor = Colors.green;
+        break;
+
+    // ❌ CANCELADO POR EL CONDUCTOR
+      case 'cancelByDriverAfterAccepted':
+        textoEstado = 'Cancelado por conductor';
+        statusColor = Colors.red;
+        break;
+
+    // ⏱️ CANCELADO POR TIEMPO DE ESPERA
+      case 'cancelTimeIsOver':
+        textoEstado = 'Cancelado por tiempo de espera';
+        statusColor = Colors.red;
         break;
 
       default:
@@ -1819,9 +1893,10 @@ class _ServicioEnVivoCardState
 
                     // 🔄 RELANZAR
 
-                    if (statusReal == 'created' &&
-                        widget.travelId
-                            .isNotEmpty) ...[
+                    if ((statusReal == 'created' ||
+                        statusReal == 'cancelByDriverAfterAccepted' ||
+                        statusReal == 'cancelTimeIsOver') &&
+                        widget.travelId.isNotEmpty) ...[
                       Tooltip(
                         message:
                         'Re-lanzar servicio',
@@ -1858,11 +1933,72 @@ class _ServicioEnVivoCardState
                       const SizedBox(width: 4),
                     ],
 
-                    // ❌ CANCELAR
+// 👁️ OCULTAR SERVICIO CANCELADO POR EL CONDUCTOR
+                    if ((statusReal == 'cancelByDriverAfterAccepted' ||
+                        statusReal == 'cancelTimeIsOver') &&
+                        widget.manualDocId.isNotEmpty) ...[
+                      Tooltip(
+                        message: 'Ocultar servicio',
+                        child: InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => AlertDialog(
+                                title: const Text('Ocultar servicio'),
+                                content: Text(
+                                  '¿Desea ocultar de la lista el servicio de "${widget.cliente}"?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogCtx),
+                                    child: const Text('No'),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blueGrey,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.pop(dialogCtx);
 
-                    Tooltip(
-                      message:
-                      'Cancelar y ocultar solicitud',
+                                      widget.onOcultarServicio(
+                                        widget.manualDocId,
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Sí, ocultar',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.blueGrey[700],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.visibility_off_outlined,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 4),
+                    ],
+
+                    // ❌ CANCELAR
+// Una vez iniciado el viaje, la operadora ya no puede cancelarlo.
+                    if (statusReal != 'started')
+                      Tooltip(
+                        message:
+                        'Cancelar y ocultar solicitud',
                       child: InkWell(
                         onTap: () {
                           showDialog(
