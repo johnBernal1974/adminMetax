@@ -216,8 +216,6 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
           // 🏢 Configuración del cliente
           'dejarDineroPorteria': _dejarDineroPorteria,
-
-          'targetDriverId': 'dka103QPiqhk4cWDWBqBKeIzg9n2',
           'tipo_servicio': 'radio',
         }),
       );
@@ -1254,8 +1252,6 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'metodo_pago': metodoPago,
           'requerimientos': requerimientos,
           'dejarDineroPorteria': dejarDineroPorteria,
-
-          'targetDriverId': 'dka103QPiqhk4cWDWBqBKeIzg9n2',
           'tipo_servicio': 'radio',
         }),
       );
