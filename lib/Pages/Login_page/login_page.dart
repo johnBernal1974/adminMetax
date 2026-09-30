@@ -247,7 +247,7 @@ class _LoginPageState extends State<LoginPage> {
         return 'general_page';
 
       case 'operador2':
-        return 'whatsapp_metax_page';
+        return 'panel_operadora_page';
 
       case 'operador_bases':
         return 'registro_porteria_page';

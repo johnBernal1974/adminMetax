@@ -15,6 +15,10 @@ class PanelOperadoraPage extends StatefulWidget {
 
 class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
   final _formKey = GlobalKey<FormState>();
+
+  // 🔎 BUSCADOR DE CLIENTES FRECUENTES
+  final TextEditingController _buscarClienteController =
+  TextEditingController();
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _barrioController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController();
@@ -86,6 +90,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
   @override
   void dispose() {
+    _buscarClienteController.dispose();
     _clienteController.dispose();
     _barrioController.dispose();
     _direccionController.dispose();
@@ -107,6 +112,25 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       final barrio = _barrioController.text.trim();
       final direccion = _direccionController.text.trim();
       final celular = _celularController.text.trim();
+
+      // =====================================================
+// 👤 SI ES CLIENTE NUEVO, LO GUARDAMOS AUTOMÁTICAMENTE
+// AL MISMO TIEMPO QUE SE LANZA EL SERVICIO
+// =====================================================
+      if (_creandoClienteNuevo) {
+        await FirebaseFirestore.instance
+            .collection('ManualClients')
+            .add({
+          'cliente': cliente,
+          'cliente_lower': cliente.toLowerCase(),
+          'barrio': barrio,
+          'direccion': direccion,
+          'celular': celular,
+          'dejarDineroPorteria': _dejarDineroPorteria,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
 
       // 1. Guardamos en TravelInfo
       await travelRef.set({
@@ -233,6 +257,35 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  // =====================================================
+// 🔎 SELECCIONAR CLIENTE DESDE EL BUSCADOR RÁPIDO
+// =====================================================
+  void _seleccionarClienteDesdeBuscador(Map<String, dynamic> cliente) {
+    setState(() {
+      _clienteFrecuenteSeleccionadoId = cliente['id']?.toString();
+      _creandoClienteNuevo = false;
+      _editingClientId = null;
+
+      _clienteController.text =
+          (cliente['cliente'] ?? '').toString();
+
+      _barrioController.text =
+          (cliente['barrio'] ?? '').toString();
+
+      _direccionController.text =
+          (cliente['direccion'] ?? '').toString();
+
+      _celularController.text =
+          (cliente['celular'] ?? '').toString();
+
+      _dejarDineroPorteria =
+          cliente['dejarDineroPorteria'] == true;
+
+      // Limpiamos la búsqueda después de seleccionar
+      _buscarClienteController.clear();
+    });
   }
 
   @override
@@ -389,12 +442,155 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 // =====================================================
 // 👤 SELECTOR DE CLIENTE FRECUENTE
 // =====================================================
-                      _cargandoClientes
-                          ? const LinearProgressIndicator()
-                          : DropdownButtonFormField<String>(
-                        value: _listaClientesFrecuentes.any((element) => element['cliente'] == _clienteController.text)
-                            ? _listaClientesFrecuentes.firstWhere((element) => element['cliente'] == _clienteController.text, orElse: () => {})['id']
-                            : null,
+
+                      // =====================================================
+// 🔎 BUSCADOR DE CLIENTES FRECUENTES
+// =====================================================
+
+
+                    if (!_creandoClienteNuevo) ...[
+                        TextField(
+                        controller: _buscarClienteController,
+                        decoration: InputDecoration(
+                          labelText: 'Buscar cliente frecuente',
+                          hintText: 'Ej: conjunto, acacias...',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.blueGrey,
+                          ),
+                          suffixIcon: _buscarClienteController.text.isNotEmpty
+                              ? IconButton(
+                            tooltip: 'Limpiar búsqueda',
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _buscarClienteController.clear();
+                              });
+                            },
+                          )
+                              : null,
+                        ),
+                        onChanged: (valor) {
+                          setState(() {});
+                        },
+                      ),
+
+                      // =====================================================
+// 🔎 RESULTADOS RÁPIDOS DEL BUSCADOR
+// =====================================================
+                      if (_buscarClienteController.text.trim().isNotEmpty) ...[
+                        Builder(
+                          builder: (context) {
+                            final busqueda =
+                            _buscarClienteController.text.trim().toLowerCase();
+
+                            final resultados = _listaClientesFrecuentes.where((cliente) {
+                              final nombre =
+                              (cliente['cliente'] ?? '').toString().toLowerCase();
+
+                              return nombre.contains(busqueda);
+                            }).toList();
+
+                            if (resultados.isEmpty) {
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'No se encontraron clientes',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return Container(
+                              constraints: const BoxConstraints(
+                                maxHeight: 220,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                itemCount: resultados.length,
+                                separatorBuilder: (_, __) =>
+                                    Divider(height: 1, color: Colors.grey.shade200),
+                                itemBuilder: (context, index) {
+                                  final cliente = resultados[index];
+
+                                  final nombre =
+                                  (cliente['cliente'] ?? '').toString();
+
+                                  final direccion =
+                                  (cliente['direccion'] ?? '').toString();
+
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(
+                                      Icons.person_outline,
+                                      color: Colors.blueGrey,
+                                    ),
+                                    title: Text(
+                                      nombre,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    subtitle: direccion.isNotEmpty
+                                        ? Text(direccion)
+                                        : null,
+                                    onTap: () {
+                                      _seleccionarClienteDesdeBuscador(cliente);
+                                    },
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+                      ],
+
+                      const SizedBox(height: 12),
+
+
+
+                    Builder(
+                        builder: (context) {
+                          final textoBusqueda =
+                          _buscarClienteController.text.trim().toLowerCase();
+
+                          final clientesFiltrados = textoBusqueda.isEmpty
+                              ? _listaClientesFrecuentes
+                              : _listaClientesFrecuentes.where((cliente) {
+                            final nombre =
+                            (cliente['cliente'] ?? '').toString().toLowerCase();
+
+                            return nombre.contains(textoBusqueda);
+                          }).toList();
+
+                          return _cargandoClientes
+                              ? const LinearProgressIndicator()
+                              : DropdownButtonFormField<String>(
+                            value: clientesFiltrados.any(
+                                    (element) => element['cliente'] == _clienteController.text)
+                                ? clientesFiltrados.firstWhere(
+                                  (element) => element['cliente'] == _clienteController.text,
+                              orElse: () => {},
+                            )['id']
+                                : null,
                         decoration: const InputDecoration(
                           labelText: 'Seleccionar Cliente Frecuente',
                           border: OutlineInputBorder(),
@@ -423,7 +619,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                           }).toList();
                         },
 
-                        items: _listaClientesFrecuentes.map((item) {
+                          items: clientesFiltrados.map((item) {
                           final idDoc = item['id'] as String;
                           final nombreCliente = item['cliente'] as String;
                           final direccion = item['direccion'] as String;
@@ -437,7 +633,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                                   child: Text(
                                     '$nombreCliente ($direccion)',
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.normal,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -450,7 +646,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.edit_outlined,
-                                        color: Colors.blue,
+                                        color: Colors.black54,
                                         size: 20,
                                       ),
                                       tooltip: 'Editar cliente',
@@ -477,7 +673,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.delete_outline,
-                                        color: Colors.red,
+                                        color: Colors.black54,
                                         size: 20,
                                       ),
                                       tooltip: 'Eliminar cliente',
@@ -525,11 +721,15 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                             }
                           }
                         },
-                      ),
+                          );
+                        },
+                    ),
+
+                    ],
 
                       const SizedBox(height: 16),
 
-                    if (_creandoClienteNuevo || _editingClientId != null) ...[
+                      if (_creandoClienteNuevo || _editingClientId != null) ...[
 
                       TextFormField(
                         controller: _clienteController,
@@ -824,6 +1024,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                           'Silla de ruedas',
                           'Mascotas',
                           'Aire acondicionado',
+                          'Cables de inicio',
+                          'Compresor',
                         ].map((opcion) {
                           final seleccionado =
                           _requerimientosSeleccionados.contains(opcion);
