@@ -8,7 +8,7 @@ class RoutePermissions {
     'usuarios_page': {'operadorFull', 'operador1'},
 
     // conductores
-    'conductores_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1'},
+    'conductores_page': {'operadorFull', 'operadorSeguimientoMap', 'operador1' , 'operador2' },
 
     'drivers_activity_admin_page': {
       'operadorFull',

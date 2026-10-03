@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../common/main_layout.dart';
+import '../../models/conductor_model.dart';
+import '../DriverDetailPage/driver_detail_page.dart';
 
 class PanelOperadoraPage extends StatefulWidget {
   const PanelOperadoraPage({super.key});
@@ -1695,6 +1697,197 @@ class _ServicioEnVivoCardState
     return 'N/A';
   }
 
+
+  Future<void> _mostrarDatosConductor({
+    required String idDriver,
+    required String placaVehiculo,
+  }) async {
+    if (idDriver.trim().isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se encontró el conductor asignado.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final driverDoc = await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(idDriver)
+          .get();
+
+      if (!mounted) return;
+
+      if (!driverDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se encontraron los datos del conductor.'),
+          ),
+        );
+        return;
+      }
+
+      final data = driverDoc.data() ?? {};
+
+      data['id'] = driverDoc.id;
+      final driver = Driver.fromJson(data);
+
+      final nombres =
+      (data['01_Nombres'] ?? '').toString().trim();
+
+      final apellidos =
+      (data['02_Apellidos'] ?? '').toString().trim();
+
+      final celular =
+      (data['07_Celular'] ?? '').toString().trim();
+
+      final imageUrl =
+      (data['image'] ?? '').toString().trim();
+
+      final placaFormateada = placaVehiculo.length >= 6
+          ? '${placaVehiculo.substring(0, 3)}-${placaVehiculo.substring(3)}'
+          : placaVehiculo;
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Datos del conductor',
+              textAlign: TextAlign.center,
+            ),
+            content: SizedBox(
+              width: 330,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: 'Ver perfil completo',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(50),
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DriverDetailPage(
+                              driver: driver,
+                            ),
+                          ),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey.shade200,
+                        child: imageUrl.isEmpty
+                            ? const Icon(
+                          Icons.person,
+                          size: 55,
+                          color: Colors.grey,
+                        )
+                            : ClipOval(
+                          child: Image.network(
+                            imageUrl,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) {
+                              return const Icon(
+                                Icons.person,
+                                size: 55,
+                                color: Colors.grey,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text('Nombre'),
+                    subtitle: Text(
+                      nombres.isEmpty ? 'No registrado' : nombres,
+                    ),
+                  ),
+
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.badge_outlined),
+                    title: const Text('Apellido'),
+                    subtitle: Text(
+                      apellidos.isEmpty ? 'No registrado' : apellidos,
+                    ),
+                  ),
+
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.phone_outlined),
+                    title: const Text('Celular / WhatsApp'),
+                    subtitle: Text(
+                      celular.isEmpty ? 'No registrado' : celular,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.directions_car_outlined),
+                    title: const Text('Placa'),
+                    subtitle: Text(
+                      placaFormateada.isEmpty
+                          ? 'No registrada'
+                          : placaFormateada,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Cerrar'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error cargando los datos del conductor: $e',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Si por alguna razón no existe travelId,
@@ -1703,7 +1896,9 @@ class _ServicioEnVivoCardState
       return _construirTarjeta(
         statusReal: widget.statusManual,
         placaVehiculo: '',
+        idDriver: '',
         acceptedAtTimestamp: null,
+        driverWaitingAtTimestamp: null,
         horaInicioViajeTimestamp: null,
         finishedAtTimestamp: null,
       );
@@ -1720,8 +1915,10 @@ class _ServicioEnVivoCardState
 
         String statusReal = widget.statusManual;
         String placaVehiculo = '';
+        String idDriver = '';
 
         Timestamp? acceptedAtTimestamp;
+        Timestamp? driverWaitingAtTimestamp;
         Timestamp? horaInicioViajeTimestamp;
         Timestamp? finishedAtTimestamp;
 
@@ -1738,8 +1935,16 @@ class _ServicioEnVivoCardState
             placaVehiculo =
                 (travelData['placa'] ?? '').toString();
 
+            // 👤 ID DEL CONDUCTOR QUE ACEPTÓ EL SERVICIO
+            idDriver =
+                (travelData['idDriver'] ?? '').toString();
+
             acceptedAtTimestamp =
             travelData['acceptedAt'] as Timestamp?;
+
+            // 🚪 FECHA Y HORA EN QUE EL CONDUCTOR REPORTÓ PUERTA
+            driverWaitingAtTimestamp =
+            travelData['driverWaitingAt'] as Timestamp?;
 
             horaInicioViajeTimestamp =
             travelData['horaInicioViaje'] as Timestamp?;
@@ -1752,22 +1957,25 @@ class _ServicioEnVivoCardState
         return _construirTarjeta(
           statusReal: statusReal,
           placaVehiculo: placaVehiculo,
+          idDriver: idDriver,
           acceptedAtTimestamp: acceptedAtTimestamp,
-          horaInicioViajeTimestamp:
-          horaInicioViajeTimestamp,
+          driverWaitingAtTimestamp: driverWaitingAtTimestamp,
+          horaInicioViajeTimestamp: horaInicioViajeTimestamp,
           finishedAtTimestamp: finishedAtTimestamp,
         );
       },
     );
   }
 
-  Widget _construirTarjeta({
+        Widget _construirTarjeta({
     required String statusReal,
     required String placaVehiculo,
+    required String idDriver,
     required Timestamp? acceptedAtTimestamp,
+    required Timestamp? driverWaitingAtTimestamp,
     required Timestamp? horaInicioViajeTimestamp,
     required Timestamp? finishedAtTimestamp,
-  }) {
+    }) {
 
     // Servicios terminados o cancelados no se muestran.
     if (statusReal == 'finished' ||
@@ -1827,12 +2035,20 @@ class _ServicioEnVivoCardState
     )
         : null;
 
-    final horaInicioStr =
-    horaInicioViajeTimestamp != null
-        ? _formatearTimestamp(
-      horaInicioViajeTimestamp,
-    )
-        : null;
+// 🚪 HORA EN QUE EL CONDUCTOR REPORTÓ PUERTA
+          final horaPuertaStr =
+          driverWaitingAtTimestamp != null
+              ? _formatearTimestamp(
+            driverWaitingAtTimestamp,
+          )
+              : null;
+
+          final horaInicioStr =
+          horaInicioViajeTimestamp != null
+              ? _formatearTimestamp(
+            horaInicioViajeTimestamp,
+          )
+              : null;
 
     final horaFinStr =
     finishedAtTimestamp != null
@@ -1949,6 +2165,32 @@ class _ServicioEnVivoCardState
                     ),
                   ],
 
+                  // 🚪 HORA EN PUERTA
+                  if (horaPuertaStr != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Hora en puerta:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          horaPuertaStr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   if (horaInicioStr != null) ...[
                     const SizedBox(height: 2),
                     Row(
@@ -2057,28 +2299,41 @@ class _ServicioEnVivoCardState
 
                   const SizedBox(height: 3),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                  Tooltip(
+                    message: 'Ver datos del conductor',
+                    child: InkWell(
+                      mouseCursor: SystemMouseCursors.click,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Colors.black87,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      placaVehiculo.length >= 6
-                          ? '${placaVehiculo.substring(0, 3)}-${placaVehiculo.substring(3)}'
-                          : placaVehiculo,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                        fontSize: 14,
-                        letterSpacing: 1.3,
+                      onTap: () {
+                        _mostrarDatosConductor(
+                          idDriver: idDriver,
+                          placaVehiculo: placaVehiculo,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.black87,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          placaVehiculo.length >= 6
+                              ? '${placaVehiculo.substring(0, 3)}-${placaVehiculo.substring(3)}'
+                              : placaVehiculo,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                            fontSize: 14,
+                            letterSpacing: 1.3,
+                          ),
+                        ),
                       ),
                     ),
                   ),
