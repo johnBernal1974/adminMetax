@@ -1759,9 +1759,10 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                       /// 🔥 TUTORIALES
                         case "tutorial_conexion":
 
+                          //nuevo video
                           enviarMensajeDirecto(
                               "🔌 *Cómo conectarte y desconectarte*\n\n"
-                                  "https://youtube.com/shorts/8kq5iWSqOZ0?feature=share"
+                                  "https://youtube.com/shorts/dW2LSlMQBVU"
                           );
 
                           break;
@@ -1776,10 +1777,10 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                           break;
 
                         case "tutorial_recarga":
-
+                        //nuevo video
                           enviarMensajeDirecto(
                               "💳 *Cómo recargar saldo*\n\n"
-                                  "https://youtube.com/shorts/SEei5W92ez4?feature=share"
+                                  "https://youtube.com/shorts/vH-1GcPfiaY"
                           );
 
                           break;
@@ -1801,6 +1802,23 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                           );
 
                           break;
+
+                      /// 🔥 SERVICIOS DESDE BASES
+                        case "servicios_bases":
+
+                          enviarMensajeDirecto(
+                              "🚕 *Servicios desde bases*\n\n"
+                                  "Asprovespulmeta y Meta X ya están lanzando servicios "
+                                  "desde nuestras bases.\n\n"
+                                  "Mantén tu aplicación Meta X encendida y permanece disponible "
+                                  "para recibir y aceptar estos nuevos servicios.\n\n"
+                                  "🎥 Mira el video para conocer esta nueva modalidad:\n\n"
+                                  "https://youtu.be/1lTiJNpZ8-w"
+                          );
+
+                          break;
+
+
                       }
                     },
 
@@ -1866,6 +1884,13 @@ class _WhatsAppMetaXPageState extends State<WhatsAppMetaXPage> {
                       const PopupMenuItem(
                         value: "tutorial_vehiculo",
                         child: Text("🚗 Tutorial añadir vehículo"),
+                      ),
+
+                      const PopupMenuDivider(),
+
+                      const PopupMenuItem(
+                        value: "servicios_bases",
+                        child: Text("🚕 Servicios desde bases"),
                       ),
                     ],
 

@@ -2192,8 +2192,11 @@ class _ServicioEnVivoCardState
                     ],
 
                     // ❌ CANCELAR
-// Una vez iniciado el viaje, la operadora ya no puede cancelarlo.
-                    if (statusReal != 'started')
+// No se muestra si el viaje ya inició
+// o si ya fue cancelado por el conductor.
+                    if (statusReal != 'started' &&
+                        statusReal != 'cancelByDriverAfterAccepted' &&
+                        statusReal != 'cancelTimeIsOver')
                       Tooltip(
                         message:
                         'Cancelar y ocultar solicitud',
