@@ -160,7 +160,13 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       const cfg = ImageConfiguration(size: Size(30, 40), devicePixelRatio: 4.0);
       _taxiIconNormal = await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores.png');
       _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores_emergencia.png');
-      _taxiIconWorking = await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores_working.png');
+      _taxiIconWorking = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(
+          size: Size(68, 76),
+          devicePixelRatio: 3.0,
+        ),
+        'assets/marker_conductores_working.png',
+      );
 
       if (mounted) {
         setState(() {});

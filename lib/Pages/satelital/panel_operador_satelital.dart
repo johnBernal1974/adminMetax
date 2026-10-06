@@ -1897,6 +1897,7 @@ class _ServicioEnVivoCardState
         statusReal: widget.statusManual,
         placaVehiculo: '',
         idDriver: '',
+        minutosAlOrigen: null,
         acceptedAtTimestamp: null,
         driverWaitingAtTimestamp: null,
         horaInicioViajeTimestamp: null,
@@ -1916,6 +1917,7 @@ class _ServicioEnVivoCardState
         String statusReal = widget.statusManual;
         String placaVehiculo = '';
         String idDriver = '';
+        int? minutosAlOrigen;
 
         Timestamp? acceptedAtTimestamp;
         Timestamp? driverWaitingAtTimestamp;
@@ -1939,6 +1941,12 @@ class _ServicioEnVivoCardState
             idDriver =
                 (travelData['idDriver'] ?? '').toString();
 
+            final minutosRaw = travelData['minutosAlOrigen'];
+
+            if (minutosRaw is num) {
+              minutosAlOrigen = minutosRaw.toInt();
+            }
+
             acceptedAtTimestamp =
             travelData['acceptedAt'] as Timestamp?;
 
@@ -1958,6 +1966,7 @@ class _ServicioEnVivoCardState
           statusReal: statusReal,
           placaVehiculo: placaVehiculo,
           idDriver: idDriver,
+          minutosAlOrigen: minutosAlOrigen,
           acceptedAtTimestamp: acceptedAtTimestamp,
           driverWaitingAtTimestamp: driverWaitingAtTimestamp,
           horaInicioViajeTimestamp: horaInicioViajeTimestamp,
@@ -1967,15 +1976,16 @@ class _ServicioEnVivoCardState
     );
   }
 
-        Widget _construirTarjeta({
+  Widget _construirTarjeta({
     required String statusReal,
     required String placaVehiculo,
     required String idDriver,
+    required int? minutosAlOrigen,
     required Timestamp? acceptedAtTimestamp,
     required Timestamp? driverWaitingAtTimestamp,
     required Timestamp? horaInicioViajeTimestamp,
     required Timestamp? finishedAtTimestamp,
-    }) {
+  }) {
 
     // Servicios terminados o cancelados no se muestran.
     if (statusReal == 'finished' ||
@@ -2158,6 +2168,32 @@ class _ServicioEnVivoCardState
                             fontSize: 11,
                             fontWeight:
                             FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // ⏱️ TIEMPO REPORTADO POR EL CONDUCTOR
+                  if (minutosAlOrigen != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Tiempo reportado:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$minutosAlOrigen minutos',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
                             color: Colors.black,
                           ),
                         ),

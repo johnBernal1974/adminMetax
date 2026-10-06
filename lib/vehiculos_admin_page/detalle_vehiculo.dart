@@ -238,6 +238,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
                                 "15_Marca",
                                 [
                                   "Hyundai Atos",
+                                  "Hyundai i10 GL",
                                   "Hyundai Grand I10",
                                   "Kia Picanto Ekotaxi",
                                   "Kia Picanto Ekotaxi LX",
