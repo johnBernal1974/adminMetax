@@ -10,6 +10,9 @@ import 'package:provider/provider.dart';
 import '../../providers/operador_provider.dart';
 import '../../src/color.dart';
 
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
+
 class AdminDriversMapPage extends StatefulWidget {
   const AdminDriversMapPage({super.key});
 
@@ -26,6 +29,12 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
   BitmapDescriptor? _taxiIconNormal;
   BitmapDescriptor? _taxiIconEmergency;
   BitmapDescriptor? _taxiIconWorking;
+
+  // Imágenes originales y marcadores rotados en caché.
+  final Map<String, Future<ui.Image>> _imagenesOriginales = {};
+  final Map<String, Future<BitmapDescriptor>> _iconosRotados = {};
+
+  int _versionReconstruccion = 0;
 
   static const CameraPosition _initial = CameraPosition(
     target: LatLng(4.1461765, -73.641138),
@@ -157,15 +166,24 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
   Future<void> _loadIcons() async {
     try {
-      const cfg = ImageConfiguration(size: Size(30, 40), devicePixelRatio: 4.0);
-      _taxiIconNormal = await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores.png');
-      _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(cfg, 'assets/marker_conductores_emergencia.png');
+      const cfg = ImageConfiguration(
+        size: Size(17, 34),
+        devicePixelRatio: 2.0,
+      );
+
+      _taxiIconNormal = await BitmapDescriptor.fromAssetImage(
+        cfg,
+        'assets/marcador_carro_amarillo.png',
+      );
+
       _taxiIconWorking = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(
-          size: Size(68, 76),
-          devicePixelRatio: 3.0,
-        ),
-        'assets/marker_conductores_working.png',
+        cfg,
+        'assets/marcador_carro_verde.png',
+      );
+
+      _taxiIconEmergency = await BitmapDescriptor.fromAssetImage(
+        cfg,
+        'assets/marcador_carro_rojo.png',
       );
 
       if (mounted) {
@@ -177,6 +195,72 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
     } catch (e) {
       if (kDebugMode) print('❌ Error loading icons: $e');
     }
+  }
+
+  Future<BitmapDescriptor> _obtenerIconoRotado(
+      String ruta,
+      double heading,
+      ) {
+    // Orientaciones cada 15 grados: máximo 24 por color.
+    final grados = ((heading.isFinite ? heading : 0.0) % 360 + 360) % 360;
+    final angulo = ((grados / 15).round() * 15) % 360;
+
+    final clave = '$ruta-$angulo';
+
+    return _iconosRotados.putIfAbsent(clave, () async {
+      // Cargar la imagen original una sola vez.
+      final imagen = await _imagenesOriginales.putIfAbsent(ruta, () async {
+        final datos = await rootBundle.load(ruta);
+        final codec = await ui.instantiateImageCodec(
+          datos.buffer.asUint8List(),
+        );
+        final frame = await codec.getNextFrame();
+        return frame.image;
+      });
+
+      // Lienzo cuadrado para que el carro no se recorte al girar.
+      const int lado = 34;
+      const double anchoCarro = 14;
+      const double altoCarro = 28;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+
+      canvas.translate(lado / 2, lado / 2);
+      canvas.rotate(angulo * math.pi / 180);
+
+      canvas.drawImageRect(
+        imagen,
+        ui.Rect.fromLTWH(
+          0,
+          0,
+          imagen.width.toDouble(),
+          imagen.height.toDouble(),
+        ),
+        const ui.Rect.fromLTWH(
+          -anchoCarro / 2,
+          -altoCarro / 2,
+          anchoCarro,
+          altoCarro,
+        ),
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
+      );
+
+      final picture = recorder.endRecording();
+      final imagenFinal = await picture.toImage(lado, lado);
+
+      final bytes = await imagenFinal.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+
+      if (bytes == null) {
+        throw StateError('No se pudo generar el marcador rotado');
+      }
+
+      return BitmapDescriptor.fromBytes(
+        bytes.buffer.asUint8List(),
+      );
+    });
   }
 
   String formatPlaca(String placa) {
@@ -212,6 +296,8 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       return;
     }
 
+    final versionActual = ++_versionReconstruccion;
+
     final newMarkers = <Marker>{};
     final newAvailable = <String, _DriverAvailable>{};
     final newWorking = <String, _DriverWorking>{};
@@ -234,6 +320,9 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
       final apellidos = pos['apellidos']?.toString() ?? '';
       final imageUrl = pos['image']?.toString() ?? '';
       final heading = (data['heading'] as num?)?.toDouble() ?? 0.0;
+      if (kDebugMode) {
+        print('🚕 ${doc.id} | Heading recibido: $heading');
+      }
       final nombreCompleto = '${nombres.trim()} ${apellidos.trim()}'.trim();
 
       if (emergencyActive) {
@@ -245,24 +334,38 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
         newAvailable[doc.id] = _DriverAvailable(id: doc.id, placa: placa, nombre: nombreCompleto, imageUrl: imageUrl, latLng: latLng);
       }
 
-      BitmapDescriptor icon;
+      String rutaIcono;
+
       if (emergencyActive) {
-        icon = _taxiIconEmergency!;
+        rutaIcono = 'assets/marcador_carro_rojo.png';
       } else if (status == 'driver_working') {
-        icon = _taxiIconWorking!;
+        rutaIcono = 'assets/marcador_carro_verde.png';
       } else {
-        icon = _taxiIconNormal!;
+        rutaIcono = 'assets/marcador_carro_amarillo.png';
       }
+
+      final BitmapDescriptor icon = await _obtenerIconoRotado(
+        rutaIcono,
+        heading,
+      );
 
       newMarkers.add(
         Marker(
           markerId: MarkerId(doc.id),
           position: latLng,
-          rotation: heading,
+          rotation: 0,
           flat: true,
           anchor: const Offset(0.5, 0.5),
           icon: icon,
-          onTap: () => _openDriverCard(id: doc.id, latLng: latLng, placa: placa, nombres: nombres, apellidos: apellidos, imageUrl: imageUrl, emergencyActive: emergencyActive),
+          onTap: () => _openDriverCard(
+            id: doc.id,
+            latLng: latLng,
+            placa: placa,
+            nombres: nombres,
+            apellidos: apellidos,
+            imageUrl: imageUrl,
+            emergencyActive: emergencyActive,
+          ),
         ),
       );
     }
@@ -273,7 +376,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
     _prevEmergencyIds.clear();
     _prevEmergencyIds.addAll(currentEmergencyIds);
 
-    if (!mounted) return;
+    if (!mounted || versionActual != _versionReconstruccion) return;
 
     setState(() {
       _markers = newMarkers;

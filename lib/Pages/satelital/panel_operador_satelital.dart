@@ -8,6 +8,9 @@ import '../../common/main_layout.dart';
 import '../../models/conductor_model.dart';
 import '../DriverDetailPage/driver_detail_page.dart';
 
+import 'package:provider/provider.dart';
+import '../../providers/operador_provider.dart';
+
 class PanelOperadoraPage extends StatefulWidget {
   const PanelOperadoraPage({super.key});
 
@@ -37,6 +40,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
   bool _isLoading = false;
   bool _isSaving = false;
+  // 🧪 Pruebas de radio: desactivado por defecto
+  bool _modoPruebaRadio = false;
 
 // ✏️ ID del cliente cuando estamos editándolo
   String? _editingClientId;
@@ -100,6 +105,39 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     super.dispose();
   }
 
+  Future<String> _generarNumeroViajeRadio() async {
+    final db = FirebaseFirestore.instance;
+
+    // Año correspondiente a Colombia
+    final ahoraColombia =
+    DateTime.now().toUtc().subtract(const Duration(hours: 5));
+
+    final anio = ahoraColombia.year;
+
+    // Contador independiente para los servicios de radio
+    final contadorRef = db
+        .collection('ContadoresViajesRadio')
+        .doc(anio.toString());
+
+    return db.runTransaction<String>((transaction) async {
+      final snapshot = await transaction.get(contadorRef);
+
+      final ultimoNumero = snapshot.exists
+          ? ((snapshot.data()?['ultimoNumero'] as num?)?.toInt() ?? 0)
+          : 0;
+
+      final siguienteNumero = ultimoNumero + 1;
+
+      transaction.set(contadorRef, {
+        'ultimoNumero': siguienteNumero,
+        'anio': anio,
+        'actualizadoAt': FieldValue.serverTimestamp(),
+      });
+
+      return 'RAD-$anio-${siguienteNumero.toString().padLeft(6, '0')}';
+    });
+  }
+
   Future<void> _enviarSolicitudRadio() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -109,6 +147,9 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       final travelRef =
       FirebaseFirestore.instance.collection('TravelInfo').doc();
       final travelId = travelRef.id;
+
+      // 🔢 Número consecutivo exclusivo para servicios de radio
+      final numeroViajeRadio = await _generarNumeroViajeRadio();
 
       final cliente = _clienteController.text.trim();
       final barrio = _barrioController.text.trim();
@@ -138,6 +179,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       await travelRef.set({
         'id': travelId,
         'idClient': travelId,
+        'numeroViaje': numeroViajeRadio,
         'cliente': cliente,
         'barrio': barrio,
         'direccion': direccion,
@@ -175,6 +217,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
       // 2. Guardamos en ManualServices
       await FirebaseFirestore.instance.collection('ManualServices').add({
         'travelId': travelId,
+        'numeroViaje': numeroViajeRadio,
         'cliente': cliente,
         'cliente_lower': cliente.toLowerCase(),
         'barrio': barrio,
@@ -219,6 +262,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           // 🏢 Configuración del cliente
           'dejarDineroPorteria': _dejarDineroPorteria,
           'tipo_servicio': 'radio',
+          'modoPrueba': _modoPruebaRadio &&
+              (context.read<OperadorProvider>().rolActual ?? '').trim() == 'Master',
         }),
       );
 
@@ -290,6 +335,9 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
   @override
   Widget build(BuildContext context) {
+    final esMaster =
+        (context.watch<OperadorProvider>().rolActual ?? '').trim() == 'Master';
+
     return MainLayout(
       pageTitle: 'Despacho de servicios',
       content: Padding(
@@ -562,10 +610,6 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
                         const SizedBox(height: 12),
                       ],
-
-                      const SizedBox(height: 12),
-
-
 
                     Builder(
                         builder: (context) {
@@ -936,6 +980,30 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 // =====================================================
 // 🚕 TARJETA - SOLICITUD DEL SERVICIO
 // =====================================================
+
+                      // 🧪 INTERRUPTOR TEMPORAL PARA PRUEBAS
+// Visible únicamente para el Master.
+                      if (esMaster)
+                        SwitchListTile(
+                        title: const Text(
+                          'Modo prueba - Solo mi conductor',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          _modoPruebaRadio
+                              ? 'ACTIVADO: las solicitudes solo se enviarán a tu conductor.'
+                              : 'DESACTIVADO: envío normal a todos los conductores disponibles.',
+                        ),
+                        value: _modoPruebaRadio,
+                        activeColor: Colors.orange,
+                        onChanged: (valor) {
+                          setState(() {
+                            _modoPruebaRadio = valor;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -1020,12 +1088,12 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
                         runSpacing: 8,
                         children: [
                           'Con Baúl',
-                          'Portabicicletas',
-                          'Silla de ruedas',
-                          'Mascotas',
-                          'Aire acondicionado',
-                          'Cables de inicio',
-                          'Compresor',
+                          'Con Portabicicletas',
+                          'Pasajero con Silla de ruedas',
+                          'Transportan Mascotas',
+                          'Con Aire acondicionado',
+                          'Con Cables de inicio',
+                          'Con Compresor',
                         ].map((opcion) {
                           final seleccionado =
                           _requerimientosSeleccionados.contains(opcion);
@@ -1226,6 +1294,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         'placa': FieldValue.delete(),
         'acceptedAt': FieldValue.delete(),
         'driverWaitingAt': FieldValue.delete(),
+        'minutosAlOrigen': FieldValue.delete(),
         'horaInicioViaje': FieldValue.delete(),
         'cancelledAt': FieldValue.delete(),
         'cancelledBy': FieldValue.delete(),
@@ -1255,6 +1324,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
           'requerimientos': requerimientos,
           'dejarDineroPorteria': dejarDineroPorteria,
           'tipo_servicio': 'radio',
+          'modoPrueba': _modoPruebaRadio &&
+              (context.read<OperadorProvider>().rolActual ?? '').trim() == 'Master',
         }),
       );
 
@@ -2176,7 +2247,12 @@ class _ServicioEnVivoCardState
                   ],
 
                   // ⏱️ TIEMPO REPORTADO POR EL CONDUCTOR
-                  if (minutosAlOrigen != null) ...[
+// No mostrar tiempos de conductores que cancelaron.
+                  if (minutosAlOrigen != null &&
+                      statusReal != 'cancelByDriverAfterAccepted' &&
+                      statusReal != 'cancelTimeIsOver' &&
+                      statusReal != 'created' &&
+                      statusReal != 'enviado') ...[
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

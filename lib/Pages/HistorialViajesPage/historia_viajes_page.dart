@@ -15,10 +15,10 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final numberFormat = NumberFormat("#,##0", "es_ES");
 
-  //new para filtrado
-  int? selectedYear;
-  int? selectedMonth; // 1-12
-  int? selectedDay;   // 1-31
+  // Filtros del historial
+  int? selectedYear = DateTime.now().year;
+  int? selectedMonth = DateTime.now().month;
+  int? selectedDay = DateTime.now().day;
   String placaQuery = "";
   String numeroViajeQuery = "";
 
@@ -198,10 +198,11 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                   tooltip: "Limpiar filtros",
                   icon: const Icon(Icons.refresh),
                   onPressed: () => setState(() {
-                    selectedYear = null;
-                    selectedMonth = null;
-                    selectedDay = null;
+                    selectedYear = DateTime.now().year;
+                    selectedMonth = DateTime.now().month;
+                    selectedDay = DateTime.now().day;
                     placaQuery = "";
+                    numeroViajeQuery = "";
                   }),
                 ),
               ],
@@ -307,6 +308,12 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
       
             final idClient = data['idClient'];
             final idDriver = data['idDriver'];
+
+            final nombreClienteRadio =
+            (data['usuario'] ?? '').toString().trim();
+
+            final esRadio = nombreClienteRadio.isNotEmpty &&
+                (data['numeroViaje'] ?? '').toString().trim().isEmpty;
       
             return DataRow(
               onSelectChanged: (_) => _openTravelDetailModal(travelDoc),
@@ -387,7 +394,13 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                 DataCell(
                   FutureBuilder<List<String>>(
                     future: Future.wait([
-                      _getClientName(
+                      esRadio
+                          ? Future.value(
+                        nombreClienteRadio.isNotEmpty
+                            ? nombreClienteRadio
+                            : 'Cliente de radio sin nombre',
+                      )
+                          : _getClientName(
                         idClient,
                         nombreConjunto: data['nombreConjunto'],
                       ),
@@ -413,7 +426,15 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
                                 children: [
                                   const Icon(Icons.person, size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
-                                  Expanded(child: Text(clientName, overflow: TextOverflow.ellipsis)),
+                                  Expanded(
+                                    child: Text(
+                                      clientName,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 4),
@@ -468,6 +489,12 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
     final idClient = data['idClient'];
     final idDriver = data['idDriver'];
 
+    final nombreClienteRadio =
+    (data['usuario'] ?? '').toString().trim();
+
+    final esRadio = nombreClienteRadio.isNotEmpty &&
+        (data['numeroViaje'] ?? '').toString().trim().isEmpty;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -483,7 +510,12 @@ class _TravelHistoryPageState extends State<TravelHistoryPage> {
             ),
             child: FutureBuilder<List<String>>(
               future: Future.wait([
-                _getClientName(idClient),
+                esRadio
+                    ? Future.value(nombreClienteRadio)
+                    : _getClientName(
+                  idClient,
+                  nombreConjunto: data['nombreConjunto'],
+                ),
                 _getDriverName(idDriver),
               ]),
               builder: (context, snap) {
