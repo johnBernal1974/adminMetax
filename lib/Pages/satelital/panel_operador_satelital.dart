@@ -1381,7 +1381,8 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
   }
 
 
-  Future<void> _cancelarServicioManual(String travelId, String manualDocId) async {
+  Future<void> _cancelarServicioManual(
+      String travelId, String manualDocId) async {
     try {
       if (travelId.isNotEmpty) {
         final travelRef = FirebaseFirestore.instance.collection('TravelInfo').doc(travelId);
@@ -1392,11 +1393,6 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
             'status': 'cancelled',
             'cancelledAt': FieldValue.serverTimestamp(),
           });
-        } else {
-          await travelRef.set({
-            'status': 'cancelled',
-            'cancelledAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
         }
       }
 
@@ -1993,9 +1989,8 @@ class _ServicioEnVivoCardState
     return StreamBuilder<DocumentSnapshot>(
       stream: _travelStream,
       builder: (context, travelSnapshot) {
-        // Mientras llega la primera respuesta no mostramos
-        // una tarjeta incompleta.
-        if (!travelSnapshot.hasData) {
+        if (!travelSnapshot.hasData ||
+            !travelSnapshot.data!.exists) {
           return const SizedBox.shrink();
         }
 
