@@ -259,6 +259,7 @@ class _AdminDriversMapPageState extends State<AdminDriversMapPage> {
 
       return BitmapDescriptor.fromBytes(
         bytes.buffer.asUint8List(),
+        size: const Size(34, 34),
       );
     });
   }

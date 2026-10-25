@@ -610,6 +610,7 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
 
                         const SizedBox(height: 12),
                       ],
+                      const SizedBox(height: 16),
 
                     Builder(
                         builder: (context) {
@@ -1299,6 +1300,9 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
         'cancelledAt': FieldValue.delete(),
         'cancelledBy': FieldValue.delete(),
         'cancelReason': FieldValue.delete(),
+        'retrasoReportado': FieldValue.delete(),
+        'motivoRetraso': FieldValue.delete(),
+        'retrasoReportadoAt': FieldValue.delete(),
       });
 
       // 📡 Relanzar el mismo servicio
@@ -1629,6 +1633,10 @@ class _ServiciosEnVivoPanelState
                     final direccion =
                     (data['direccion'] ?? '').toString();
 
+                    final requerimientos = (data['requerimientos'] is List)
+                        ? List<String>.from(data['requerimientos'])
+                        : <String>[];
+
                     return _ServicioEnVivoCard(
                       key: ValueKey(docs[index].id),
                       manualDocId: docs[index].id,
@@ -1637,6 +1645,7 @@ class _ServiciosEnVivoPanelState
                       barrio: barrio,
                       direccion: direccion,
                       celular: (data['celular'] ?? '').toString(),
+                      requerimientos: requerimientos,
                       createdAt: data['createdAt'],
                       statusManual:
                       (data['status'] ?? 'pendiente').toString(),
@@ -1670,6 +1679,7 @@ class _ServicioEnVivoCard extends StatefulWidget {
   final String barrio;
   final String direccion;
   final String celular;
+  final List<String> requerimientos;
   final dynamic createdAt;
   final String statusManual;
 
@@ -1699,6 +1709,7 @@ class _ServicioEnVivoCard extends StatefulWidget {
     required this.barrio,
     required this.direccion,
     required this.celular,
+    required this.requerimientos,
     required this.createdAt,
     required this.statusManual,
     required this.onRelanzarServicio,
@@ -1973,6 +1984,9 @@ class _ServicioEnVivoCardState
         driverWaitingAtTimestamp: null,
         horaInicioViajeTimestamp: null,
         finishedAtTimestamp: null,
+        retrasoReportado: false,
+        motivoRetraso: '',
+        retrasoReportadoAtTimestamp: null,
       );
     }
 
@@ -1989,6 +2003,11 @@ class _ServicioEnVivoCardState
         String placaVehiculo = '';
         String idDriver = '';
         int? minutosAlOrigen;
+
+// 🚨 Reporte de retraso del conductor
+        bool retrasoReportado = false;
+        String motivoRetraso = '';
+        Timestamp? retrasoReportadoAtTimestamp;
 
         Timestamp? acceptedAtTimestamp;
         Timestamp? driverWaitingAtTimestamp;
@@ -2030,6 +2049,17 @@ class _ServicioEnVivoCardState
 
             finishedAtTimestamp =
             travelData['finishedAt'] as Timestamp?;
+
+            // 🚨 Leer reporte de retraso desde TravelInfo
+            retrasoReportado = travelData['retrasoReportado'] == true;
+            motivoRetraso = (travelData['motivoRetraso'] ?? '').toString();
+
+            retrasoReportadoAtTimestamp =
+            travelData['retrasoReportadoAt'] is Timestamp
+                ? travelData['retrasoReportadoAt'] as Timestamp
+                : null;
+
+
           }
         }
 
@@ -2042,6 +2072,10 @@ class _ServicioEnVivoCardState
           driverWaitingAtTimestamp: driverWaitingAtTimestamp,
           horaInicioViajeTimestamp: horaInicioViajeTimestamp,
           finishedAtTimestamp: finishedAtTimestamp,
+          retrasoReportado: retrasoReportado,
+          motivoRetraso: motivoRetraso,
+          retrasoReportadoAtTimestamp: retrasoReportadoAtTimestamp,
+
         );
       },
     );
@@ -2056,6 +2090,11 @@ class _ServicioEnVivoCardState
     required Timestamp? driverWaitingAtTimestamp,
     required Timestamp? horaInicioViajeTimestamp,
     required Timestamp? finishedAtTimestamp,
+
+    // 🚨 Reporte de retraso
+    required bool retrasoReportado,
+    required String motivoRetraso,
+    required Timestamp? retrasoReportadoAtTimestamp,
   }) {
 
     // Servicios terminados o cancelados no se muestran.
@@ -2187,6 +2226,50 @@ class _ServicioEnVivoCardState
                     ),
                   ),
 
+// 🚕 Mostrar requerimientos únicamente cuando existan
+                  if (widget.requerimientos.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+
+                    Text(
+                      'REQUERIMIENTOS:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade900,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Wrap(
+                      spacing: 5,
+                      runSpacing: 5,
+                      children: widget.requerimientos.map((requerimiento) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Colors.orange.shade300,
+                            ),
+                          ),
+                          child: Text(
+                            requerimiento,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
                   const Divider(
                     height: 16,
                     thickness: 1,
@@ -2274,6 +2357,76 @@ class _ServicioEnVivoCardState
                           ),
                         ),
                       ],
+                    ),
+                  ],
+
+                  // 🚨 ALERTA DE RETRASO REPORTADO POR EL CONDUCTOR
+                  if (retrasoReportado) ...[
+                    const SizedBox(height: 10),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.orange.shade700,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange.shade900,
+                            size: 20,
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'RETRASO REPORTADO',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 4),
+
+                                Text(
+                                  motivoRetraso.isNotEmpty
+                                      ? motivoRetraso
+                                      : 'Motivo no especificado',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+
+                                if (retrasoReportadoAtTimestamp != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Reportado: ${_formatearTimestamp(retrasoReportadoAtTimestamp)}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
 

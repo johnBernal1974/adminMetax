@@ -16,7 +16,7 @@ class RoutePermissions {
       'operador1',
     },
 
-    'historial_viajes_page': {'operadorFull' , 'operador1'},
+    'historial_viajes_page': {'operadorFull' , 'operador1', 'operador2'},
 
     'detalle_vehiculo_page': {'operadorFull', 'operador1'},
     'campanas_whatsapp_page': {'operadorFull'},
@@ -40,7 +40,7 @@ class RoutePermissions {
 
     // 🔥 WhatsApp MetaX
     'whatsapp_metax_page': {'operadorFull', 'operador1'},
-    'panel_operadora_page': {'operador2'},
+    'panel_operadora_page': {'operador2', 'operadorFull'},
   };
 
   static bool canRoleAccess(

@@ -116,7 +116,8 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('conductores_page'),
                 ),
 
-              if (_canSee(role, 'conductores_page'))
+              if (role != 'operador2' &&
+                  _canSee(role, 'drivers_activity_admin_page'))
                 DrawerListTitle(
                   title: "Estado Conductores",
                   icon: Icons.monitor_heart_outlined,
@@ -228,11 +229,12 @@ class _SideBarState extends State<SideBar> {
                   press: () => _go('campanas_whatsapp_page'),
                 ),
 
-              DrawerListTitle(
-                title: "Gestión Conductores",
-                icon: Icons.group_work, // Puedes cambiar este ícono por el que prefieras
-                press: () => _go('gestor_conexion_drivers_page'),
-              ),
+              if (role != 'operador2')
+                DrawerListTitle(
+                  title: "Gestión Conductores",
+                  icon: Icons.group_work,
+                  press: () => _go('gestor_conexion_drivers_page'),
+                ),
 
               if (_canSee(role, 'campanas_whatsapp_clientes_page'))
                 DrawerListTitle(

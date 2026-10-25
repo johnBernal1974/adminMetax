@@ -2128,13 +2128,191 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
         _buildInfoRowHorizontal('Fecha activación:', driver.the12FechaActivacion),
         _buildInfoRowHorizontal('Activador:', driver.the13NombreActivador),
         _buildInfoRowHorizontal('Email:', driver.the06Email),
-        _buildInfoRowHorizontal('Celular:', driver.the07Celular),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Celular: ${driver.the07Celular}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (rol == 'Master') ...[
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Cambiar celular',
+                icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                onPressed: () => _cambiarCelularConductor(driver),
+              ),
+            ],
+          ],
+        ),
         _buildInfoRowHorizontalBold('Viajes:', driver.the30NumeroViajes.toString()),
         _buildInfoRowHorizontalIconoEstrella('Calificación:', averageRating.toStringAsFixed(1)),
         _buildInfoRowHorizontalIconocancel('Cancelaciones:', driver.the40NumeroCancelaciones.toString()),
       ],
     );
   }
+
+
+  Future<void> _cambiarCelularConductor(Driver driver) async {
+    final controller = TextEditingController();
+
+    final nuevoCelular = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cambiar celular del conductor'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Número actual: ${driver.the07Celular}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              decoration: const InputDecoration(
+                labelText: 'Nuevo número de celular',
+                prefixText: '+57 ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final numero = controller.text.trim();
+
+              if (!RegExp(r'^3\d{9}$').hasMatch(numero)) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Ingresa un celular colombiano válido de 10 dígitos',
+                    ),
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(dialogContext, numero);
+            },
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (!mounted || nuevoCelular == null) return;
+
+    if (nuevoCelular == driver.the07Celular) {
+      _showSnackBar(context, 'El número es igual al actual');
+      return;
+    }
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar cambio'),
+        content: Text(
+          '¿Confirmas cambiar el celular de '
+              '${driver.the01Nombres} ${driver.the02Apellidos}?\n\n'
+              'Actual: ${driver.the07Celular}\n'
+              'Nuevo: $nuevoCelular\n\n'
+              'Se actualizarán Firebase Authentication y Firestore '
+              'sin cambiar el UID del conductor.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmar cambio'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmado != true) return;
+
+    bool cargando = false;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Actualizando celular...'),
+            ],
+          ),
+        ),
+      );
+
+      cargando = true;
+
+      final resultado = await _functions
+          .httpsCallable('cambiarCelularConductorAdmin')
+          .call({
+        'driverId': driver.id,
+        'nuevoCelular': nuevoCelular,
+      });
+
+      if (!mounted) return;
+
+      Navigator.of(context, rootNavigator: true).pop();
+      cargando = false;
+
+      if (resultado.data['ok'] == true) {
+        setState(() {
+          widget.driver.the07Celular = nuevoCelular;
+          driver.the07Celular = nuevoCelular;
+        });
+
+        _showSnackBar(
+          context,
+          'Celular actualizado correctamente',
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+
+      if (cargando) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      _showSnackBar(
+        context,
+        'Error al cambiar celular: ${e.message ?? e.code}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      if (cargando) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      _showSnackBar(
+        context,
+        'No se pudo actualizar el celular: $e',
+      );
+    }
+  }
+
 
   void getClientRatings() async {
     final driverId = widget.driver.id;  // Obtienes el ID del conductor
@@ -2592,51 +2770,7 @@ class _DriverDetailPageState extends State<DriverDetailPage> {
     });
   }
 
-  // Future<void> activarConductorEnFirestore() async {
-  //   try {
-  //     final vehiculosSnapshot = await FirebaseFirestore.instance
-  //         .collection("Drivers")
-  //         .doc(widget.driver.id)
-  //         .collection("vehiculos")
-  //         .where("estado_documentos", isEqualTo: "aprobado")
-  //         .limit(1)
-  //         .get();
-  //
-  //     if (vehiculosSnapshot.docs.isEmpty) {
-  //       throw Exception("No hay vehículos aprobados");
-  //     }
-  //
-  //     final vehiculoDoc = vehiculosSnapshot.docs.first;
-  //     final vehiculoData = vehiculoDoc.data();
-  //
-  //     final data = {
-  //       "Verificacion_Status": "activado",
-  //
-  //       /// 🔥 ESTA ES LA CLAVE (TE FALTABA)
-  //       "11_Esta_activado": true,
-  //
-  //       "38_Esta_bloqueado": false,
-  //       "vehiculoActivoId": vehiculoDoc.id,
-  //       "placaActiva": vehiculoData["18_Placa"],
-  //
-  //       "13_Nombre_Activador":
-  //       "${nameOperador ?? 'Nombre'} ${apellidosOperador ?? 'Apellido'}",
-  //
-  //       "12_Fecha_Activacion":
-  //       DateFormat("d 'de' MMMM/yyyy - HH:mm:ss", 'es_ES')
-  //           .format(DateTime.now()),
-  //     };
-  //
-  //     await _driverProvider.update(data, widget.driver.id);
-  //
-  //     if (!context.mounted) return;
-  //     _showSnackBar(context, 'Conductor activado correctamente');
-  //
-  //   } catch (e) {
-  //     if (!context.mounted) return;
-  //     _showSnackBar(context, 'Error: ${e.toString()}');
-  //   }
-  // }
+
 
   Future<void> activarConductorEnFirestore() async {
     try {
