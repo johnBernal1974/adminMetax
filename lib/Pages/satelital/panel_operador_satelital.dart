@@ -21,6 +21,8 @@ class PanelOperadoraPage extends StatefulWidget {
 class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
   final _formKey = GlobalKey<FormState>();
 
+  bool _mostrarServiciosEnMovil = true;
+
   // 🔎 BUSCADOR DE CLIENTES FRECUENTES
   final TextEditingController _buscarClienteController =
   TextEditingController();
@@ -338,840 +340,809 @@ class _PanelOperadoraPageState extends State<PanelOperadoraPage> {
     final esMaster =
         (context.watch<OperadorProvider>().rolActual ?? '').trim() == 'Master';
 
-    return MainLayout(
-      pageTitle: 'Despacho de servicios',
-      content: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final anchoPantalla = MediaQuery.sizeOf(context).width;
+    final esMovil = anchoPantalla < 700;
+
+    debugPrint(
+      '📱 METAX PANEL: ancho=$anchoPantalla, esMovil=$esMovil',
+    );
+
+    final formulario = Container(
+      padding: EdgeInsets.all(esMovil ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Form(
+        key: _formKey,
+        child: ListView(
           children: [
-            // ================= COLUMNA IZQUIERDA: FORMULARIO =================
-            Expanded(
-              flex: 1,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)
-                  ],
+            Text(
+              'DESPACHO DE SERVICIOS POR OPERADORA',
+              style: TextStyle(
+                fontSize: esMovil ? 17 : 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ACCIONES DEL CLIENTE
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (!_creandoClienteNuevo && _editingClientId == null)
+                  TextButton.icon(
+                    onPressed: _limpiarFormularioEdicion,
+                    icon: const Icon(
+                      Icons.person_add_alt_1,
+                      color: Colors.blueGrey,
+                    ),
+                    label: const Text(
+                      'Nuevo cliente',
+                      style: TextStyle(
+                        color: Colors.blueGrey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                if (_creandoClienteNuevo || _editingClientId != null) ...[
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _editingClientId = null;
+                        _clienteFrecuenteSeleccionadoId = null;
+                        _creandoClienteNuevo = false;
+                        _clienteController.clear();
+                        _barrioController.clear();
+                        _direccionController.clear();
+                        _celularController.clear();
+                        _dejarDineroPorteria = false;
+                      });
+                    },
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    label: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: (_isSaving ||
+                        _isLoading ||
+                        _clienteController.text.trim().isEmpty ||
+                        _barrioController.text.trim().isEmpty ||
+                        _direccionController.text.trim().isEmpty ||
+                        _celularController.text.trim().isEmpty)
+                        ? null
+                        : _guardarClienteFrecuente,
+                    icon: _isSaving
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.green,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : Icon(
+                      _editingClientId != null
+                          ? Icons.save_as
+                          : Icons.person_add,
+                      size: 22,
+                    ),
+                    label: Text(
+                      _isSaving
+                          ? 'Guardando...'
+                          : _editingClientId != null
+                          ? 'Actualizar Cliente'
+                          : 'Guardar Cliente',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _editingClientId != null
+                          ? Colors.blue[800]
+                          : Colors.green[800],
+                      side: BorderSide(
+                        color: _editingClientId != null
+                            ? Colors.blue.shade700
+                            : Colors.green.shade700,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // BUSCADOR DE CLIENTES FRECUENTES
+            if (!_creandoClienteNuevo) ...[
+              TextField(
+                controller: _buscarClienteController,
+                decoration: InputDecoration(
+                  labelText: 'Buscar cliente frecuente',
+                  hintText: 'Ej: conjunto, acacias...',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.blueGrey,
+                  ),
+                  suffixIcon: _buscarClienteController.text.isNotEmpty
+                      ? IconButton(
+                    tooltip: 'Limpiar búsqueda',
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _buscarClienteController.clear();
+                      });
+                    },
+                  )
+                      : null,
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      const Text(
-                        'DESPACHO DE SERVICIOS POR OPERADORA',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 20),
+                onChanged: (valor) => setState(() {}),
+              ),
 
-// =====================================================
-// 👤 ACCIONES DEL CLIENTE
-// =====================================================
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
+              if (_buscarClienteController.text.trim().isNotEmpty) ...[
+                Builder(
+                  builder: (context) {
+                    final busqueda =
+                    _buscarClienteController.text.trim().toLowerCase();
 
-                          // 🆕 NUEVO CLIENTE
-                          if (!_creandoClienteNuevo && _editingClientId == null) ...[
-                            TextButton.icon(
-                              onPressed: () {
-                                _limpiarFormularioEdicion();
-                              },
-                              icon: const Icon(
-                                Icons.person_add_alt_1,
-                                color: Colors.blueGrey,
-                              ),
-                              label: const Text(
-                                'Nuevo cliente',
-                                style: TextStyle(
-                                  color: Colors.blueGrey,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                    final resultados =
+                    _listaClientesFrecuentes.where((cliente) {
+                      final nombre =
+                      (cliente['cliente'] ?? '').toString().toLowerCase();
+                      return nombre.contains(busqueda);
+                    }).toList();
 
-                          if (_creandoClienteNuevo || _editingClientId != null) ...[
-                            TextButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  // Volvemos al estado inicial
-                                  _editingClientId = null;
-                                  _clienteFrecuenteSeleccionadoId = null;
-                                  _creandoClienteNuevo = false;
-
-                                  // Limpiamos los datos cargados
-                                  _clienteController.clear();
-                                  _barrioController.clear();
-                                  _direccionController.clear();
-                                  _celularController.clear();
-
-                                  // Reiniciamos portería
-                                  _dejarDineroPorteria = false;
-                                });
-                              },
-                              icon: const Icon(
-                                Icons.close,
-                                color: Colors.grey,
-                              ),
-                              label: const Text(
-                                'Cancelar',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 8),
-                          ],
-
-                          // 💾 GUARDAR / ACTUALIZAR CLIENTE
-                          if (_creandoClienteNuevo || _editingClientId != null)
-                            OutlinedButton.icon(
-                              onPressed: (_isSaving ||
-                                  _isLoading ||
-                                  _clienteController.text.trim().isEmpty ||
-                                  _barrioController.text.trim().isEmpty ||
-                                  _direccionController.text.trim().isEmpty ||
-                                  _celularController.text.trim().isEmpty)
-                                  ? null
-                                  : _guardarClienteFrecuente,
-                              icon: _isSaving
-                                  ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.green,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                                  : Icon(
-                                _editingClientId != null
-                                    ? Icons.save_as
-                                    : Icons.person_add,
-                                size: 22,
-                              ),
-                              label: Text(
-                                _isSaving
-                                    ? 'Guardando...'
-                                    : (_editingClientId != null
-                                    ? 'Actualizar Cliente'
-                                    : 'Guardar Cliente'),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _editingClientId != null
-                                    ? Colors.blue[800]
-                                    : Colors.green[800],
-                                side: BorderSide(
-                                  color: _editingClientId != null
-                                      ? Colors.blue.shade700
-                                      : Colors.green.shade700,
-                                  width: 1.5,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-// =====================================================
-// 👤 SELECTOR DE CLIENTE FRECUENTE
-// =====================================================
-
-                      // =====================================================
-// 🔎 BUSCADOR DE CLIENTES FRECUENTES
-// =====================================================
-
-
-                    if (!_creandoClienteNuevo) ...[
-                        TextField(
-                        controller: _buscarClienteController,
-                        decoration: InputDecoration(
-                          labelText: 'Buscar cliente frecuente',
-                          hintText: 'Ej: conjunto, acacias...',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: Colors.blueGrey,
-                          ),
-                          suffixIcon: _buscarClienteController.text.isNotEmpty
-                              ? IconButton(
-                            tooltip: 'Limpiar búsqueda',
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              setState(() {
-                                _buscarClienteController.clear();
-                              });
-                            },
-                          )
-                              : null,
+                    if (resultados.isEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        onChanged: (valor) {
-                          setState(() {});
+                        child: const Text(
+                          'No se encontraron clientes',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: resultados.length,
+                        separatorBuilder: (_, __) =>
+                            Divider(height: 1, color: Colors.grey.shade200),
+                        itemBuilder: (context, index) {
+                          final cliente = resultados[index];
+                          final nombre =
+                          (cliente['cliente'] ?? '').toString();
+                          final direccion =
+                          (cliente['direccion'] ?? '').toString();
+
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(
+                              Icons.person_outline,
+                              color: Colors.blueGrey,
+                            ),
+                            title: Text(
+                              nombre,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle:
+                            direccion.isNotEmpty ? Text(direccion) : null,
+                            onTap: () {
+                              _seleccionarClienteDesdeBuscador(cliente);
+                            },
+                          );
                         },
                       ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
 
-                      // =====================================================
-// 🔎 RESULTADOS RÁPIDOS DEL BUSCADOR
-// =====================================================
-                      if (_buscarClienteController.text.trim().isNotEmpty) ...[
-                        Builder(
-                          builder: (context) {
-                            final busqueda =
-                            _buscarClienteController.text.trim().toLowerCase();
+              const SizedBox(height: 16),
 
-                            final resultados = _listaClientesFrecuentes.where((cliente) {
-                              final nombre =
-                              (cliente['cliente'] ?? '').toString().toLowerCase();
+              Builder(
+                builder: (context) {
+                  final textoBusqueda =
+                  _buscarClienteController.text.trim().toLowerCase();
 
-                              return nombre.contains(busqueda);
-                            }).toList();
+                  final clientesFiltrados = textoBusqueda.isEmpty
+                      ? _listaClientesFrecuentes
+                      : _listaClientesFrecuentes.where((cliente) {
+                    final nombre = (cliente['cliente'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    return nombre.contains(textoBusqueda);
+                  }).toList();
 
-                            if (resultados.isEmpty) {
-                              return Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'No se encontraron clientes',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              );
-                            }
+                  return _cargandoClientes
+                      ? const LinearProgressIndicator()
+                      : DropdownButtonFormField<String>(
+                    value: clientesFiltrados.any(
+                          (element) =>
+                      element['cliente'] == _clienteController.text,
+                    )
+                        ? clientesFiltrados.firstWhere(
+                          (element) =>
+                      element['cliente'] ==
+                          _clienteController.text,
+                    )['id']
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Seleccionar Cliente Frecuente',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(
+                        Icons.person_search,
+                        color: Colors.amber,
+                      ),
+                    ),
+                    hint: const Text('-- Seleccione un cliente --'),
+                    isExpanded: true,
+                    selectedItemBuilder: (BuildContext context) {
+                      return clientesFiltrados.map<Widget>((item) {
+                        final nombreCliente =
+                        (item['cliente'] ?? '').toString();
+                        final direccion =
+                        (item['direccion'] ?? '').toString();
 
-                            return Container(
-                              constraints: const BoxConstraints(
-                                maxHeight: 220,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                padding: EdgeInsets.zero,
-                                itemCount: resultados.length,
-                                separatorBuilder: (_, __) =>
-                                    Divider(height: 1, color: Colors.grey.shade200),
-                                itemBuilder: (context, index) {
-                                  final cliente = resultados[index];
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '$nombreCliente ($direccion)',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList();
+                    },
+                    items: clientesFiltrados.map((item) {
+                      final idDoc = item['id'] as String;
+                      final nombreCliente =
+                      (item['cliente'] ?? '').toString();
+                      final direccion =
+                      (item['direccion'] ?? '').toString();
 
-                                  final nombre =
-                                  (cliente['cliente'] ?? '').toString();
-
-                                  final direccion =
-                                  (cliente['direccion'] ?? '').toString();
-
-                                  return ListTile(
-                                    dense: true,
-                                    leading: const Icon(
-                                      Icons.person_outline,
-                                      color: Colors.blueGrey,
-                                    ),
-                                    title: Text(
-                                      nombre,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: direccion.isNotEmpty
-                                        ? Text(direccion)
-                                        : null,
-                                    onTap: () {
-                                      _seleccionarClienteDesdeBuscador(cliente);
-                                    },
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 12),
-                      ],
-                      const SizedBox(height: 16),
-
-                    Builder(
-                        builder: (context) {
-                          final textoBusqueda =
-                          _buscarClienteController.text.trim().toLowerCase();
-
-                          final clientesFiltrados = textoBusqueda.isEmpty
-                              ? _listaClientesFrecuentes
-                              : _listaClientesFrecuentes.where((cliente) {
-                            final nombre =
-                            (cliente['cliente'] ?? '').toString().toLowerCase();
-
-                            return nombre.contains(textoBusqueda);
-                          }).toList();
-
-                          return _cargandoClientes
-                              ? const LinearProgressIndicator()
-                              : DropdownButtonFormField<String>(
-                            value: clientesFiltrados.any(
-                                    (element) => element['cliente'] == _clienteController.text)
-                                ? clientesFiltrados.firstWhere(
-                                  (element) => element['cliente'] == _clienteController.text,
-                              orElse: () => {},
-                            )['id']
-                                : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Seleccionar Cliente Frecuente',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person_search, color: Colors.amber),
-                        ),
-                        hint: const Text('-- Seleccione un cliente --'),
-                        isExpanded: true,
-
-// 👁️ Así se muestra el cliente cuando el dropdown está CERRADO.
-// No mostramos aquí los botones editar/eliminar.
-                        selectedItemBuilder: (BuildContext context) {
-                          return _listaClientesFrecuentes.map<Widget>((item) {
-                            final nombreCliente = item['cliente'] as String;
-                            final direccion = item['direccion'] as String;
-
-                            return Align(
-                              alignment: Alignment.centerLeft,
+                      return DropdownMenuItem<String>(
+                        value: idDoc,
+                        child: Row(
+                          children: [
+                            Expanded(
                               child: Text(
                                 '$nombreCliente ($direccion)',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            );
-                          }).toList();
-                        },
-
-                          items: clientesFiltrados.map((item) {
-                          final idDoc = item['id'] as String;
-                          final nombreCliente = item['cliente'] as String;
-                          final direccion = item['direccion'] as String;
-
-                          return DropdownMenuItem<String>(
-                            value: idDoc,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '$nombreCliente ($direccion)',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.normal,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-
-                                // Estos botones aparecerán únicamente al abrir el dropdown
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit_outlined,
-                                        color: Colors.black54,
-                                        size: 20,
-                                      ),
-                                      tooltip: 'Editar cliente',
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-
-                                        setState(() {
-                                          // ✏️ Entramos explícitamente en modo edición
-                                          _editingClientId = idDoc;
-                                          _clienteFrecuenteSeleccionadoId = idDoc;
-                                          _creandoClienteNuevo = false;
-
-                                          _clienteController.text = nombreCliente;
-                                          _barrioController.text = item['barrio'] ?? '';
-                                          _direccionController.text = direccion;
-                                          _celularController.text = item['celular'] ?? '';
-
-                                          _dejarDineroPorteria =
-                                              item['dejarDineroPorteria'] == true;
-                                        });
-                                      },
-                                    ),
-
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.black54,
-                                        size: 20,
-                                      ),
-                                      tooltip: 'Eliminar cliente',
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        _confirmarYEliminarCliente(idDoc, nombreCliente);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ),
-                          );
-                        }).toList(),
-                        onChanged: (String? nuevoId) {
-                          if (nuevoId != null) {
-                            final clienteEncontrado = _listaClientesFrecuentes.firstWhere(
-                                  (element) => element['id'] == nuevoId,
-                              orElse: () => {},
-                            );
-
-                            if (clienteEncontrado.isNotEmpty) {
-                              setState(() {
-                                // 👤 Cliente frecuente seleccionado para solicitar servicio
-                                _clienteFrecuenteSeleccionadoId = nuevoId;
-                                _creandoClienteNuevo = false;
-
-                                // No estamos editando
-                                _editingClientId = null;
-
-                                // Conservamos internamente los datos porque se necesitan
-                                // para lanzar la solicitud de radio
-                                _clienteController.text =
-                                    clienteEncontrado['cliente'] ?? '';
-                                _barrioController.text =
-                                    clienteEncontrado['barrio'] ?? '';
-                                _direccionController.text =
-                                    clienteEncontrado['direccion'] ?? '';
-                                _celularController.text =
-                                    clienteEncontrado['celular'] ?? '';
-
-                                _dejarDineroPorteria =
-                                    clienteEncontrado['dejarDineroPorteria'] == true;
-                              });
-                            }
-                          }
-                        },
-                          );
-                        },
-                    ),
-
-                    ],
-
-                      const SizedBox(height: 16),
-
-                      if (_creandoClienteNuevo || _editingClientId != null) ...[
-
-                      TextFormField(
-                        controller: _clienteController,
-                        onChanged: (value) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre del Cliente',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                        validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: _barrioController,
-                        onChanged: (value) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Barrio / Sector',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.location_city),
-                        ),
-                        validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: _direccionController,
-                        onChanged: (value) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Dirección Exacta o Referencia',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.home),
-                        ),
-                        validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: _celularController,
-                        onChanged: (value) => setState(() {}),
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Número de Celular',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
-                        ),
-                        validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-// =====================================================
-// 👤 DATOS DEL CLIENTE FRECUENTE SELECCIONADO
-// =====================================================
-                      if (!_creandoClienteNuevo &&
-                          _editingClientId == null &&
-                          _clienteFrecuenteSeleccionadoId != null) ...[
-
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Datos del cliente',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Colors.black54,
+                                size: 20,
                               ),
-
-                              const SizedBox(height: 16),
-
-                              Row(
-                                children: [
-                                  const Icon(Icons.person, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      _clienteController.text,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_city, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      _barrioController.text,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              Row(
-                                children: [
-                                  const Icon(Icons.home, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      _direccionController.text,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              Row(
-                                children: [
-                                  const Icon(Icons.phone, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      _celularController.text,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              const Divider(),
-                              const SizedBox(height: 6),
-
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Checkbox(
-                                    value: _dejarDineroPorteria,
-                                    onChanged: null,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      _dejarDineroPorteria
-                                          ? 'Se tienen que dejar \$1.000 en portería.'
-                                          : 'No se deben dejar \$1.000 en portería.',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: _dejarDineroPorteria
-                                            ? Colors.orange.shade800
-                                            : Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-                      ],
-/// =====================================================
-// 🏢 PAGO EN PORTERÍA
-// =====================================================
-
-// ✏️ SOLO NUEVO CLIENTE O CLIENTE EN EDICIÓN
-// En estos dos casos sí permitimos modificar la portería.
-                      if (_creandoClienteNuevo || _editingClientId != null) ...[
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: const Text(
-                            'El conductor debe dejar \$1.000 en portería',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          subtitle: const Text(
-                            'Marque esta opción únicamente cuando aplique.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          value: _dejarDineroPorteria,
-                          onChanged: (valor) {
-                            setState(() {
-                              _dejarDineroPorteria = valor ?? false;
-                            });
-                          },
-                        ),
-                      ],
-    const SizedBox(height: 24),
-
-// =====================================================
-// 🚕 TARJETA - SOLICITUD DEL SERVICIO
-// =====================================================
-
-                      // 🧪 INTERRUPTOR TEMPORAL PARA PRUEBAS
-// Visible únicamente para el Master.
-                      if (esMaster)
-                        SwitchListTile(
-                        title: const Text(
-                          'Modo prueba - Solo mi conductor',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          _modoPruebaRadio
-                              ? 'ACTIVADO: las solicitudes solo se enviarán a tu conductor.'
-                              : 'DESACTIVADO: envío normal a todos los conductores disponibles.',
-                        ),
-                        value: _modoPruebaRadio,
-                        activeColor: Colors.orange,
-                        onChanged: (valor) {
-                          setState(() {
-                            _modoPruebaRadio = valor;
-                          });
-                        },
-                      ),
-
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.grey.shade300,
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            const Text(
-                              'SOLICITAR SERVICIO',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // =====================================================
-                            // 💳 FORMA DE PAGO
-                            // =====================================================
-                            const Text(
-                              'Forma de pago',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          'Efectivo',
-                          'Nequi',
-                          'Daviplata',
-                          'Llave',
-                        ].map((opcion) {
-                          return ChoiceChip(
-                            label: Text(
-                              opcion,
-                              style: const TextStyle(
-                                fontSize: 10,
-                              ),
-                            ),
-                            selected: _metodoPagoSeleccionado == opcion,
-                            onSelected: (seleccionado) {
-                              if (seleccionado) {
+                              tooltip: 'Editar cliente',
+                              onPressed: () {
+                                Navigator.of(context).pop();
                                 setState(() {
-                                  _metodoPagoSeleccionado = opcion;
+                                  _editingClientId = idDoc;
+                                  _clienteFrecuenteSeleccionadoId = idDoc;
+                                  _creandoClienteNuevo = false;
+                                  _clienteController.text = nombreCliente;
+                                  _barrioController.text =
+                                      item['barrio'] ?? '';
+                                  _direccionController.text = direccion;
+                                  _celularController.text =
+                                      item['celular'] ?? '';
+                                  _dejarDineroPorteria =
+                                      item['dejarDineroPorteria'] == true;
                                 });
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 24),
-
-// =====================================================
-// 🚕 REQUERIMIENTOS ESPECIALES
-// =====================================================
-                      const Text(
-                        'Requerimientos',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          'Con Baúl',
-                          'Con Portabicicletas',
-                          'Pasajero con Silla de ruedas',
-                          'Transportan Mascotas',
-                          'Con Aire acondicionado',
-                          'Con Cables de inicio',
-                          'Con Compresor',
-                        ].map((opcion) {
-                          final seleccionado =
-                          _requerimientosSeleccionados.contains(opcion);
-
-                          return FilterChip(
-                            label: Text(
-                              opcion,
-                              style: const TextStyle(
-                                fontSize: 10,
-                              ),
+                              },
                             ),
-                            selected: seleccionado,
-                            onSelected: (valor) {
-                              setState(() {
-                                if (valor) {
-                                  _requerimientosSeleccionados.add(opcion);
-                                } else {
-                                  _requerimientosSeleccionados.remove(opcion);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: (_isLoading || _isSaving || _clienteController.text.trim().isEmpty || _barrioController.text.trim().isEmpty || _direccionController.text.trim().isEmpty || _celularController.text.trim().isEmpty)
-                                ? null
-                                : _enviarSolicitudRadio,
-                            icon: _isLoading
-                                ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                                : const Icon(Icons.podcasts, size: 24),
-                            label: Text(_isLoading ? 'Transmitiendo...' : 'Lanzar servicio'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[700],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.black54,
+                                size: 20,
                               ),
+                              tooltip: 'Eliminar cliente',
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _confirmarYEliminarCliente(
+                                  idDoc,
+                                  nombreCliente,
+                                );
+                              },
                             ),
                           ],
                         ),
+                      );
+                    }).toList(),
+                    onChanged: (String? nuevoId) {
+                      if (nuevoId == null) return;
 
-                        ],
+                      final clienteEncontrado =
+                      _listaClientesFrecuentes.firstWhere(
+                            (element) => element['id'] == nuevoId,
+                        orElse: () => {},
+                      );
+
+                      if (clienteEncontrado.isNotEmpty) {
+                        setState(() {
+                          _clienteFrecuenteSeleccionadoId = nuevoId;
+                          _creandoClienteNuevo = false;
+                          _editingClientId = null;
+
+                          _clienteController.text =
+                              clienteEncontrado['cliente'] ?? '';
+                          _barrioController.text =
+                              clienteEncontrado['barrio'] ?? '';
+                          _direccionController.text =
+                              clienteEncontrado['direccion'] ?? '';
+                          _celularController.text =
+                              clienteEncontrado['celular'] ?? '';
+                          _dejarDineroPorteria =
+                              clienteEncontrado['dejarDineroPorteria'] ==
+                                  true;
+                        });
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // CAMPOS DE NUEVO CLIENTE O EDICIÓN
+            if (_creandoClienteNuevo || _editingClientId != null) ...[
+              TextFormField(
+                controller: _clienteController,
+                onChanged: (value) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del Cliente',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _barrioController,
+                onChanged: (value) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Barrio / Sector',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.location_city),
+                ),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _direccionController,
+                onChanged: (value) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Dirección Exacta o Referencia',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.home),
+                ),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _celularController,
+                onChanged: (value) => setState(() {}),
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Número de Celular',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // DATOS DEL CLIENTE SELECCIONADO
+            if (!_creandoClienteNuevo &&
+                _editingClientId == null &&
+                _clienteFrecuenteSeleccionadoId != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Datos del cliente',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                      const SizedBox(height: 24),
-
-                    ],
-                  ),
+                    const SizedBox(height: 16),
+                    _datoCliente(Icons.person, _clienteController.text),
+                    const SizedBox(height: 12),
+                    _datoCliente(Icons.location_city, _barrioController.text),
+                    const SizedBox(height: 12),
+                    _datoCliente(Icons.home, _direccionController.text),
+                    const SizedBox(height: 12),
+                    _datoCliente(Icons.phone, _celularController.text),
+                    const SizedBox(height: 14),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _dejarDineroPorteria,
+                          onChanged: null,
+                        ),
+                        Expanded(
+                          child: Text(
+                            _dejarDineroPorteria
+                                ? 'Se tienen que dejar \$1.000 en portería.'
+                                : 'No se deben dejar \$1.000 en portería.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _dejarDineroPorteria
+                                  ? Colors.orange.shade800
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 24),
+            ],
 
-            const SizedBox(width: 20),
+            if (_creandoClienteNuevo || _editingClientId != null)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text(
+                  'El conductor debe dejar \$1.000 en portería',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Marque esta opción únicamente cuando aplique.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                value: _dejarDineroPorteria,
+                onChanged: (valor) {
+                  setState(() {
+                    _dejarDineroPorteria = valor ?? false;
+                  });
+                },
+              ),
 
-            // ================= COLUMNA DERECHA: LISTADO EN VIVO DE SERVICIOS =================
-            Expanded(
-              flex: 1,
-              child: _ServiciosEnVivoPanel(
-                onRelanzarServicio: _relanzarServicioExistente,
-                onCancelarServicio: _cancelarServicioManual,
-                onOcultarServicio: _ocultarServicioManual,
+            const SizedBox(height: 24),
+
+            if (esMaster)
+              SwitchListTile(
+                title: const Text(
+                  'Modo prueba - Solo mi conductor',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  _modoPruebaRadio
+                      ? 'ACTIVADO: las solicitudes solo se enviarán a tu conductor.'
+                      : 'DESACTIVADO: envío normal a todos los conductores disponibles.',
+                ),
+                value: _modoPruebaRadio,
+                activeColor: Colors.orange,
+                onChanged: (valor) {
+                  setState(() {
+                    _modoPruebaRadio = valor;
+                  });
+                },
+              ),
+
+            const SizedBox(height: 12),
+
+            // SOLICITAR SERVICIO
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(esMovil ? 12 : 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'SOLICITAR SERVICIO',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Forma de pago',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'Efectivo',
+                      'Nequi',
+                      'Daviplata',
+                      'Llave',
+                    ].map((opcion) {
+                      return ChoiceChip(
+                        label: Text(
+                          opcion,
+                          style: TextStyle(fontSize: esMovil ? 13 : 10),
+                        ),
+                        selected: _metodoPagoSeleccionado == opcion,
+                        onSelected: (seleccionado) {
+                          if (seleccionado) {
+                            setState(() {
+                              _metodoPagoSeleccionado = opcion;
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Requerimientos',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'Con Baúl',
+                      'Con Portabicicletas',
+                      'Pasajero con Silla de ruedas',
+                      'Transportan Mascotas',
+                      'Con Aire acondicionado',
+                      'Con Cables de inicio',
+                      'Con Compresor',
+                    ].map((opcion) {
+                      final seleccionado =
+                      _requerimientosSeleccionados.contains(opcion);
+
+                      return FilterChip(
+                        label: Text(
+                          opcion,
+                          style: TextStyle(fontSize: esMovil ? 13 : 10),
+                        ),
+                        selected: seleccionado,
+                        onSelected: (valor) {
+                          setState(() {
+                            if (valor) {
+                              _requerimientosSeleccionados.add(opcion);
+                            } else {
+                              _requerimientosSeleccionados.remove(opcion);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: esMovil ? double.infinity : null,
+                    child: ElevatedButton.icon(
+                      onPressed: (_isLoading ||
+                          _isSaving ||
+                          _clienteController.text.trim().isEmpty ||
+                          _barrioController.text.trim().isEmpty ||
+                          _direccionController.text.trim().isEmpty ||
+                          _celularController.text.trim().isEmpty)
+                          ? null
+                          : _enviarSolicitudRadio,
+                      icon: _isLoading
+                          ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Icon(Icons.podcasts, size: 24),
+                      label: Text(
+                        _isLoading ? 'Transmitiendo...' : 'Lanzar servicio',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
+    );
+
+    final servicios = _ServiciosEnVivoPanel(
+      onRelanzarServicio: _relanzarServicioExistente,
+      onCancelarServicio: _cancelarServicioManual,
+      onOcultarServicio: _ocultarServicioManual,
+    );
+
+    return MainLayout(
+      pageTitle: 'Despacho de servicios',
+      content: Padding(
+        padding: EdgeInsets.all(esMovil ? 8 : 24),
+        child: esMovil
+            ? Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _mostrarServiciosEnMovil = true;
+                      });
+                    },
+                    icon: const Icon(Icons.list_alt, size: 18),
+                    label: const Text(
+                      'Servicios en vivo',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _mostrarServiciosEnMovil
+                          ? Colors.blue.shade800
+                          : Colors.grey.shade200,
+                      foregroundColor: _mostrarServiciosEnMovil
+                          ? Colors.white
+                          : Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _mostrarServiciosEnMovil = false;
+                      });
+                    },
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Despachar',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: !_mostrarServiciosEnMovil
+                          ? Colors.green.shade700
+                          : Colors.grey.shade200,
+                      foregroundColor: !_mostrarServiciosEnMovil
+                          ? Colors.white
+                          : Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: IndexedStack(
+                index: _mostrarServiciosEnMovil ? 0 : 1,
+                children: [
+                  servicios,
+                  formulario,
+                ],
+              ),
+            ),
+          ],
+        )
+            : Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: formulario),
+            const SizedBox(width: 20),
+            Expanded(child: servicios),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _datoCliente(IconData icono, String valor) {
+    return Row(
+      children: [
+        Icon(icono, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            valor,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+      ],
     );
   }
 

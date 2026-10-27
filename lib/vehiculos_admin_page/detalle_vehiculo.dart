@@ -17,6 +17,7 @@ class VehiculoDetailAdminPage extends StatefulWidget {
 class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
 
   Map<String, dynamic> data = {};
+  final Map<String, dynamic> _camposEditados = {};
   Map<String, List<String>> errores = {};
 
   late String placaGlobal;
@@ -24,6 +25,8 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
 
   Map<String, List<String>> erroresFirestore = {};
   Map<String, List<String>> erroresSeleccionados = {};
+
+
 
 
 
@@ -111,11 +114,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
           /// 🔥 ACTUALIZA DATA EN TIEMPO REAL
           data = {
             ...docData,
-
-            /// 🔥 SOLO conservar inputs que el admin está escribiendo
-            "20_Numero_Soat": data["20_Numero_Soat"],
-            "22_Numero_Tecno": data["22_Numero_Tecno"],
-            "24_Numero_Tarjeta_Propiedad": data["24_Numero_Tarjeta_Propiedad"],
+            ..._camposEditados,
           };
 
           /// 🔥 PROCESAR ERRORES EN TIEMPO REAL
@@ -731,6 +730,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
           .collection("vehiculos")
           .doc(placa)
           .update(dataSeguro);
+      _camposEditados.clear();
 
       /// 🔥 4. FEEDBACK
       ScaffoldMessenger.of(context).showSnackBar(
@@ -896,6 +896,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         onChanged: (v) {
           setState(() {
             data[key] = v;
+            _camposEditados[key] = v;
           });
         },
       ),
@@ -943,6 +944,7 @@ class _VehiculoDetailAdminPageState extends State<VehiculoDetailAdminPage> {
         onChanged: (v) {
           setState(() {
             data[key] = v;
+            _camposEditados[key] = v;
           });
         },
       ),
