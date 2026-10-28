@@ -40,6 +40,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
   Timer? _debounce;
   int _initialTabIndex = 0; // Pestaña por defecto: Registrados (0)
 
+  Map<String, String> placasPorConductor = {};
+
   @override
   void initState() {
     super.initState();
@@ -149,32 +151,63 @@ class _ConductoresPageState extends State<ConductoresPage> {
         (driver.the26CedulaTraseraFoto ?? "") == "rechazada";
   }
 
+
   Future<void> cargarErroresVehiculos() async {
-    final snapshot = await FirebaseFirestore.instance.collectionGroup("vehiculos").get();
+    final snapshot = await FirebaseFirestore.instance
+        .collectionGroup("vehiculos")
+        .get();
+
     Map<String, String> mapa = {};
+    Map<String, String> placas = {};
 
     for (var doc in snapshot.docs) {
       final data = doc.data();
       String estado = "";
 
-      if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") == "corregida" ||
-          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") == "corregida") {
+      // Recuperar el conductor propietario del vehículo
+      final driverId = doc.reference.parent.parent?.id;
+
+      if (driverId == null) continue;
+
+      // Recuperar la placa del vehículo
+      final placa = (data["18_Placa"] ?? doc.id)
+          .toString()
+          .trim()
+          .toUpperCase();
+
+      if (placa.isNotEmpty) {
+        placas[driverId] = [
+          if (placas[driverId] != null) placas[driverId]!,
+          placa,
+        ].join(" ");
+      }
+
+      // Mantener la lógica actual de documentos corregidos/rechazados
+      if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") ==
+          "corregida" ||
+          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") ==
+              "corregida") {
         estado = "corregida";
-      } else if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") == "rechazada" ||
-          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") == "rechazada") {
+      } else if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") ==
+          "rechazada" ||
+          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") ==
+              "rechazada") {
         estado = "rechazada";
       }
 
       if (estado.isNotEmpty) {
-        final driverId = data["driverId"];
         mapa[driverId] = estado;
       }
     }
 
+    if (!mounted) return;
+
     setState(() {
       driversEstadoVehiculo = mapa;
+      placasPorConductor = placas;
     });
   }
+
 
   List ordenarConductores(List lista) {
     lista.sort((a, b) {
@@ -206,86 +239,151 @@ class _ConductoresPageState extends State<ConductoresPage> {
     }
   }
 
+
+  bool _coincideBusqueda(Driver d, String q) {
+    if (q.isEmpty) return true;
+
+    final texto = q.toLowerCase().trim();
+
+    final nombres = (d.the01Nombres ?? "").toLowerCase();
+    final apellidos = (d.the02Apellidos ?? "").toLowerCase();
+    final documento = (d.the03NumeroDocumento ?? "").toLowerCase();
+    final celular = (d.the07Celular ?? "").toLowerCase();
+
+    // Placas recuperadas de la colección vehiculos
+    final placas = (placasPorConductor[d.id] ?? "").toLowerCase();
+
+    return nombres.contains(texto) ||
+        apellidos.contains(texto) ||
+        "$nombres $apellidos".contains(texto) ||
+        documento.contains(texto) ||
+        celular.contains(texto) ||
+        placas.contains(texto);
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
     final todosLosConductores = driverProvider.drivers;
     final bool puedeVerElite = _tienePermisoElite();
 
-    // 1. LÓGICA DE BÚSQUEDA (Nombre, Apellido, Cédula, Celular)
+    // 1. LÓGICA DE BÚSQUEDA
     final q = searchQuery.toLowerCase();
-    List filteredConductores = todosLosConductores.where((d) {
-      if (searchQuery.isEmpty) return true;
-      return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
-          (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
-          (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
-          (d.the07Celular ?? "").toLowerCase().contains(q);
-    }).toList();
+
+
+    List filteredConductores = todosLosConductores
+        .where((d) => _coincideBusqueda(d, q))
+        .toList();
+
 
     // 2. CATEGORÍAS
-    final registrados = ordenarConductores(filteredConductores.where((d) {
-      final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
-      return estado == "registrado" && !tieneCorregida(d) && !tieneRechazada(d);
-    }).toList());
+    final registrados = ordenarConductores(
+      filteredConductores.where((d) {
+        final estado =
+        (d.verificacionStatus ?? "").toLowerCase().trim();
 
-    final corregidos = ordenarConductores(filteredConductores.where((d) {
-      final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
-      final estadoVehiculo = driversEstadoVehiculo[d.id];
-      if (estado == "bloqueado" || d.the38EstaBloqueado == true) return false;
-      return tieneCorregida(d) || estadoVehiculo == "corregida";
-    }).toList());
+        return estado == "registrado" &&
+            !tieneCorregida(d) &&
+            !tieneRechazada(d);
+      }).toList(),
+    );
 
-    final rechazados = ordenarConductores(filteredConductores.where((d) {
-      final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
-      if (estado == "bloqueado" || d.the38EstaBloqueado == true) return false;
-      return tieneRechazada(d) && !tieneCorregida(d);
-    }).toList());
+    final corregidos = ordenarConductores(
+      filteredConductores.where((d) {
+        final estado =
+        (d.verificacionStatus ?? "").toLowerCase().trim();
+        final estadoVehiculo = driversEstadoVehiculo[d.id];
 
-    final procesando = ordenarConductores(filteredConductores.where((d) {
-      final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
-      final estadoVehiculo = driversEstadoVehiculo[d.id];
-      if (estado == "bloqueado" || d.the38EstaBloqueado == true) return false;
-      if (tieneCorregida(d) || estadoVehiculo == "corregida") return false;
-      return estado == "procesando" && !tieneRechazada(d);
-    }).toList());
+        if (estado == "bloqueado" ||
+            d.the38EstaBloqueado == true) {
+          return false;
+        }
 
-    final activados = ordenarConductores(listaConductoresActivosLocal.where((d) {
-      if (d.the38EstaBloqueado == true) return false;
-      if (searchQuery.isNotEmpty) {
-        return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
-            (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
-            (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
-            (d.the07Celular ?? "").toLowerCase().contains(q);
-      }
-      return true;
-    }).toList());
+        return tieneCorregida(d) ||
+            estadoVehiculo == "corregida";
+      }).toList(),
+    );
 
-    // 🌟 FILTRO EXCLUSIVO PARA CONDUCTORES ELITE
-    final elites = ordenarConductores(listaConductoresActivosLocal.where((d) {
-      if (d.the38EstaBloqueado == true) return false;
-      if (d.isElite != true) return false;
-      if (searchQuery.isNotEmpty) {
-        return (d.the01Nombres ?? "").toLowerCase().contains(q) ||
-            (d.the02Apellidos ?? "").toLowerCase().contains(q) ||
-            (d.the03NumeroDocumento ?? "").toLowerCase().contains(q) ||
-            (d.the07Celular ?? "").toLowerCase().contains(q);
-      }
-      return true;
-    }).toList());
+    final rechazados = ordenarConductores(
+      filteredConductores.where((d) {
+        final estado =
+        (d.verificacionStatus ?? "").toLowerCase().trim();
+
+        if (estado == "bloqueado" ||
+            d.the38EstaBloqueado == true) {
+          return false;
+        }
+
+        return tieneRechazada(d) && !tieneCorregida(d);
+      }).toList(),
+    );
+
+    final procesando = ordenarConductores(
+      filteredConductores.where((d) {
+        final estado =
+        (d.verificacionStatus ?? "").toLowerCase().trim();
+        final estadoVehiculo = driversEstadoVehiculo[d.id];
+
+        if (estado == "bloqueado" ||
+            d.the38EstaBloqueado == true) {
+          return false;
+        }
+
+        if (tieneCorregida(d) ||
+            estadoVehiculo == "corregida") {
+          return false;
+        }
+
+        return estado == "procesando" &&
+            !tieneRechazada(d);
+      }).toList(),
+    );
+
+
+    final activados = ordenarConductores(
+      listaConductoresActivosLocal.where((d) {
+        if (d.the38EstaBloqueado == true) return false;
+
+        return _coincideBusqueda(d, q);
+      }).toList(),
+    );
+
+
+
+    final elites = ordenarConductores(
+      listaConductoresActivosLocal.where((d) {
+        if (d.the38EstaBloqueado == true) return false;
+        if (d.isElite != true) return false;
+
+        return _coincideBusqueda(d, q);
+      }).toList(),
+    );
+
+
 
     final bloqueados = ordenarConductores([
       ...filteredConductores,
-      ...listaConductoresActivosLocal,
+      ...listaConductoresActivosLocal.where(
+            (d) => _coincideBusqueda(d, q),
+      ),
     ].where((d) {
-      final estado = (d.verificacionStatus ?? "").toLowerCase().trim();
-      return estado == "bloqueado" || d.the38EstaBloqueado == true;
+
+      final estado =
+      (d.verificacionStatus ?? "").toLowerCase().trim();
+
+      return estado == "bloqueado" ||
+          d.the38EstaBloqueado == true;
     }).toList().toSet().toList());
 
     totalDrivers = filteredConductores.length + activados.length;
 
-    // Ajusta la cantidad de pestañas según permisos
+    // PESTAÑAS SEGÚN PERMISOS
     final int cantidadTabs = puedeVerElite ? 7 : 6;
-    final int initialTabValida = _initialTabIndex < cantidadTabs ? _initialTabIndex : 0;
+
+    final int initialTabValida =
+    _initialTabIndex < cantidadTabs ? _initialTabIndex : 0;
 
     return MainLayout(
       pageTitle: 'Conductores',
@@ -294,47 +392,121 @@ class _ConductoresPageState extends State<ConductoresPage> {
         initialIndex: initialTabValida,
         child: Column(
           children: [
-            SizedBox(height: MediaQuery.of(context).padding.top),
+            SizedBox(
+              height: MediaQuery.of(context).padding.top,
+            ),
 
+            // BUSCADOR Y BOTONES RESPONSIVOS
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
-              child: Wrap(
-                spacing: 10.0,
-                runSpacing: 10.0,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _buildSearchField(),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14.0,
+                vertical: 10.0,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool esMovil = constraints.maxWidth < 700;
 
-                  _buildBotonSegmentado(
-                    context: context,
-                    titulo: 'Activos Vencidos',
-                    conductores: listaConductoresActivosLocal,
-                    color: Colors.red,
-                    icono: Icons.gpp_maybe_rounded,
-                  ),
+                  // MÓVIL: buscador arriba, botones debajo.
+                  if (esMovil) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildSearchField(),
+                        ),
 
-                  _buildBotonSegmentado(
-                    context: context,
-                    titulo: 'Pendientes Vencidos',
-                    conductores: filteredConductores,
-                    color: Colors.orange,
-                    icono: Icons.folder_zip_outlined,
-                  ),
+                        const SizedBox(height: 12),
 
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 26),
-                    color: Theme.of(context).primaryColor,
-                    onPressed: () async {
-                      driverProvider.limpiarCache();
-                      driverProvider.fetchPendientesServidor();
-                      await _cargarActivosDeFormaAislada();
-                      await cargarErroresVehiculos();
-                    },
-                  ),
-                ],
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          crossAxisAlignment:
+                          WrapCrossAlignment.center,
+                          children: [
+                            _buildBotonSegmentado(
+                              context: context,
+                              titulo: 'Activos Vencidos',
+                              conductores:
+                              listaConductoresActivosLocal,
+                              color: Colors.red,
+                              icono: Icons.gpp_maybe_rounded,
+                            ),
+
+                            _buildBotonSegmentado(
+                              context: context,
+                              titulo: 'Pendientes Vencidos',
+                              conductores: filteredConductores,
+                              color: Colors.orange,
+                              icono: Icons.folder_zip_outlined,
+                            ),
+
+                            IconButton(
+                              icon: const Icon(
+                                Icons.refresh,
+                                size: 26,
+                              ),
+                              color: Theme.of(context).primaryColor,
+                              onPressed: () async {
+                                driverProvider.limpiarCache();
+                                driverProvider
+                                    .fetchPendientesServidor();
+
+                                await _cargarActivosDeFormaAislada();
+                                await cargarErroresVehiculos();
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  // COMPUTADOR: distribución horizontal.
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _buildSearchField(),
+
+                      _buildBotonSegmentado(
+                        context: context,
+                        titulo: 'Activos Vencidos',
+                        conductores: listaConductoresActivosLocal,
+                        color: Colors.red,
+                        icono: Icons.gpp_maybe_rounded,
+                      ),
+
+                      _buildBotonSegmentado(
+                        context: context,
+                        titulo: 'Pendientes Vencidos',
+                        conductores: filteredConductores,
+                        color: Colors.orange,
+                        icono: Icons.folder_zip_outlined,
+                      ),
+
+                      IconButton(
+                        icon: const Icon(
+                          Icons.refresh,
+                          size: 26,
+                        ),
+                        color: Theme.of(context).primaryColor,
+                        onPressed: () async {
+                          driverProvider.limpiarCache();
+                          driverProvider.fetchPendientesServidor();
+
+                          await _cargarActivosDeFormaAislada();
+                          await cargarErroresVehiculos();
+                        },
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
+            // BARRA DE PESTAÑAS
             Container(
               color: Colors.white,
               width: double.infinity,
@@ -344,32 +516,75 @@ class _ConductoresPageState extends State<ConductoresPage> {
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Theme.of(context).primaryColor,
                 tabs: [
-                  Tab(text: "🆕 Registrados (${registrados.length})"),
-                  Tab(text: "🛠️ Corregidos (${corregidos.length})"),
-                  Tab(text: "⏳ Procesando (${procesando.length})"),
-                  Tab(text: "🚫 Rechazados (${rechazados.length})"),
-                  Tab(text: "🟢 Activos (${activados.length})"),
+                  Tab(
+                    text: "🆕 Registrados (${registrados.length})",
+                  ),
+                  Tab(
+                    text: "🛠️ Corregidos (${corregidos.length})",
+                  ),
+                  Tab(
+                    text: "⏳ Procesando (${procesando.length})",
+                  ),
+                  Tab(
+                    text: "🚫 Rechazados (${rechazados.length})",
+                  ),
+                  Tab(
+                    text: "🟢 Activos (${activados.length})",
+                  ),
                   if (puedeVerElite)
-                    Tab(text: "⭐ Elites (${elites.length}/60)"), // 🔒 TAB RESTRINGIDO
-                  Tab(text: "🔴 Bloqueados (${bloqueados.length})"),
+                    Tab(
+                      text: "⭐ Elites (${elites.length}/60)",
+                    ),
+                  Tab(
+                    text: "🔴 Bloqueados (${bloqueados.length})",
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 12),
 
+            // CONTENIDO DE LAS PESTAÑAS
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                ),
                 margin: const EdgeInsets.all(7),
                 child: TabBarView(
                   children: [
-                    _buildTabContent(registrados, false, puedeVerElite),
-                    _buildTabContent(corregidos, false, puedeVerElite),
-                    _buildTabContent(procesando, false, puedeVerElite),
-                    _buildTabContent(rechazados, false, puedeVerElite),
-                    _buildTabContent(activados, cargandoActivosLocal, puedeVerElite),
+                    _buildTabContent(
+                      registrados,
+                      false,
+                      puedeVerElite,
+                    ),
+
+                    _buildTabContent(
+                      corregidos,
+                      false,
+                      puedeVerElite,
+                    ),
+
+                    _buildTabContent(
+                      procesando,
+                      false,
+                      puedeVerElite,
+                    ),
+
+                    _buildTabContent(
+                      rechazados,
+                      false,
+                      puedeVerElite,
+                    ),
+
+                    _buildTabContent(
+                      activados,
+                      cargandoActivosLocal,
+                      puedeVerElite,
+                    ),
+
                     if (puedeVerElite)
                       EliteGroupTab(
                         conductoresElite: elites.cast<Driver>(),
@@ -377,7 +592,12 @@ class _ConductoresPageState extends State<ConductoresPage> {
                           await _cargarActivosDeFormaAislada();
                         },
                       ),
-                    _buildTabContent(bloqueados, false, puedeVerElite),
+
+                    _buildTabContent(
+                      bloqueados,
+                      false,
+                      puedeVerElite,
+                    ),
                   ],
                 ),
               ),
@@ -387,6 +607,7 @@ class _ConductoresPageState extends State<ConductoresPage> {
       ),
     );
   }
+
 
   Widget _buildBotonSegmentado({
     required BuildContext context,
