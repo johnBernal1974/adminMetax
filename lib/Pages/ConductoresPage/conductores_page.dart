@@ -42,6 +42,8 @@ class _ConductoresPageState extends State<ConductoresPage> {
 
   Map<String, String> placasPorConductor = {};
 
+  List<Map<String, dynamic>> vehiculosPendientes = [];
+
   @override
   void initState() {
     super.initState();
@@ -152,61 +154,125 @@ class _ConductoresPageState extends State<ConductoresPage> {
   }
 
 
+
   Future<void> cargarErroresVehiculos() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collectionGroup("vehiculos")
-        .get();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup("vehiculos")
+          .get();
 
-    Map<String, String> mapa = {};
-    Map<String, String> placas = {};
+      final Map<String, String> mapa = {};
+      final Map<String, String> placas = {};
+      final List<Map<String, dynamic>> pendientes = [];
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      String estado = "";
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final driverId = doc.reference.parent.parent?.id;
 
-      // Recuperar el conductor propietario del vehículo
-      final driverId = doc.reference.parent.parent?.id;
+        if (driverId == null) continue;
 
-      if (driverId == null) continue;
+        final placa = (data["18_Placa"] ?? doc.id)
+            .toString()
+            .trim()
+            .toUpperCase();
 
-      // Recuperar la placa del vehículo
-      final placa = (data["18_Placa"] ?? doc.id)
-          .toString()
-          .trim()
-          .toUpperCase();
+        if (placa.isNotEmpty) {
+          placas[driverId] = [
+            if (placas[driverId] != null) placas[driverId]!,
+            placa,
+          ].join(" ");
+        }
 
-      if (placa.isNotEmpty) {
-        placas[driverId] = [
-          if (placas[driverId] != null) placas[driverId]!,
-          placa,
-        ].join(" ");
+        final errores = data["errores"] is Map
+            ? Map<String, dynamic>.from(data["errores"])
+            : <String, dynamic>{};
+
+        // Mantener detección actual de documentos corregidos.
+        String estado = "";
+
+        if (data["27_Tarjeta_Propiedad_Delantera_foto"] ==
+            "corregida" ||
+            data["28_Tarjeta_Propiedad_Trasera_foto"] ==
+                "corregida") {
+          estado = "corregida";
+        } else if (data["27_Tarjeta_Propiedad_Delantera_foto"] ==
+            "rechazada" ||
+            data["28_Tarjeta_Propiedad_Trasera_foto"] ==
+                "rechazada") {
+          estado = "rechazada";
+        }
+
+        if (estado.isNotEmpty) {
+          mapa[driverId] = estado;
+        }
+
+        // Detectar vehículos pendientes.
+        final estadoDocumentos = (
+            data["estado_documentos"] ??
+                errores["estado_documentos"] ??
+                ""
+        ).toString().trim().toLowerCase();
+
+        if (estadoDocumentos == "procesando") {
+          final conductorDoc = await FirebaseFirestore.instance
+              .collection("Drivers")
+              .doc(driverId)
+              .get();
+
+          if (!conductorDoc.exists) continue;
+
+          final conductorData = conductorDoc.data()!;
+
+          final estadoConductor =
+          (conductorData["Verificacion_Status"] ?? "")
+              .toString()
+              .trim()
+              .toLowerCase();
+
+          // Solo conductores que ya están activados.
+          if (estadoConductor != "activado") continue;
+
+          final fecha = data["fechaRegistro"] ??
+              errores["fechaRegistro"];
+
+          pendientes.add({
+            "driverId": driverId,
+            "placa": placa,
+            "estado": estadoDocumentos,
+            "fechaRegistro": fecha,
+          });
+        }
       }
 
-      // Mantener la lógica actual de documentos corregidos/rechazados
-      if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") ==
-          "corregida" ||
-          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") ==
-              "corregida") {
-        estado = "corregida";
-      } else if ((data["27_Tarjeta_Propiedad_Delantera_foto"] ?? "") ==
-          "rechazada" ||
-          (data["28_Tarjeta_Propiedad_Trasera_foto"] ?? "") ==
-              "rechazada") {
-        estado = "rechazada";
+      // Ordenar por fecha más reciente.
+      DateTime obtenerFecha(dynamic valor) {
+        if (valor is Timestamp) return valor.toDate();
+        if (valor is DateTime) return valor;
+        return DateTime.fromMillisecondsSinceEpoch(0);
       }
 
-      if (estado.isNotEmpty) {
-        mapa[driverId] = estado;
-      }
+      pendientes.sort((a, b) {
+        return obtenerFecha(b["fechaRegistro"])
+            .compareTo(obtenerFecha(a["fechaRegistro"]));
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        driversEstadoVehiculo = mapa;
+        placasPorConductor = placas;
+        vehiculosPendientes = pendientes;
+      });
+
+      print(
+        "🚕 Vehículos pendientes encontrados: "
+            "${pendientes.length}",
+      );
+    } catch (e) {
+      print("❌ Error cargando vehículos: $e");
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      driversEstadoVehiculo = mapa;
-      placasPorConductor = placas;
-    });
   }
+
 
 
   List ordenarConductores(List lista) {
@@ -441,6 +507,10 @@ class _ConductoresPageState extends State<ConductoresPage> {
                               icono: Icons.folder_zip_outlined,
                             ),
 
+                            _buildBotonVehiculosPendientes(),
+
+                            const SizedBox(width: 4),
+
                             IconButton(
                               icon: const Icon(
                                 Icons.refresh,
@@ -485,6 +555,9 @@ class _ConductoresPageState extends State<ConductoresPage> {
                         color: Colors.orange,
                         icono: Icons.folder_zip_outlined,
                       ),
+                      _buildBotonVehiculosPendientes(),
+
+                      const SizedBox(width: 4),
 
                       IconButton(
                         icon: const Icon(
@@ -607,6 +680,232 @@ class _ConductoresPageState extends State<ConductoresPage> {
       ),
     );
   }
+
+
+  Widget _buildBotonVehiculosPendientes() {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue.shade50,
+        elevation: 0,
+        side: BorderSide(
+          color: Colors.blue.shade200,
+          width: 1.5,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: const Icon(
+        Icons.directions_car,
+        color: Colors.blue,
+        size: 20,
+      ),
+      label: Text(
+        "Vehículos pendientes: ${vehiculosPendientes.length}",
+        style: const TextStyle(
+          color: Colors.blue,
+          fontWeight: FontWeight.w800,
+          fontSize: 13,
+        ),
+      ),
+      onPressed: () {
+        _mostrarPanelVehiculosPendientes();
+      },
+    );
+  }
+
+
+  void _mostrarPanelVehiculosPendientes() {
+    final pendientes = List<Map<String, dynamic>>.from(
+      vehiculosPendientes,
+    );
+
+    final conductores = <String, Driver>{};
+
+    for (final driver in [
+      ...Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      ).drivers,
+      ...listaConductoresActivosLocal,
+    ]) {
+      conductores[driver.id] = driver;
+    }
+
+    String formatearFecha(dynamic fecha) {
+      if (fecha is Timestamp) {
+        return DateFormat('dd/MM/yyyy HH:mm')
+            .format(fecha.toDate());
+      }
+
+      if (fecha is DateTime) {
+        return DateFormat('dd/MM/yyyy HH:mm')
+            .format(fecha);
+      }
+
+      return "No disponible";
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final ancho = MediaQuery.of(sheetContext).size.width;
+
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            width: ancho < 500 ? ancho : 500,
+            height: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                bottomLeft: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.directions_car,
+                      color: Colors.blue,
+                      size: 26,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Vehículos pendientes (${pendientes.length})",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                      },
+                    ),
+                  ],
+                ),
+
+                const Divider(height: 30),
+
+                Expanded(
+                  child: pendientes.isEmpty
+                      ? const Center(
+                    child: Text(
+                      "No hay vehículos pendientes.",
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  )
+                      : ListView.builder(
+                    itemCount: pendientes.length,
+                    itemBuilder: (context, index) {
+                      final vehiculo = pendientes[index];
+
+                      final driverId =
+                      vehiculo["driverId"] as String;
+
+                      final driver = conductores[driverId];
+
+                      final nombre = driver == null
+                          ? "Conductor no disponible"
+                          : "${driver.the01Nombres ?? ''} "
+                          "${driver.the02Apellidos ?? ''}"
+                          .trim();
+
+                      return Card(
+                        margin: const EdgeInsets.only(
+                          bottom: 12,
+                        ),
+                        color: Colors.grey.shade50,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: Colors.grey.shade200,
+                          ),
+                        ),
+                        child: ListTile(
+                          contentPadding:
+                          const EdgeInsets.all(14),
+                          title: Text(
+                            nombre,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(
+                              top: 8,
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Placa: ${vehiculo["placa"]}",
+                                  style: const TextStyle(
+                                    fontWeight:
+                                    FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  "Estado: Procesando",
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Registro: ${formatearFecha(vehiculo["fechaRegistro"])}",
+                                ),
+                              ],
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
+                          onTap: driver == null
+                              ? null
+                              : () {
+                            Navigator.pop(
+                              sheetContext,
+                            );
+                            _irADetalleConductor(
+                              driver,
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
 
 
   Widget _buildBotonSegmentado({
