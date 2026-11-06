@@ -228,6 +228,32 @@ class _MainLayoutState
         /// =========================================================================
       ],
 
+            /// 🏆 RANKING DE CONDUCTORES
+            if (role == 'Master' ||
+                role == 'operadorFull' ||
+                role == 'contador')
+              Padding(
+                padding: EdgeInsets.only(
+                  right: isMobile ? 4 : 12,
+                ),
+                child: Tooltip(
+                  message: 'Ranking de conductores - Top 50',
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.emoji_events,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        'ranking_conductores_page',
+                      );
+                    },
+                  ),
+                ),
+              ),
+
           /// 🔥 OPERADOR
           Consumer<OperadorProvider>(
 

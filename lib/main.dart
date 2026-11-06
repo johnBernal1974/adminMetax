@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:metax_administrador/providers/client_provider.dart';
 import 'package:metax_administrador/providers/operador_provider.dart';
+import 'package:metax_administrador/ranking_conductores_page.dart';
 import 'package:metax_administrador/vehiculos_admin_page/detalle_vehiculo.dart';
 import 'package:metax_administrador/vehiculos_admin_page/vehiculos_admin_page.dart';
 import 'package:provider/provider.dart';
@@ -169,6 +170,10 @@ class MyApp extends StatelessWidget {
           }
           if (name == 'historial_porteria_page') {return _guardedRoute( const HistorialPorteriaPage(), settings,
             );
+          }
+          // 🏆 RANKING DE CONDUCTORES - TOP 50
+          if (name == 'ranking_conductores_page') {
+            return _guardedRoute(const RankingConductoresPage(), settings);
           }
 
           if (name == 'bonos_admin_page') { return _guardedRoute( const BonosAdminPage(), settings,
